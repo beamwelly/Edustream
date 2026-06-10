@@ -110,7 +110,6 @@ graph TD
 ## 3. Database Documentation
 
 EduStream's Neon PostgreSQL database schema consists of the following core tables, relationships, and constraints. All dates are persisted in UTC with timezones.
-
 ### Users Management Schema
 
 #### `users` Table
@@ -469,3 +468,58 @@ Caches the client's entries for the interactive toolkit.
 | **POST** | `/wow/goals` | Add personal goal | User/Admin | Goal details | Created goal |
 | **GET** | `/wow/vault` | Get family vault collections | User/Admin | None | Combined collections of family members, bank accounts, etc |
 | **POST** | `/wow/inputs` | Cache calculator inputs | User/Admin | `{ retirement_inputs, cost_of_delay_inputs, ... }` | Cached inputs schema |
+
+---
+
+## 5. Docker Setup
+
+You can run the entire application stack using Docker Compose. Ensure you have Docker and Docker Compose installed.
+
+### Prerequisites
+- [Docker](https://docs.docker.com/get-docker/) installed
+- [Docker Compose](https://docs.docker.com/compose/install/) installed
+
+### 1. Setup Environment Variables
+
+Copy the `.env.example` files and populate them with your values:
+
+```bash
+cp backend/.env.example backend/.env
+# Fill in: DATABASE_URL, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, FRONTEND_URL
+
+cp frontend/.env.example frontend/.env
+# Fill in: VITE_API_URL=http://localhost:8000
+```
+
+### 2. Build & Run with Docker Compose
+
+```bash
+docker-compose up --build
+```
+
+| Service | URL |
+| :--- | :--- |
+| **Frontend** | `http://localhost:5173` |
+| **Backend API** | `http://localhost:8000` |
+| **API Health Check** | `http://localhost:8000/health` |
+
+### 3. Stop the Containers
+
+```bash
+docker-compose down
+```
+
+### Project Structure (with Docker files)
+
+```text
+project-root/
+├── frontend/
+│   ├── Dockerfile          # Multi-stage: Node build → Nginx serve
+│   ├── .dockerignore
+│   └── ...
+├── backend/
+│   ├── Dockerfile          # Python 3.11-slim + uvicorn
+│   ├── .dockerignore
+│   └── ...
+└── docker-compose.yml      # Orchestrates frontend + backend
+```

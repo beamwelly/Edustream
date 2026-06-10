@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    # Optional: For development, you can mount the code to allow hot-reloading
+    # volumes:
+    #   - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Pass the backend URL during build time
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    # Note: Volume mounting in frontend here would override the built files in the container.
+    # It's better to use `npm run dev` directly on the host if you need hot-reloading for the frontend,
+    # or use a separate docker-compose override for dev.
