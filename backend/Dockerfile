@@ -1,26 +1,26 @@
-# Use an official Python runtime as a parent image
+# ──────────────────────────────────────────────
+# EduStream Backend — FastAPI
+# ──────────────────────────────────────────────
 FROM python:3.11-slim
 
-# Set the working directory in the container
 WORKDIR /app
 
-# Install system dependencies (useful for some Python packages like psycopg2)
+# Install system dependencies for psycopg2 / Pillow
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
+# Install Python dependencies
+# (requirements.txt only — no .env file is copied)
 COPY requirements.txt .
-
-# Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
-COPY . .
+# Copy application source code
+COPY app/ ./app/
 
-# Expose the port the app runs on
 EXPOSE 8000
 
-# Run the FastAPI application using uvicorn
+# All env vars (DATABASE_URL, SECRET_KEY, etc.) are injected
+# at runtime via docker-compose — nothing is baked into this image.
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

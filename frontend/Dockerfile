@@ -1,42 +1,36 @@
-# Build stage
-FROM node:20-slim AS build
+# ──────────────────────────────────────────────
+# Stage 1 – Build the React/Vite application
+# ──────────────────────────────────────────────
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Install dependencies first (layer-cache friendly)
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy source code
+# Copy source
 COPY . .
 
-# Pass API URL as a build argument
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# VITE_API_URL is a BUILD ARG only — it is used by Vite at compile time
+# and is NOT stored as an ENV in the final image.
+ARG VITE_API_URL=http://localhost:8000
+RUN VITE_API_URL=${VITE_API_URL} npm run build
 
-# Build the application
-RUN npm run build
+# ──────────────────────────────────────────────
+# Stage 2 – Serve with Nginx on port 80
+# ──────────────────────────────────────────────
+FROM nginx:alpine AS runner
 
-# Serve stage
-FROM nginx:alpine
+# Remove default nginx config
+RUN rm /etc/nginx/conf.d/default.conf
 
-# Copy built assets
-COPY --from=build /app/dist/client /usr/share/nginx/html
+# Add SPA-friendly nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Add custom nginx configuration for SPA routing
-RUN echo 'server { \
-    listen 80; \
-    location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
-        try_files $uri $uri/ /index.html; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
+# Copy built assets from builder stage
+COPY --from=builder /app/dist/client /usr/share/nginx/html
 
-# Expose port 80
 EXPOSE 80
 
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
