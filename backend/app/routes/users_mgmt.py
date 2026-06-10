@@ -271,7 +271,7 @@ async def download_template(
     with pd.ExcelWriter(filepath, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Users Template")
         
-    origin = request.headers.get("origin") or "http://localhost:8081"
+    origin = request.headers.get("origin") or os.getenv("FRONTEND_URL", "http://localhost:8081")
     headers = {
         "Access-Control-Allow-Origin": origin,
         "Access-Control-Allow-Credentials": "true",

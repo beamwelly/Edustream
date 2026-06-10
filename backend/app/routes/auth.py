@@ -333,7 +333,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
                     <div class="icon">✗</div>
                     <h2>OAuth Connection Failed</h2>
                     <p>Error details: {str(e)}</p>
-                    <a href="http://localhost:8081/admin/meetings?google_error=true" class="btn">Back to Meetings</a>
+                    <a href="{frontend_url}/admin/meetings?google_error=true" class="btn">Back to Meetings</a>
                 </div>
             </body>
         </html>

@@ -77,7 +77,8 @@ async def create_standard_user(
 
     # Assemble HTML Email content (using the new red #E53935 branding)
     email_subject = "Welcome to EduStream - Onboarding Credentials"
-    login_url = "http://localhost:8081/login"
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8081")
+    login_url = f"{frontend_url}/login"
     
     email_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1a202c;">

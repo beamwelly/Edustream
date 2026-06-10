@@ -16,18 +16,21 @@ SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET")
 if SUPABASE_URL:
     SUPABASE_URL = SUPABASE_URL.rstrip("/")
 
-# Strict startup validation logs and exceptions
+# Strict startup validation logs
 if not SUPABASE_URL:
-    raise RuntimeError("✗ Supabase URL (SUPABASE_URL) missing from environment variables!")
-print("✓ Supabase URL loaded")
+    logger.warning("✗ Supabase URL (SUPABASE_URL) missing from environment variables!")
+else:
+    print("✓ Supabase URL loaded")
 
 if not SUPABASE_SERVICE_ROLE_KEY:
-    raise RuntimeError("✗ Supabase Service Role Key (SUPABASE_SERVICE_ROLE_KEY) missing from environment variables!")
-print("✓ Service Role Key loaded")
+    logger.warning("✗ Supabase Service Role Key (SUPABASE_SERVICE_ROLE_KEY) missing from environment variables!")
+else:
+    print("✓ Service Role Key loaded")
 
 if not SUPABASE_BUCKET:
-    raise RuntimeError("✗ Supabase Bucket name (SUPABASE_BUCKET) missing from environment variables!")
-print("✓ Bucket loaded")
+    logger.warning("✗ Supabase Bucket name (SUPABASE_BUCKET) missing from environment variables!")
+else:
+    print("✓ Bucket loaded")
 
 BUCKET_NAME = SUPABASE_BUCKET
 

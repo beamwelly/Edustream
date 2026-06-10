@@ -271,6 +271,7 @@ def generate_live_email_body(webinar: Masterclass, user: User) -> str:
     return generate_email_template("Webinar is Live", html)
 
 def generate_recording_email_body(webinar: Masterclass) -> str:
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8081")
     thumbnail_img = f'<img src="{webinar.thumbnail_url}" class="thumbnail" alt="Thumbnail" />' if webinar.thumbnail_url else ""
     html = f"""
       {thumbnail_img}
@@ -279,7 +280,7 @@ def generate_recording_email_body(webinar: Masterclass) -> str:
       <p>Missed the live broadcast? No worries! The full recorded session is now available for on-demand streaming inside the EduStream portal.</p>
       
       <div class="button-container">
-        <a href="http://localhost:8081/masterclasses/{webinar.masterclass_id}/watch" class="btn">Watch Recording</a>
+        <a href="{frontend_url}/masterclasses/{webinar.masterclass_id}/watch" class="btn">Watch Recording</a>
       </div>
     """
     return generate_email_template("Recording Available", html)
