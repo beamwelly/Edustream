@@ -1,0 +1,117 @@
+============================================================
+SHEET: Needs Discovery
+============================================================
+B2: CLIENT NEEDS DISCOVERY QUESTIONNAIRE
+B3: Mutual Funds  |  Equity  |  Insurance  |  PMS  |  AIF  |  SIF
+B4: Client Name: | D4: RM / Advisor Name: | G4: Meeting Date:
+B5: Client ID / Code: | D5: Branch / Location: | G5: Review Type:
+B7:   A.  CLIENT PROFILE & DEMOGRAPHICS
+B8: A1 | C8: What is the client's age?
+B9: A2 | C9: Annual Income (approximate)?
+B10: A3 | C10: Current Net Worth (approximate)?
+B11: A4 | C11: Primary Occupation?
+B12: A5 | C12: Highest Educational Qualification?
+B13: A6 | C13: Marital Status & Family?
+B14: A7 | C14: Income Tax Slab / Bracket?
+B16:   B.  INVESTMENT OBJECTIVES & GOALS
+B17: B1 | C17: Primary Financial Goal?
+B18: B2 | C18: Investment Time Horizon for Primary Goal?
+B19: B3 | C19: Lump Sum Amount Available to Invest?
+B20: B4 | C20: SIP / Monthly Investment Amount? (Text if applicable)
+B21: B5 | C21: Return Expectation from Investments?
+B22: B6 | C22: Do you require Regular Income / Payouts?
+B23: B7 | C23: Do you have existing investments? (Describe briefly)
+B25:   C.  RISK PROFILING
+B26: C1 | C26: If portfolio fell 20% in 3 months, client would:
+B27: C2 | C27: Investment Knowledge Level?
+B28: C3 | C28: Prior Capital Market Experience?
+B29: C4 | C29: % of Total Savings willing to put at risk?
+B30: C5 | C30: Best describes client's attitude towards risk?
+B31: C6 | C31: Outstanding Loans or Liabilities?
+B32: C7 | C32: Does client have Emergency Fund (6+ months expenses)?
+B34:   D.  TAX PLANNING & REGULATORY
+B35: D1 | C35: Is Tax Saving a priority for this investment?
+B36: D2 | C36: Aware of LTCG / STCG implications?
+B37: D3 | C37: Residency / NRI Status?
+B38: D4 | C38: FATCA / CRS Reporting Obligations?
+B40:   E.  PRODUCT PREFERENCE & ELIGIBILITY SCREENING
+B41: E1 | C41: Aware of PMS (min ₹50L ticket)?
+B42: E2 | C42: Aware of AIF (min ₹1Cr ticket)?
+B43: E3 | C43: Aware of SIF (min ₹10L ticket)?
+B44: E4 | C44: Life Insurance cover of at least 10x annual income?
+B45: E5 | C45: Interested in Insurance-linked investment products (ULIP)?
+B46: E6 | C46: Preference: Actively vs Passively managed funds?
+B47: E7 | C47: Preference for any specific Fund House / Manager? (Text)
+B48: E8 | C48: Open to International / Global diversification?
+B49: E9 | C49: Prefer Growth or IDCW option?
+B50: E10 | C50: Preferred mode of communication & statements?
+B52:   F.  ADVISOR ASSESSMENT & NEXT STEPS
+B53: F1 | C53: Overall Risk Profile assessed by RM:
+B54: F2 | C54: Urgency of Investment Decision:
+B55: F3 | C55: Key concerns raised by client (notes):
+B56: F4 | C56: Products discussed in this meeting (notes):
+B57: F5 | C57: Next Step:
+B58: Client Signature: ___________________________ | F58: RM / Advisor Signature: ___________________________
+B59:   🟡 Yellow cells = Input / Dropdown Fields    ⚠ For authorised RM / advisor use only. Handle per SEBI / IRDAI data protection norms.
+============================================================
+SHEET: _Lists
+============================================================
+A1: Income | B1: NetWorth | C1: Occupation | D1: Education | E1: Marital | F1: TaxSlab | G1: YesNo | H1: YesNoMaybe | I1: YesNoNotSure | J1: YesNoPartial | K1: Goals | L1: Horizon | M1: LumpSum | N1: Returns | O1: Income2 | P1: RiskReaction | Q1: Knowledge | R1: Experience | S1: PctRisk | T1: RiskAttitude | U1: LoanStatus | V1: Priority | W1: TaxUsed | X1: TaxAware | Y1: Residency | Z1: Awareness | AA1: FundPref | AB1: DivPref | AC1: CommPref | AD1: RiskProfile | AE1: ReviewType | AF1: Urgency | AG1: NextAction | AI1: Age_Scores | AJ1: Horizon_Scores | AK1: Income_Scores | AL1: NW_Scores | AM1: React_Scores | AN1: Know_Scores | AO1: Exp_Scores | AP1: PctR_Scores | AQ1: Liq_Scores | AR1: Loan_Scores | AT1: Age_Scores_Vals | AU1: Horizon_Scores_Vals | AV1: Income_Scores_Vals | AW1: NW_Scores_Vals | AX1: React_Scores_Vals | AY1: Know_Scores_Vals | AZ1: Exp_Scores_Vals | BA1: PctR_Scores_Vals | BB1: Liq_Scores_Vals | BC1: Loan_Scores_Vals | BD1: Risk Profile: | BE1: Investment Horizon: | BF1: Investable Surplus: | BG1: Liquidity Need: | BH1: Tax Saving Priority: | BI1: Investor Category:
+A2: < ₹5 Lakhs | B2: < ₹25 Lakhs | C2: Salaried | D2: Below Graduate | E2: Single | F2: Nil / New Regime | G2: Yes | H2: Yes | I2: Yes | J2: Yes | K2: Wealth Creation | L2: < 1 Year | M2: < ₹1 Lakh | N2: FD-like (6–7%) | O2: Yes – Monthly | P2: Sell Everything (Score 1) | Q2: Novice – Never invested | R2: Never | S2: < 10% of Savings | T2: Safety first – minimal risk | U2: Yes – Major Liabilities | V2: Very High | W2: Fully Utilised (₹1.5L) | X2: Yes – Fully Aware | Y2: Resident Indian | Z2: Yes – Fully Aware | AA2: Actively Managed | AB2: Growth Option | AC2: Email | AD2: Conservative | AE2: New Client | AF2: Immediate | AG2: Send Product Proposal | AI2: 18–25 | AJ2: < 1 Year | AK2: < ₹5 Lakhs | AL2: < ₹25 Lakhs | AM2: Sell Everything | AN2: Novice | AO2: Never | AP2: < 10% | AQ2: < 1 Week | AR2: Major Liabilities | AT2: 5.0 | AU2: 1.0 | AV2: 1.0 | AW2: 1.0 | AX2: 1.0 | AY2: 1.0 | AZ2: 1.0 | BA2: 1.0 | BB2: 1.0 | BC2: 1.0 | BD2: Conservative | BE2: < 1 Year | BF2: < ₹1 Lakh | BG2: High (< 1 Month) | BH2: Very High | BI2: Retail (< ₹5Cr NW)
+A3: ₹5–10 Lakhs | B3: ₹25–50 Lakhs | C3: Self-Employed | D3: Graduate | E3: Married | F3: 5% | G3: No | H3: No | I3: No | J3: No | K3: Retirement Planning | L3: 1–3 Years | M3: ₹1–5 Lakhs | N3: Moderate (10–12%) | O3: Yes – Quarterly | P3: Sell Some (Score 2) | Q3: Basic – FD/PPF only | R3: Less than 1 Year | S3: 10–25% | T3: Modest growth with low risk | U3: Yes – Minor Liabilities | V3: High | W3: Partially Utilised | X3: Aware but Need Clarity | Y3: NRI | Z3: Heard of It | AA3: Passively Managed (Index) | AB3: IDCW – Monthly | AC3: WhatsApp | AD3: Moderately Conservative | AE3: Annual Review | AF3: This Month | AG3: Schedule Follow-up | AI3: 26–35 | AJ3: 1–3 Years | AK3: ₹5–10 Lakhs | AL3: ₹25–50 Lakhs | AM3: Sell Some | AN3: Basic | AO3: < 1 Year | AP3: 10–25% | AQ3: 1–3 Months | AR3: Minor Liabilities | AT3: 5.0 | AU3: 2.0 | AV3: 2.0 | AW3: 2.0 | AX3: 2.0 | AY3: 2.0 | AZ3: 2.0 | BA3: 2.0 | BB3: 2.0 | BC3: 3.0 | BD3: Mod. Conservative | BE3: 1–3 Years | BF3: ₹1–5 Lakhs | BG3: Moderate (1–3 Months) | BH3: High | BI3: HNI (₹5Cr+ NW)
+A4: ₹10–25 Lakhs | B4: ₹50L–1 Crore | C4: Business Owner | D4: Post-Graduate | E4: Married with Children | F4: 10% | H4: Maybe | I4: Not Sure | J4: Partially | K4: Child's Education | L4: 3–5 Years | M4: ₹5–10 Lakhs | N4: Market-Linked (12–15%) | O4: Yes – Annually | P4: Hold & Wait (Score 3) | Q4: Intermediate – MF investor | R4: 1–3 Years | S4: 25–50% | T4: Balanced risk-return | U4: No Loans | V4: Moderate | W4: Not Utilised at All | X4: Not Aware | Y4: PIO / OCI | Z4: Not Aware | AA4: Both / No Preference | AB4: IDCW – Quarterly | AC4: Physical Mail | AD4: Moderate | AE4: Portfolio Rebalance | AF4: This Quarter | AG4: Complete KYC | AI4: 36–45 | AJ4: 3–5 Years | AK4: ₹10–25 Lakhs | AL4: ₹50L–1 Crore | AM4: Hold & Wait | AN4: Intermediate | AO4: 1–3 Years | AP4: 25–50% | AQ4: 3–12 Months | AR4: No Loans | AT4: 4.0 | AU4: 3.0 | AV4: 3.0 | AW4: 3.0 | AX4: 3.0 | AY4: 3.0 | AZ4: 3.0 | BA4: 3.0 | BB4: 3.0 | BC4: 5.0 | BD4: Moderate | BE4: 3–5 Years | BF4: ₹5–10 Lakhs | BG4: Low (3Y+ OK) | BH4: Moderate | BI4: Accredited Investor
+A5: ₹25–50 Lakhs | B5: ₹1–5 Crores | C5: Professional (Doctor/CA/Lawyer) | D5: Professional Degree | E5: Divorced / Widowed | F5: 15% | K5: Home Purchase | L5: 5–10 Years | M5: ₹10–25 Lakhs | N5: Aggressive (>15%) | O5: No | P5: Buy More (Score 4) | Q5: Advanced – Equity/PMS | R5: 3–5 Years | S5: 50–75% | T5: Growth with higher risk | V5: Low | Y5: Foreign National | AB5: IDCW – Annual | AC5: Mobile App | AD5: Moderately Aggressive | AE5: Goal Review | AF5: No Urgency | AG5: Risk Profiling Pending | AI5: 46–55 | AJ5: 5–10 Years | AK5: ₹25–50 Lakhs | AL5: ₹1–5 Crores | AM5: Buy More | AN5: Advanced | AO5: 3–5 Years | AP5: 50–75% | AQ5: 1–3 Years | AT5: 3.0 | AU5: 4.0 | AV5: 4.0 | AW5: 4.0 | AX5: 4.0 | AY5: 4.0 | AZ5: 4.0 | BA5: 4.0 | BB5: 4.0 | BD5: Mod. Aggressive | BE5: 5–10 Years | BF5: ₹10–25 Lakhs | BG5: Very Low (5Y+ OK) | BH5: Low | BI5: Institutional
+A6: ₹50L–1 Crore | B6: ₹5–10 Crores | C6: Retired | F6: 20% | K6: Tax Saving | L6: > 10 Years | M6: ₹25–50 Lakhs | P6: Buy Very Aggressively (Score 5) | Q6: Expert – Derivatives/AIF | R6: > 5 Years | S6: > 75% | T6: Maximum returns at any risk | V6: Not a Priority | AB6: No Preference | AD6: Aggressive | AE6: Other | AG6: Awaiting Client Decision | AI6: 56–65 | AJ6: > 10 Years | AK6: > ₹50 Lakhs | AL6: > ₹5 Crores | AM6: Buy Very Aggressively | AN6: Expert | AO6: > 5 Years | AP6: > 75% | AQ6: > 3 Years | AT6: 2.0 | AU6: 5.0 | AV6: 5.0 | AW6: 5.0 | AX6: 5.0 | AY6: 5.0 | AZ6: 5.0 | BA6: 5.0 | BB6: 5.0 | BD6: Aggressive | BE6: > 10 Years | BF6: ₹25–50 Lakhs | BH6: Not a Priority
+A7: > ₹1 Crore | B7: > ₹10 Crores | C7: Other | F7: 30% | K7: Regular Income | M7: ₹50L–1 Crore | AD7: Very Aggressive | AG7: Closed – Invested | AI7: 66+ | AT7: 1.0 | BD7: Very Aggressive | BF7: ₹50L–1 Crore
+K8: Capital Preservation | M8: > ₹1 Crore | BF8: > ₹1 Crore
+K9: Legacy / Estate Planning
+============================================================
+SHEET: Risk Score Calculator
+============================================================
+B2: CLIENT RISK SCORE CALCULATOR
+B3: Select client response from each dropdown — Score auto-calculates
+B5: Parameter | C5: Client Response (Select ▼) | D5: Score | E5: Max | F5: Weight
+B6: Age (years) | C6: 26–35 | D6: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed37548e0> | E6: 5.0 | F6: 10%
+B7: Investment Horizon | C7: 3–5 Years | D7: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3754a30> | E7: 5.0 | F7: 10%
+B8: Annual Income | C8: ₹25–50 Lakhs | D8: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3754b80> | E8: 5.0 | F8: 10%
+B9: Net Worth | C9: < ₹25 Lakhs | D9: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3754cd0> | E9: 5.0 | F9: 10%
+B10: Reaction to 20% Portfolio Fall | C10: Sell Everything | D10: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3754e20> | E10: 5.0 | F10: 10%
+B11: Investment Knowledge Level | C11: Basic | D11: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3754f70> | E11: 5.0 | F11: 10%
+B12: Prior Capital Market Experience | C12: < 1 Year | D12: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed37550c0> | E12: 5.0 | F12: 10%
+B13: % of Savings Willing to Risk | C13: 10–25% | D13: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3755210> | E13: 5.0 | F13: 10%
+B14: Liquidity Requirement | C14: 1–3 Months | D14: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed3755360> | E14: 5.0 | F14: 10%
+B15: Loans / Liabilities | C15: Minor Liabilities | D15: <openpyxl.worksheet.formula.ArrayFormula object at 0x719ed37554b0> | E15: 5.0 | F15: 10%
+B16: TOTAL RISK SCORE | D16: =IFERROR(SUM(D6:D15),"") | E16: 50.0
+B17: RISK PROFILE (Auto) | D17: =IF(D16="","",IF(D16<=17,"Conservative",IF(D16<=25,"Moderately Conservative",IF(D16<=33,"Moderate",IF(D16<=40,"Moderately Aggressive",IF(D16<=47,"Aggressive","Very Aggressive"))))))
+B19: RISK PROFILE SCORE MAPPING
+B20: Score | C20: Profile | D20: Suitable Products
+B21: 10–17 | C21: Conservative | D21: Debt MF, Liquid MF, Insurance, FD
+B22: 18–25 | C22: Mod. Conservative | D22: Balanced MF, Insurance, Large Cap MF
+B23: 26–33 | C23: Moderate | D23: Hybrid MF, Balanced Advantage Fund, PMS sel.
+B24: 34–40 | C24: Mod. Aggressive | D24: Equity MF, PMS, SIF
+B25: 41–47 | C25: Aggressive | D25: Direct Equity, PMS, AIF, SIF
+B26: 48–50 | C26: Very Aggressive | D26: Direct Equity, AIF Cat III, International
+B28: ⚠ Score is auto-calculated when client response is selected from dropdown. Total and Profile update automatically.
+============================================================
+SHEET: Suitability Check
+============================================================
+B2: QUICK PRODUCT SUITABILITY CHECK
+B3: Select client profile inputs — suitability auto-fills
+B5:   CLIENT INPUTS
+B6: Risk Profile: | C6: Mod. Conservative
+B7: Investment Horizon: | C7: 1–3 Years
+B8: Investable Surplus: | C8: ₹1–5 Lakhs
+B9: Liquidity Need: | C9: Moderate (1–3 Months)
+B10: Tax Saving Priority: | C10: Very High
+B11: Investor Category: | C11: HNI (₹5Cr+ NW)
+B14:   SUITABILITY RESULT (Auto)
+B15: Suitability Dimension | C15: Mutual
+Funds | D15: Direct
+Equity | E15: Insurance
+(Life/ULIP) | F15: PMS | G15: AIF | H15: SIF
+B16: Based on Risk Profile | C16: =IF(C6="","—",IF(OR(C6="Conservative",C6="Mod. Conservative",C6="Moderate",C6="Mod. Aggressive",C6="Aggressive",C6="Very Aggressive"),"✅","❌")) | D16: =IF(C6="","—",IF(OR(C6="Mod. Aggressive",C6="Aggressive",C6="Very Aggressive"),"✅",IF(OR(C6="Moderate"),"⚠","❌"))) | E16: =IF(C6="","—",IF(OR(C6="Conservative",C6="Mod. Conservative",C6="Moderate"),"✅","⚠")) | F16: =IF(C6="","—",IF(OR(C6="Mod. Aggressive",C6="Aggressive",C6="Very Aggressive"),"✅",IF(C6="Moderate","⚠","❌"))) | G16: =IF(C6="","—",IF(OR(C6="Aggressive",C6="Very Aggressive"),"✅",IF(C6="Mod. Aggressive","⚠","❌"))) | H16: =IF(C6="","—",IF(OR(C6="Mod. Aggressive",C6="Aggressive",C6="Very Aggressive"),"✅",IF(C6="Moderate","⚠","❌")))
+B17: Based on Horizon | C17: =IF(C7="","—","✅") | D17: =IF(C7="","—",IF(OR(C7="3–5 Years",C7="5–10 Years",C7="> 10 Years"),"✅",IF(C7="1–3 Years","⚠","❌"))) | E17: =IF(C7="","—",IF(OR(C7="5–10 Years",C7="> 10 Years"),"✅",IF(C7="3–5 Years","⚠","❌"))) | F17: =IF(C7="","—",IF(OR(C7="3–5 Years",C7="5–10 Years",C7="> 10 Years"),"✅",IF(C7="1–3 Years","⚠","❌"))) | G17: =IF(C7="","—",IF(OR(C7="5–10 Years",C7="> 10 Years"),"✅",IF(C7="3–5 Years","⚠","❌"))) | H17: =IF(C7="","—",IF(OR(C7="3–5 Years",C7="5–10 Years",C7="> 10 Years"),"✅","⚠"))
+B18: Based on Investable Surplus | C18: =IF(C8="","—","✅") | D18: =IF(C8="","—",IF(OR(C8="₹1–5 Lakhs",C8="₹5–10 Lakhs",C8="₹10–25 Lakhs",C8="₹25–50 Lakhs",C8="₹50L–1 Crore",C8="> ₹1 Crore"),"✅","⚠")) | E18: =IF(C8="","—","✅") | F18: =IF(C8="","—",IF(OR(C8="₹25–50 Lakhs",C8="₹50L–1 Crore",C8="> ₹1 Crore"),"✅",IF(C8="₹10–25 Lakhs","⚠","❌"))) | G18: =IF(C8="","—",IF(C8="> ₹1 Crore","✅",IF(C8="₹50L–1 Crore","⚠","❌"))) | H18: =IF(C8="","—",IF(OR(C8="₹10–25 Lakhs",C8="₹25–50 Lakhs",C8="₹50L–1 Crore",C8="> ₹1 Crore"),"✅",IF(C8="₹5–10 Lakhs","⚠","❌")))
+B19: Based on Liquidity Need | C19: =IF(C9="","—","✅") | D19: =IF(C9="","—",IF(OR(C9="Moderate (1–3 Months)",C9="Low (3Y+ OK)",C9="Very Low (5Y+ OK)"),"✅","⚠")) | E19: =IF(C9="","—",IF(OR(C9="Low (3Y+ OK)",C9="Very Low (5Y+ OK)"),"✅",IF(C9="Moderate (1–3 Months)","⚠","❌"))) | F19: =IF(C9="","—",IF(OR(C9="Low (3Y+ OK)",C9="Very Low (5Y+ OK)"),"✅",IF(C9="Moderate (1–3 Months)","⚠","❌"))) | G19: =IF(C9="","—",IF(C9="Very Low (5Y+ OK)","✅",IF(C9="Low (3Y+ OK)","⚠","❌"))) | H19: =IF(C9="","—",IF(OR(C9="Low (3Y+ OK)",C9="Very Low (5Y+ OK)"),"✅","⚠"))
+B21: Legend:  ✅ Suitable for this client   ⚠ Conditionally Suitable   ❌ Not Suitable   — (Input not yet selected)
+B22: ⚠ Select client inputs (yellow cells above) to auto-generate suitability. Final recommendation subject to complete KYC and risk profiling.

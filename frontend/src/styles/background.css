@@ -1,0 +1,238 @@
+/* Premium warm background — complements red primary (#D72638) */
+
+:root {
+  --bg-base: #faf8f6;
+  --bg-warm: #fbf6f3;
+  --bg-cream: #fffbf8;
+  --bg-rose-wash: #fff5f3;
+  --bg-beige: #f5efe9;
+
+  --glow-red-soft: rgba(215, 38, 56, 0.07);
+  --glow-red-ambient: rgba(215, 38, 56, 0.11);
+  --glow-rose: rgba(255, 228, 222, 0.55);
+  --glow-peach: rgba(255, 237, 228, 0.45);
+  --glow-warm-grey: rgba(168, 162, 158, 0.12);
+  --glow-cream: rgba(255, 250, 245, 0.85);
+
+  --card-surface: rgba(255, 255, 255, 0.78);
+  --card-surface-hover: rgba(255, 255, 255, 0.9);
+  --sidebar-surface: rgba(255, 255, 255, 0.82);
+  --nav-surface: rgba(250, 248, 246, 0.72);
+
+  --shadow-soft:
+    0 1px 2px 0 rgb(120 90 80 / 0.04),
+    0 1px 3px 0 rgb(120 90 80 / 0.05);
+  --shadow-card:
+    0 4px 24px -6px rgb(120 80 70 / 0.08),
+    0 0 0 1px rgb(255 255 255 / 0.65) inset;
+  --shadow-card-glow: 0 8px 36px -10px rgb(215 38 56 / 0.1);
+
+  /* Warmer neutrals — background layers only */
+  --background: oklch(0.985 0.006 55);
+  --secondary: oklch(0.97 0.008 55);
+  --muted: oklch(0.97 0.007 55);
+  --border: oklch(0.91 0.01 55);
+  --sidebar-border: oklch(0.91 0.012 55);
+}
+
+.app-canvas {
+  min-height: 100dvh;
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse 110% 70% at 50% -15%, var(--glow-rose) 0%, transparent 52%),
+    radial-gradient(ellipse 80% 55% at 100% 20%, var(--glow-peach) 0%, transparent 48%),
+    radial-gradient(ellipse 75% 50% at 0% 75%, var(--glow-cream) 0%, transparent 45%),
+    radial-gradient(ellipse 50% 40% at 85% 90%, var(--glow-red-soft) 0%, transparent 55%),
+    linear-gradient(168deg, var(--bg-cream) 0%, var(--bg-base) 42%, var(--bg-warm) 100%);
+}
+
+/* Decorative stack */
+.app-background__base {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    transparent 30%,
+    transparent 68%,
+    rgba(255, 245, 240, 0.35) 100%
+  );
+}
+
+.app-background__blob {
+  filter: blur(72px);
+  will-change: transform;
+}
+
+.app-background__blob--rose-tr {
+  background: radial-gradient(
+    circle at 35% 35%,
+    var(--glow-rose) 0%,
+    rgba(254, 226, 220, 0.25) 40%,
+    transparent 70%
+  );
+  opacity: 0.9;
+}
+
+.app-background__blob--red-bl {
+  background: radial-gradient(
+    circle at 55% 55%,
+    var(--glow-red-soft) 0%,
+    rgba(255, 235, 230, 0.15) 50%,
+    transparent 72%
+  );
+  opacity: 0.85;
+}
+
+.app-background__blob--beige-br {
+  background: radial-gradient(
+    circle at 50% 50%,
+    var(--glow-peach) 0%,
+    rgba(250, 240, 232, 0.2) 55%,
+    transparent 75%
+  );
+  filter: blur(64px);
+  opacity: 0.75;
+}
+
+.app-background__blob--warm-tl {
+  background: radial-gradient(
+    circle at 40% 40%,
+    var(--glow-warm-grey) 0%,
+    transparent 68%
+  );
+  filter: blur(56px);
+  opacity: 0.55;
+}
+
+.app-background__glow {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(255, 240, 235, 0.4) 0%,
+    rgba(255, 248, 245, 0.15) 42%,
+    transparent 72%
+  );
+  filter: blur(44px);
+}
+
+.app-background__wave {
+  pointer-events: none;
+}
+
+.app-background__wave--upper {
+  opacity: 0.5;
+  animation: app-wave-drift 30s ease-in-out infinite alternate;
+}
+
+.app-background__wave--lower {
+  opacity: 0.65;
+  animation: app-wave-drift 36s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes app-wave-drift {
+  0% {
+    transform: translateX(0) scaleY(1);
+  }
+  100% {
+    transform: translateX(-1.5%) scaleY(1.015);
+  }
+}
+
+.app-background__noise {
+  opacity: 0.28;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 180px 180px;
+}
+
+/* Frosted surfaces — dimensions unchanged */
+.app-surface-card {
+  background: var(--card-surface) !important;
+  backdrop-filter: blur(14px) saturate(1.12);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+  border-color: oklch(0.91 0.014 40 / 0.7) !important;
+  box-shadow: var(--shadow-card), var(--shadow-card-glow);
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.app-surface-card:hover {
+  background: var(--card-surface-hover) !important;
+}
+
+.app-surface-sidebar {
+  background: var(--sidebar-surface) !important;
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  border-color: oklch(0.91 0.014 40 / 0.6) !important;
+}
+
+.app-surface-nav {
+  background: var(--nav-surface) !important;
+  backdrop-filter: blur(16px) saturate(1.12);
+  -webkit-backdrop-filter: blur(16px) saturate(1.12);
+  border-color: oklch(0.9 0.012 40 / 0.5) !important;
+}
+
+.app-surface-interactive {
+  background: var(--card-surface) !important;
+  backdrop-filter: blur(12px) saturate(1.1);
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  box-shadow: var(--shadow-card);
+  transition:
+    background 0.25s ease,
+    box-shadow 0.3s ease,
+    border-color 0.25s ease;
+}
+
+.app-surface-interactive:hover {
+  background: var(--card-surface-hover) !important;
+  box-shadow: var(--shadow-card), var(--shadow-card-glow);
+}
+
+.app-surface-muted {
+  background: rgba(255, 252, 250, 0.5) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-surface-panel {
+  background: var(--card-surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+
+.rounded-xl.border.border-border.bg-card:not(input):not(textarea):not(select) {
+  background: var(--card-surface);
+  backdrop-filter: blur(12px) saturate(1.08);
+  -webkit-backdrop-filter: blur(12px) saturate(1.08);
+  box-shadow: var(--shadow-soft);
+}
+
+.rounded-xl.border-2.border-dashed.border-border.bg-card {
+  background: rgba(255, 252, 250, 0.48);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.rounded-lg.border.border-border.bg-card:not(button) {
+  background: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.rounded-full.border.border-border.bg-card {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-background__wave--upper,
+  .app-background__wave--lower {
+    animation: none;
+  }
+}

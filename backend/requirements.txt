@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+python-dotenv
+python-jose
+passlib
+bcrypt
+httpx
+asyncpg
+redis
+httpx
+google-api-python-client
+google-auth
+python-multipart
