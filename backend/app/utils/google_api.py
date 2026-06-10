@@ -33,18 +33,8 @@ def get_google_auth_url() -> str:
     print(f"scopes: {scopes}")
     print("--------------------------------------------------")
     
-    # 2. Strict redirect URI validation check
-    expected_uris = [
-        "http://localhost:8000/auth/google/callback",
-        "http://127.0.0.1:8000/auth/google/callback"
-    ]
-    if not GOOGLE_REDIRECT_URI or GOOGLE_REDIRECT_URI not in expected_uris:
-        error_msg = (
-            f"Validation failed: redirect_uri '{GOOGLE_REDIRECT_URI}' does not match "
-            f"configured values: {expected_uris}"
-        )
-        print(f"ERROR: {error_msg}")
-        raise ValueError(error_msg)
+    # 2. Log redirect URI config
+    print(f"GOOGLE_REDIRECT_URI: {GOOGLE_REDIRECT_URI}")
         
     url = (
         "https://accounts.google.com/o/oauth2/v2/auth"

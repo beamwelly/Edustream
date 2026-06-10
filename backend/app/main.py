@@ -42,13 +42,6 @@ async def lifespan(app: FastAPI):
     print(f"GOOGLE_CLIENT_ID: {google_client_id}")
     print(f"GOOGLE_REDIRECT_URI: {google_redirect_uri}")
     print("--------------------------------------------------")
-    
-    expected_uri = "http://localhost:8000/auth/google/callback"
-    if google_redirect_uri != expected_uri:
-        raise RuntimeError(
-            f"GOOGLE OAUTH STARTUP MISMATCH ERROR: GOOGLE_REDIRECT_URI is "
-            f"'{google_redirect_uri}', but must be '{expected_uri}' character-for-character."
-        )
 
     # Dynamically create all tables in Neon PostgreSQL on start
     async with engine.begin() as conn:
@@ -190,21 +183,26 @@ async def validation_exception_handler(request, exc):
         status_code=422,
         content={"detail": exc.errors()},
     )
-frontend_origin = os.getenv("FRONTEND_URL", "http://localhost:8081")
+frontend_origins_str = os.getenv("FRONTEND_URL", "")
+frontend_origins = [origin.strip() for origin in frontend_origins_str.split(",") if origin.strip()]
+
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000"
+]
+for origin in frontend_origins:
+    if origin not in allowed_origins:
+        allowed_origins.append(origin)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        frontend_origin,
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8081",
-        "http://127.0.0.1:8081",
-        "http://localhost:8080",
-        "http://127.0.0.1:8080",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000"
-    ],
+    allow_origins=allowed_origins,
     allow_origin_regex="https?://(localhost|127\\.0\\.0\\.1)(:\\d+)?",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],

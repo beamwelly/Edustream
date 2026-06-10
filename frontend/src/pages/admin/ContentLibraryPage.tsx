@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
+import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { 
@@ -75,10 +76,8 @@ const getDownloadUrl = (item: ContentItem) => {
 };
 
 const triggerDownload = (item: ContentItem) => {
-  if (!item) return;
   const token = localStorage.getItem("token") || "";
-  const backendBase = window.location.origin.replace("5173", "8000").replace("8081", "8000");
-  const downloadUrl = `${backendBase}/content/download/${item.id}?token=${encodeURIComponent(token)}`;
+  const downloadUrl = `${API_URL}/content/download/${item.id}?token=${encodeURIComponent(token)}`;
 
   // Determine original filename with extension reconstructed if missing
   let filename = item.original_filename || item.title || "download";
@@ -472,7 +471,7 @@ export function ContentLibraryPage() {
 
     try {
       // Send dynamic multipart data to upload
-      await fetch("http://localhost:8000/content/upload", {
+      await fetch(`${API_URL}/content/upload`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("token")}`
@@ -588,7 +587,7 @@ export function ContentLibraryPage() {
         }
       }
 
-      const response = await fetch("http://localhost:8000/content/bulk-upload", {
+      const response = await fetch(`${API_URL}/content/bulk-upload`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
