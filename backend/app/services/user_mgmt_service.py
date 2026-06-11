@@ -2,6 +2,7 @@ import re
 import secrets
 import string
 import io
+import os
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
