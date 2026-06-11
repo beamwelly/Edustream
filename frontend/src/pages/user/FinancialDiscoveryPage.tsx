@@ -641,7 +641,7 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(14);
-      doc.text("EDUSTREAM | FINANCIAL DISCOVERY", 15, 10);
+      doc.text("MASTERCLASS | FINANCIAL DISCOVERY", 15, 10);
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
       doc.text(title.toUpperCase(), 15, 17);
@@ -1207,20 +1207,26 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
                     <BarChart3 className="h-4.5 w-4.5 text-primary" /> Assets vs Liabilities
                   </h4>
                   <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={[
-                        { name: "Assets", amount: totalAssets, color: "#166534" },
-                        { name: "Liabilities", amount: totalLiabilities, color: "#DC2626" }
-                      ]}>
-                        <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
-                        <YAxis tick={{ fontSize: 9 }} />
-                        <Tooltip formatter={(value) => formatIndianCurrency(Number(value))} />
-                        <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={45}>
-                          <Cell fill="#166534" />
-                          <Cell fill="#DC2626" />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {totalAssets === 0 && totalLiabilities === 0 ? (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        No assets or liabilities configured.
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { name: "Assets", amount: totalAssets, color: "#166534" },
+                          { name: "Liabilities", amount: totalLiabilities, color: "#DC2626" }
+                        ]}>
+                          <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 600 }} />
+                          <YAxis tick={{ fontSize: 9 }} />
+                          <Tooltip formatter={(value) => formatIndianCurrency(Number(value))} />
+                          <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={45}>
+                            <Cell fill="#166534" />
+                            <Cell fill="#DC2626" />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </Card>
 
@@ -1265,22 +1271,28 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
                     <ShieldAlert className="h-4.5 w-4.5 text-primary" /> Life Insurance Adequacy Gap
                   </h4>
                   <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={[
-                        { name: "Recommended", amount: recommendedLifeCover },
-                        { name: "Existing Cover", amount: totalLifeCover },
-                        { name: "Coverage Gap", amount: lifeCoverageGap > 0 ? lifeCoverageGap : 0 }
-                      ]}>
-                        <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 600 }} />
-                        <YAxis tick={{ fontSize: 9 }} />
-                        <Tooltip formatter={(value) => formatIndianCurrency(Number(value))} />
-                        <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={35}>
-                          <Cell fill="#4B5563" />
-                          <Cell fill="#166534" />
-                          <Cell fill="#DC2626" />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {recommendedLifeCover === 0 && totalLifeCover === 0 ? (
+                      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                        No life insurance coverage data configured.
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={[
+                          { name: "Recommended", amount: recommendedLifeCover },
+                          { name: "Existing Cover", amount: totalLifeCover },
+                          { name: "Coverage Gap", amount: lifeCoverageGap > 0 ? lifeCoverageGap : 0 }
+                        ]}>
+                          <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 600 }} />
+                          <YAxis tick={{ fontSize: 9 }} />
+                          <Tooltip formatter={(value) => formatIndianCurrency(Number(value))} />
+                          <Bar dataKey="amount" radius={[4, 4, 0, 0]} barSize={35}>
+                            <Cell fill="#4B5563" />
+                            <Cell fill="#166534" />
+                            <Cell fill="#DC2626" />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </Card>
               </div>

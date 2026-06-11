@@ -96,7 +96,7 @@ function LoginPageComponent() {
       <div className="relative z-10 flex w-full max-w-md flex-col">
         {/* Brand Logo Header */}
         <div className="mb-8 flex items-center justify-center gap-3">
-          <img src="/logo.png" alt="EduStream Logo" className="h-10 w-auto object-contain" />
+          <img src="/logo.png" alt="Masterclass Logo" className="h-10 w-auto object-contain" />
           <div className="text-left">
             <h1 className="text-xl font-bold tracking-tight leading-none text-[#1F2937]">{APP_NAME}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">{APP_TAGLINE}</p>

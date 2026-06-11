@@ -377,7 +377,7 @@ export function MeetingsPage() {
                     <div>
                       <h4 className="text-base font-semibold">{r.title}</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Requested by: <strong className="text-foreground">{r.requested_by?.full_name} ({r.requested_by?.role || "user"}) [{r.requested_by?.organization_name || "EduStream"}]</strong> ({r.requested_by?.email}) • Preferred: <strong>{r.meeting_date} at {r.start_time}</strong>
+                        Requested by: <strong className="text-foreground">{r.requested_by?.full_name} ({r.requested_by?.role || "user"}) [{r.requested_by?.organization_name || "Masterclass"}]</strong> ({r.requested_by?.email}) • Preferred: <strong>{r.meeting_date} at {r.start_time}</strong>
                       </p>
                       {r.agenda && <p className="mt-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/40 inline-block">{r.agenda}</p>}
                     </div>
@@ -411,7 +411,7 @@ export function MeetingsPage() {
                     <div>
                       <h4 className="text-base font-semibold">{r.title}</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Accepted by: <strong className="text-foreground">{r.requested_to?.full_name} ({r.requested_to?.role || "admin"}) [{r.requested_to?.organization_name || "EduStream"}]</strong> ({r.requested_to?.email}) • Date: <strong>{r.meeting_date} at {r.start_time}</strong>
+                        Accepted by: <strong className="text-foreground">{r.requested_to?.full_name} ({r.requested_to?.role || "admin"}) [{r.requested_to?.organization_name || "Masterclass"}]</strong> ({r.requested_to?.email}) • Date: <strong>{r.meeting_date} at {r.start_time}</strong>
                       </p>
                       {r.agenda && <p className="mt-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/40 inline-block">{r.agenda}</p>}
                     </div>
@@ -445,7 +445,7 @@ export function MeetingsPage() {
                     <div>
                       <h4 className="text-base font-semibold">{r.title}</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Sent to: <strong className="text-foreground">{r.requested_to?.full_name || "Unknown"} ({r.requested_to?.role || "user"}) [{r.requested_to?.organization_name || "EduStream"}]</strong> ({r.requested_to?.email}) • Proposed: <strong>{r.meeting_date} at {r.start_time}</strong>
+                        Sent to: <strong className="text-foreground">{r.requested_to?.full_name || "Unknown"} ({r.requested_to?.role || "user"}) [{r.requested_to?.organization_name || "Masterclass"}]</strong> ({r.requested_to?.email}) • Proposed: <strong>{r.meeting_date} at {r.start_time}</strong>
                       </p>
                       {r.agenda && <p className="mt-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/40 inline-block">{r.agenda}</p>}
                     </div>
@@ -484,7 +484,7 @@ export function MeetingsPage() {
                           <strong className="text-foreground">{activeNotesMeeting.requested_by?.full_name}</strong>
                           <span className="text-[10px] text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded capitalize">{activeNotesMeeting.requested_by?.role}</span>
                         </span>
-                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_by?.organization_name || "EduStream"}</Badge>
+                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_by?.organization_name || "Masterclass"}</Badge>
                       </div>
                       <div className="flex items-center justify-between pt-0.5">
                         <span className="flex items-center gap-1.5">
@@ -492,7 +492,7 @@ export function MeetingsPage() {
                           <strong className="text-foreground">{activeNotesMeeting.requested_to?.full_name}</strong>
                           <span className="text-[10px] text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded capitalize">{activeNotesMeeting.requested_to?.role}</span>
                         </span>
-                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_to?.organization_name || "EduStream"}</Badge>
+                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_to?.organization_name || "Masterclass"}</Badge>
                       </div>
                     </div>
                     
@@ -605,8 +605,8 @@ export function MeetingsPage() {
                     </div>
                     <h4 className="text-sm font-semibold text-foreground truncate">{u.title}</h4>
                     <p className="text-xs text-muted-foreground mt-1">Date: {u.meeting_date}</p>
-                    <p className="text-xs text-muted-foreground truncate" title={`${u.requested_by?.full_name} (${u.requested_by?.role || "user"}) [${u.requested_by?.organization_name || "EduStream"}] & ${u.requested_to?.full_name} (${u.requested_to?.role || "admin"}) [${u.requested_to?.organization_name || "EduStream"}]`}>
-                      Between: {u.requested_by?.full_name} ({u.requested_by?.organization_name || "EduStream"}) & {u.requested_to?.full_name} ({u.requested_to?.organization_name || "EduStream"})
+                    <p className="text-xs text-muted-foreground truncate" title={`${u.requested_by?.full_name} (${u.requested_by?.role || "user"}) [${u.requested_by?.organization_name || "Masterclass"}] & ${u.requested_to?.full_name} (${u.requested_to?.role || "admin"}) [${u.requested_to?.organization_name || "Masterclass"}]`}>
+                      Between: {u.requested_by?.full_name} ({u.requested_by?.organization_name || "Masterclass"}) & {u.requested_to?.full_name} ({u.requested_to?.organization_name || "Masterclass"})
                     </p>
                     {u.google_meet_link && (
                       <a href={u.google_meet_link} target="_blank" rel="noreferrer" className="mt-3 block" onClick={e => e.stopPropagation()}>
@@ -654,11 +654,11 @@ export function MeetingsPage() {
                         <td className="px-6 py-4 font-medium text-foreground">{h.title}</td>
                         <td className="px-6 py-4 text-muted-foreground text-xs">
                           <div>
-                            <strong className="text-foreground">{h.requested_by?.full_name}</strong> ({h.requested_by?.role || "user"}) [{h.requested_by?.organization_name || "EduStream"}]
+                            <strong className="text-foreground">{h.requested_by?.full_name}</strong> ({h.requested_by?.role || "user"}) [{h.requested_by?.organization_name || "Masterclass"}]
                           </div>
                           <div className="text-[10px] my-0.5 text-muted-foreground">and</div>
                           <div>
-                            <strong className="text-foreground">{h.requested_to?.full_name}</strong> ({h.requested_to?.role || "admin"}) [{h.requested_to?.organization_name || "EduStream"}]
+                            <strong className="text-foreground">{h.requested_to?.full_name}</strong> ({h.requested_to?.role || "admin"}) [{h.requested_to?.organization_name || "Masterclass"}]
                           </div>
                         </td>
                         <td className="px-6 py-4 text-muted-foreground text-xs">{h.meeting_date} @ {h.start_time}</td>
@@ -801,7 +801,7 @@ export function MeetingsPage() {
                         >
                           <div className="text-left">
                             <div className="font-semibold text-foreground capitalize">{u.full_name} ({u.role || "user"})</div>
-                            <div className="text-[10px] text-muted-foreground">{u.organization_name || "EduStream"} · {u.email}</div>
+                            <div className="text-[10px] text-muted-foreground">{u.organization_name || "Masterclass"} · {u.email}</div>
                           </div>
                           <div className="font-bold text-primary text-xs">
                             {isSelected ? "✓ Selected" : "+ Add"}

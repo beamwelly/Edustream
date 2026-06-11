@@ -126,7 +126,7 @@ async def lifespan(app: FastAPI):
             # Fallback company_name for super_admin
             await conn.execute(text("""
                 UPDATE users
-                SET company_name = 'EduStream'
+                SET company_name = 'Masterclass'
                 WHERE (company_name IS NULL OR company_name = '');
             """))
             # Role migration removed to prevent resetting admin users to standard users on reload
@@ -167,7 +167,7 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 app = FastAPI(
-    title="EduStream API",
+    title="Masterclass API",
     description="Learning platform API",
     version="0.1.0",
     lifespan=lifespan
@@ -249,7 +249,7 @@ app.include_router(needs_discovery_router)
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "edustream-api"}
+    return {"status": "ok", "service": "masterclass-api"}
 
 from app.services.email_service import send_email_async
 
@@ -258,11 +258,11 @@ async def test_email(to: str):
     """
     Simple test endpoint to verify SMTP configuration and send a test email.
     """
-    subject = "EduStream SMTP Connection Test"
+    subject = "Masterclass SMTP Connection Test"
     body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #4F46E5;">EduStream SMTP Connection Success!</h2>
+            <h2 style="color: #4F46E5;">Masterclass SMTP Connection Success!</h2>
             <p>This is a test email sent from the FastAPI backend to verify your Gmail SMTP integration.</p>
             <p><strong>SMTP Host:</strong> {os.getenv("SMTP_HOST")}</p>
             <p><strong>Sender Email:</strong> {os.getenv("SMTP_FROM")}</p>

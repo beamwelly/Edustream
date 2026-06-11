@@ -202,7 +202,7 @@ export function UserMeetingsPage() {
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
-                        {u.full_name} ({u.role === "admin" ? "Admin" : u.organization_name || "EduStream"})
+                        {u.full_name} ({u.role === "admin" ? "Admin" : u.organization_name || "Masterclass"})
                       </option>
                     ))}
                   </select>

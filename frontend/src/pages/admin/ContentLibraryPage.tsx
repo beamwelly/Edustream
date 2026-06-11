@@ -881,7 +881,7 @@ export function ContentLibraryPage() {
             {/* Organization / Company Uploader Info Display */}
             <div className="flex flex-col text-left mb-2.5 border-t border-border/40 pt-2.5">
               <span className="text-xs font-bold text-foreground truncate">Uploaded by: {item.uploaded_by}</span>
-              <span className="text-[10px] text-muted-foreground truncate">{item.organization_name || "EduStream"}</span>
+              <span className="text-[10px] text-muted-foreground truncate">{item.organization_name || "Masterclass"}</span>
             </div>
 
             {/* Premium details */}
@@ -1351,7 +1351,7 @@ export function ContentLibraryPage() {
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-foreground">{item.uploaded_by}</span>
-                        <span className="text-[10px] text-muted-foreground">{item.organization_name || "EduStream"}</span>
+                        <span className="text-[10px] text-muted-foreground">{item.organization_name || "Masterclass"}</span>
                       </div>
                     </td>
                     <td className="p-4 text-muted-foreground text-xs font-bold">{mockDownloads}</td>

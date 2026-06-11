@@ -77,7 +77,7 @@ async def create_standard_user(
     await db.flush()
 
     # Assemble HTML Email content (using the new red #E53935 branding)
-    email_subject = "Welcome to EduStream - Onboarding Credentials"
+    email_subject = "Welcome to Masterclass - Onboarding Credentials"
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8081")
     login_url = f"{frontend_url}/login"
     
@@ -85,13 +85,13 @@ async def create_standard_user(
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1a202c;">
          <div style="text-align: center; margin-bottom: 20px;">
               <div style="display: inline-block; padding: 10px 20px; background-color: #E53935; color: #ffffff; font-weight: bold; font-size: 24px; border-radius: 8px;">
-                   E
+                   M
               </div>
-              <h2 style="color: #E53935; margin-top: 10px; font-size: 20px; font-weight: 600;">Welcome to EduStream!</h2>
+              <h2 style="color: #E53935; margin-top: 10px; font-size: 20px; font-weight: 600;">Welcome to Masterclass!</h2>
          </div>
          
          <p>Hello <strong>{full_name_clean}</strong>,</p>
-         <p>You have been added as a User under: <strong>{company_name_clean}</strong> on the <strong>EduStream Learning & Content Platform</strong>.</p>
+         <p>You have been added as a User under: <strong>{company_name_clean}</strong> on the <strong>Masterclass Learning & Content Platform</strong>.</p>
          <p>Below are your secure temporary credentials:</p>
          
          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 25px 0;">
@@ -109,7 +109,7 @@ async def create_standard_user(
         </div>
         
         <p style="margin-top: 25px;">Should you have any questions or require custom setup help, please do not hesitate to contact our platform assistance team.</p>
-        <p style="margin-bottom: 0;">Warm regards,<br/><strong>The EduStream Team</strong></p>
+        <p style="margin-bottom: 0;">Warm regards,<br/><strong>The Masterclass Team</strong></p>
         
         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0 20px 0;" />
         <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">This is an automated notification. Please do not reply directly to this email.</p>

@@ -16,9 +16,9 @@ export function DashboardSidebar({ roleLabel, nav, footerNav }: DashboardSidebar
   return (
     <aside className="app-surface-sidebar fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <img src="/logo.png" alt="EduStream Logo" className="h-10 w-auto object-contain" />
+        <img src="/logo.png" alt="Masterclass Logo" className="h-10 w-auto object-contain" />
         <div>
-          <h1 className="text-base font-semibold text-foreground">EduStream</h1>
+          <h1 className="text-base font-semibold text-foreground">Masterclass</h1>
           <p className="text-xs text-muted-foreground capitalize">
             {user?.role ? (user.role === "admin" ? "Admin Dashboard" : "User Dashboard") : roleLabel}
           </p>

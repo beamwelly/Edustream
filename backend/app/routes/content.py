@@ -313,7 +313,7 @@ async def list_content_items(
     user_orgs = {}
     for u in users:
         if u.full_name:
-            user_orgs[u.full_name] = u.company_name or "EduStream"
+            user_orgs[u.full_name] = u.company_name or "Masterclass"
 
     async def process_item(item):
         # Explicit required logging
@@ -356,7 +356,7 @@ async def list_content_items(
             "warning": item_warning,
             "mime_type": item.mime_type,
             "folder": item.folder,
-            "organization_name": user_orgs.get(item.uploaded_by, "EduStream")
+            "organization_name": user_orgs.get(item.uploaded_by, "Masterclass")
         }
 
     import asyncio

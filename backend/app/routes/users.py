@@ -248,7 +248,7 @@ async def get_super_dashboard_kpis(
         
     if not recent_activities:
         recent_activities = [
-            { "title": "EduStream Workspace fully operational", "time": "Just now", "tone": "primary", "tag": "System" }
+            { "title": "Masterclass Workspace fully operational", "time": "Just now", "tone": "primary", "tag": "System" }
         ]
         
     recent_uploads_list = []

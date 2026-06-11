@@ -89,7 +89,7 @@ async def sign_masterclass_thumbnail(mc: Masterclass):
 
 def generate_email_template(title: str, content_html: str) -> str:
     """
-    Standard responsive EduStream email template.
+    Standard responsive Masterclass email template.
     """
     return f"""
     <!DOCTYPE html>
@@ -119,13 +119,13 @@ def generate_email_template(title: str, content_html: str) -> str:
     <body>
       <div class="container">
         <div class="header">
-          <h1>EduStream Masterclass</h1>
+          <h1>Masterclass Portal</h1>
         </div>
         <div class="content">
           {content_html}
         </div>
         <div class="footer">
-          &copy; {datetime.now().year} EduStream. All rights reserved.
+          &copy; {datetime.now().year} Masterclass. All rights reserved.
         </div>
       </div>
     </body>
@@ -139,7 +139,7 @@ def generate_scheduled_email_body(webinar: Masterclass, user: User) -> str:
     html = f"""
       {thumbnail_img}
       <div class="title">{webinar.title}</div>
-      <div class="speaker">Hosted by {webinar.speaker or 'EduStream Expert'}</div>
+      <div class="speaker">Hosted by {webinar.speaker or 'Masterclass Expert'}</div>
       
       <p>Hello {user.full_name},</p>
       <p>We are excited to invite you to our newly scheduled webinar Masterclass. Secure your spot now!</p>
@@ -247,7 +247,7 @@ def generate_reminder_email_body(webinar: Masterclass, user: User, time_str: str
         </tr>
         <tr>
           <td class="details-label">Speaker</td>
-          <td class="details-value">{webinar.speaker or 'EduStream Expert'}</td>
+          <td class="details-value">{webinar.speaker or 'Masterclass Expert'}</td>
         </tr>
       </table>
       
@@ -277,7 +277,7 @@ def generate_recording_email_body(webinar: Masterclass) -> str:
       {thumbnail_img}
       <div class="title">Webinar Recording Available</div>
       <h3>{webinar.title}</h3>
-      <p>Missed the live broadcast? No worries! The full recorded session is now available for on-demand streaming inside the EduStream portal.</p>
+      <p>Missed the live broadcast? No worries! The full recorded session is now available for on-demand streaming inside the Masterclass portal.</p>
       
       <div class="button-container">
         <a href="{frontend_url}/masterclasses/{webinar.masterclass_id}/watch" class="btn">Watch Recording</a>
@@ -443,7 +443,7 @@ async def list_masterclasses(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Fetch masterclasses created by EduStream.
+    Fetch masterclasses created by Masterclass.
     - Admins see all states (draft, private, public).
     - Standard users only see public or registered private ones, excluding drafts.
     """
@@ -1129,24 +1129,46 @@ async def zoom_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     webhook_secret = os.getenv("ZOOM_WEBHOOK_SECRET")
     
     try:
-        data = json.loads(body_str)
-    except Exception:
+        data = json.loads(body_str) if body_str else {}
+    except Exception as e:
+        print(f"[ZOOM WEBHOOK ERROR] JSON parsing exception: {str(e)}")
         data = {}
+
+    # Diagnostic Logging
+    print("=== ZOOM WEBHOOK DIAGNOSTIC AUDIT ===")
+    print("Request Headers:")
+    for header_name, header_value in request.headers.items():
+        # Hide authorization tokens or cookies for security if present
+        if header_name.lower() in ("authorization", "cookie"):
+            print(f"  {header_name}: [REDACTED]")
+        else:
+            print(f"  {header_name}: {header_value}")
+    print(f"Raw Body content: {body_str}")
+    print(f"Parsed JSON payload: {data}")
+    print(f"ZOOM_WEBHOOK_SECRET is set: {bool(webhook_secret)}")
+    print("=====================================")
 
     # 1. Challenge check (endpoint validation)
     if data.get("event") == "endpoint.url_validation":
+        print("[ZOOM WEBHOOK] URL validation handshake request detected.")
         plain_token = data.get("payload", {}).get("plainToken", "")
+        
         if webhook_secret:
             h = hmac.new(webhook_secret.encode("utf-8"), plain_token.encode("utf-8"), hashlib.sha256)
             encrypted_token = h.hexdigest()
+            print(f"[ZOOM WEBHOOK] Generated validation hash. plainToken={plain_token}, encryptedToken={encrypted_token}")
             return {
                 "plainToken": plain_token,
                 "encryptedToken": encrypted_token
             }
-        return {"plainToken": plain_token}
+        else:
+            print("[WARNING][ZOOM WEBHOOK] ZOOM_WEBHOOK_SECRET is missing! Returning plainToken only.")
+            return {"plainToken": plain_token}
 
     # 2. Check Signature
+    print("[ZOOM WEBHOOK] Executing event signature verification...")
     if not timestamp or not signature or not webhook_secret:
+        print(f"[ZOOM WEBHOOK ERROR] Verification elements missing. Timestamp={bool(timestamp)}, Signature={bool(signature)}, Secret={bool(webhook_secret)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Missing webhook signature validation headers."
@@ -1157,10 +1179,12 @@ async def zoom_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     expected_sig = f"v0={h.hexdigest()}"
     
     if signature != expected_sig:
+        print(f"[ZOOM WEBHOOK ERROR] Signature mismatch. Received={signature}, Expected={expected_sig}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid signature."
         )
+    print("[ZOOM WEBHOOK] Signature verified successfully.")
 
     event = data.get("event")
     payload = data.get("payload", {})
@@ -1176,8 +1200,8 @@ async def zoom_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     webinar = res.scalar_one_or_none()
     
     if not webinar:
-        # Ignore any webhook notifications for webinars created outside EduStream
-        return {"status": "ignored", "reason": "Not an EduStream webinar"}
+        # Ignore any webhook notifications for webinars created outside Masterclass
+        return {"status": "ignored", "reason": "Not a Masterclass webinar"}
 
     if event == "recording.completed":
         duration = webinar_obj.get("duration", webinar.duration_minutes)

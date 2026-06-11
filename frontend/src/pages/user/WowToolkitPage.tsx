@@ -193,6 +193,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to connect to calculation engine.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -278,7 +279,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("EDUSTREAM | FINANCIAL FREEDOM TOOLKIT", 15, 10);
+    doc.text("MASTERCLASS | FINANCIAL FREEDOM TOOLKIT", 15, 10);
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
@@ -1588,7 +1589,7 @@ function RetirementPredictorTab({
             )}
           </Card>
 
-          {results && results.sensitivity_table && results.sensitivity_table.length > 0 && (
+          {results && results.sensitivity_table && results.sensitivity_table.length > 0 ? (
             <Card className="p-5">
               <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
                 📈 Corpus Required vs. Retirement Age
@@ -1656,6 +1657,17 @@ function RetirementPredictorTab({
                 💡 <b>How to read this chart:</b> Retiring earlier dramatically expands the required corpus size because your investments have fewer years to grow, and you have more years in retirement to support with inflated expenses.
               </p>
             </Card>
+          ) : (
+            <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+              {loading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span>Calculating and generating chart...</span>
+                </div>
+              ) : (
+                <span>No data available. Configure inputs to generate retirement predictor chart.</span>
+              )}
+            </Card>
           )}
 
           <Card className="p-4 bg-muted/10">
@@ -1721,18 +1733,22 @@ function CostOfDelayTab({
   useEffect(() => {
     if (inputs.monthly_sip_amount <= 0) {
       setError("Monthly SIP Amount must be greater than zero.");
+      setResults(null);
       return;
     }
     if (inputs.expected_annual_return < 0 || inputs.expected_annual_return > 1) {
       setError("Expected Annual Return must be between 0% and 100% (0.0 and 1.0).");
+      setResults(null);
       return;
     }
     if (inputs.current_age < 0 || inputs.target_age < 0) {
       setError("Age values cannot be negative.");
+      setResults(null);
       return;
     }
     if (inputs.current_age >= inputs.target_age) {
       setError("Current Age must be less than Target Age.");
+      setResults(null);
       return;
     }
     setError(null);
@@ -1756,6 +1772,7 @@ function CostOfDelayTab({
         setResults(data);
       } catch (err: any) {
         setError(err.message || "Failed to calculate.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -1890,37 +1907,45 @@ function CostOfDelayTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {results?.delay_table.map((row: any) => {
-                    const isSelected = row.start_age === inputs.current_age;
-                    return (
-                      <tr 
-                        key={row.start_age} 
-                        className={`border-b border-border/50 transition-colors ${
-                          isSelected ? "bg-primary-soft/30 font-semibold" : "hover:bg-muted/10"
-                        }`}
-                      >
-                        <td className="p-3 flex items-center gap-1.5">
-                          {row.start_age}
-                          {isSelected && <span className="text-[9px] bg-primary text-primary-foreground px-1.5 py-0.2 rounded-full">Current</span>}
-                        </td>
-                        <td className="p-3 text-right">{row.years_to_invest}</td>
-                        <td className="p-3 text-right">{formatCurrency(row.total_invested)}</td>
-                        <td className="p-3 text-right">{formatCurrency(row.corpus_at_target)}</td>
-                        <td className="p-3 text-right text-destructive">
-                          {row.vs_starting_at_25 !== 0 ? formatCurrency(row.vs_starting_at_25) : "—"}
-                        </td>
-                        <td className="p-3 text-right text-destructive font-medium">
-                          {row.delay_cost_percent !== 0 ? `${(Math.abs(row.delay_cost_percent) * 100).toFixed(1)}%` : "0.0%"}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {results && results.delay_table && results.delay_table.length > 0 ? (
+                    results.delay_table.map((row: any) => {
+                      const isSelected = row.start_age === inputs.current_age;
+                      return (
+                        <tr 
+                          key={row.start_age} 
+                          className={`border-b border-border/50 transition-colors ${
+                            isSelected ? "bg-primary-soft/30 font-semibold" : "hover:bg-muted/10"
+                          }`}
+                        >
+                          <td className="p-3 flex items-center gap-1.5">
+                            {row.start_age}
+                            {isSelected && <span className="text-[9px] bg-primary text-primary-foreground px-1.5 py-0.2 rounded-full">Current</span>}
+                          </td>
+                          <td className="p-3 text-right">{row.years_to_invest}</td>
+                          <td className="p-3 text-right">{formatCurrency(row.total_invested)}</td>
+                          <td className="p-3 text-right">{formatCurrency(row.corpus_at_target)}</td>
+                          <td className="p-3 text-right text-destructive">
+                            {row.vs_starting_at_25 !== 0 ? formatCurrency(row.vs_starting_at_25) : "—"}
+                          </td>
+                          <td className="p-3 text-right text-destructive font-medium">
+                            {row.delay_cost_percent !== 0 ? `${(Math.abs(row.delay_cost_percent) * 100).toFixed(1)}%` : "0.0%"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                        {loading ? "Calculating delay table..." : "No data available."}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </Card>
 
-          {results && (
+          {results && results.delay_table && results.delay_table.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="p-5">
                 <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
@@ -1960,6 +1985,29 @@ function CostOfDelayTab({
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Calculating and generating chart...</span>
+                  </div>
+                ) : (
+                  <span>No future corpus data. Configure inputs to calculate.</span>
+                )}
+              </Card>
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Calculating and generating chart...</span>
+                  </div>
+                ) : (
+                  <span>No percentage penalty data. Configure inputs to calculate.</span>
+                )}
               </Card>
             </div>
           )}
@@ -2021,10 +2069,12 @@ function SipHomeLoanTab({
   useEffect(() => {
     if (inputs.monthly_sip < 0 || inputs.loan_amount < 0 || inputs.down_payment < 0) {
       setError("Financial amounts cannot be negative.");
+      setResults(null);
       return;
     }
     if (inputs.sip_duration <= 0 || inputs.loan_tenure <= 0) {
       setError("Tenures/durations must be greater than zero.");
+      setResults(null);
       return;
     }
     setError(null);
@@ -2048,6 +2098,7 @@ function SipHomeLoanTab({
         setResults(data);
       } catch (err: any) {
         setError(err.message || "Failed to calculate.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -2217,7 +2268,7 @@ function SipHomeLoanTab({
             </div>
           )}
 
-          {results && (
+          {results && results.sip_series && results.sip_series.length > 0 ? (
             <div className="space-y-6">
               <Card className="p-5">
                 <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
@@ -2302,6 +2353,41 @@ function SipHomeLoanTab({
                 </Card>
               </div>
             </div>
+          ) : (
+            <div className="space-y-6">
+              <Card className="p-5 flex flex-col items-center justify-center h-72 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Calculating and generating chart...</span>
+                  </div>
+                ) : (
+                  <span>No SIP wealth accumulation data. Configure inputs to calculate.</span>
+                )}
+              </Card>
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span>Generating amortization schedule...</span>
+                    </div>
+                  ) : (
+                    <span>No mortgage amortization data. Configure inputs to calculate.</span>
+                  )}
+                </Card>
+                <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span>Generating appreciation chart...</span>
+                    </div>
+                  ) : (
+                    <span>No property value appreciation data. Configure inputs to calculate.</span>
+                  )}
+                </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -2360,10 +2446,12 @@ function FinancialFreedomDateTab({
   useEffect(() => {
     if (inputs.current_age < 0 || inputs.birth_year < 0 || inputs.current_monthly_expenses < 0 || inputs.current_net_worth < 0 || inputs.monthly_savings < 0) {
       setError("Input values cannot be negative.");
+      setResults(null);
       return;
     }
     if (inputs.withdrawal_rate <= 0) {
       setError("Withdrawal Rate must be greater than zero.");
+      setResults(null);
       return;
     }
     setError(null);
@@ -2387,6 +2475,7 @@ function FinancialFreedomDateTab({
         setResults(data);
       } catch (err: any) {
         setError(err.message || "Failed to calculate.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -2553,7 +2642,7 @@ function FinancialFreedomDateTab({
             </div>
           )}
 
-          {results && (
+          {results && results.projection_series && results.projection_series.length > 0 ? (
             <Card className="p-5">
               <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
                 📈 Wealth Accumulation Projection to Freedom
@@ -2581,6 +2670,17 @@ function FinancialFreedomDateTab({
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </Card>
+          ) : (
+            <Card className="p-5 flex flex-col items-center justify-center h-72 text-xs text-muted-foreground">
+              {loading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span>Calculating and generating chart...</span>
+                </div>
+              ) : (
+                <span>No projection data. Configure inputs to calculate wealth projection.</span>
+              )}
             </Card>
           )}
         </div>
@@ -2911,7 +3011,7 @@ function GoalVisualizationDashboardTab({
             </div>
           </Card>
 
-          {goalsData && goalsData.goals.length > 0 && (
+          {goalsData && goalsData.goals.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="p-5">
                 <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
@@ -2955,6 +3055,29 @@ function GoalVisualizationDashboardTab({
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Loading goals...</span>
+                  </div>
+                ) : (
+                  <span>No goal allocation data. Create a financial goal to visualize target allocation.</span>
+                )}
+              </Card>
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Loading goals...</span>
+                  </div>
+                ) : (
+                  <span>No SIP data. Create a financial goal to visualize monthly SIP contributions.</span>
+                )}
               </Card>
             </div>
           )}

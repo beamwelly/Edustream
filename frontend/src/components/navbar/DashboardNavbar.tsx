@@ -385,7 +385,7 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
             <div className="hidden lg:block text-right">
               <p className="text-sm font-bold text-foreground group-hover:text-primary transition leading-tight mb-0.5">{userName}</p>
               <p className="text-[10px] text-muted-foreground font-semibold leading-none">
-                Organization: <span className="text-primary font-bold">{user?.organization_name || "EduStream"}</span>
+                Organization: <span className="text-primary font-bold">{user?.organization_name || "Masterclass"}</span>
               </p>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary transition shadow-sm border border-primary/15 uppercase font-bold">

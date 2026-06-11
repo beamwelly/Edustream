@@ -1,5 +1,5 @@
 # ──────────────────────────────────────────────
-# EduStream Backend — FastAPI
+# Masterclass Backend — FastAPI
 # ──────────────────────────────────────────────
 FROM python:3.11-slim
 

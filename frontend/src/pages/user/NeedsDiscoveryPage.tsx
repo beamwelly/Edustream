@@ -778,7 +778,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.text("EDUSTREAM", 15, 10);
+      doc.text("MASTERCLASS", 15, 10);
       doc.setFontSize(8.5);
       doc.text("CLIENT NEEDS DISCOVERY TOOL", 15, 17);
       doc.setFont("helvetica", "normal");
@@ -1032,7 +1032,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.text("EDUSTREAM", 15, 10);
+      doc.text("MASTERCLASS", 15, 10);
       doc.setFontSize(8.5);
       doc.text("CLIENT NEEDS DISCOVERY TOOL", 15, 17);
       doc.setFont("helvetica", "normal");
@@ -1207,7 +1207,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.text("EDUSTREAM", 15, 10);
+      doc.text("MASTERCLASS", 15, 10);
       doc.setFontSize(8.5);
       doc.text("CLIENT NEEDS DISCOVERY TOOL", 15, 17);
       doc.setFont("helvetica", "normal");
@@ -1397,7 +1397,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.text("EDUSTREAM", 15, 10);
+      doc.text("MASTERCLASS", 15, 10);
       doc.setFontSize(8.5);
       doc.text("CLIENT NEEDS DISCOVERY TOOL", 15, 17);
       doc.setFont("helvetica", "normal");
@@ -1554,7 +1554,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       doc.setTextColor(255, 255, 255);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(13);
-      doc.text("EDUSTREAM", 15, 10);
+      doc.text("MASTERCLASS", 15, 10);
       
       doc.setFontSize(8.5);
       doc.text("CLIENT NEEDS DISCOVERY TOOL", 15, 17);

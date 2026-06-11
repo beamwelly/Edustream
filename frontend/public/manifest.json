@@ -1,6 +1,6 @@
 {
-  "name": "EduStream",
-  "short_name": "EduStream",
+  "name": "Masterclass",
+  "short_name": "Masterclass",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFF7F7",

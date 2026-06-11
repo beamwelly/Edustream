@@ -235,8 +235,8 @@ async def list_meetings(
         req_to_res = await db.execute(req_to_stmt)
         req_to = req_to_res.scalar_one_or_none()
         
-        req_by_org_name = (req_by.company_name or "EduStream") if req_by else "EduStream"
-        req_to_org_name = (req_to.company_name or "EduStream") if req_to else "EduStream"
+        req_by_org_name = (req_by.company_name or "Masterclass") if req_by else "Masterclass"
+        req_to_org_name = (req_to.company_name or "Masterclass") if req_to else "Masterclass"
         
         out.append({
             "id": m.id,

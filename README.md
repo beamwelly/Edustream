@@ -1,13 +1,13 @@
-# EduStream — Learning & Financial Freedom Platform
+# Masterclass — Learning & Financial Freedom Platform
 
-EduStream is a high-performance, premium web application built for wealth managers, advisors, and clients. It integrates structured learning via masterclasses, a shared content library, meeting scheduling with Google Calendar/Meet, automated notifications, feedback tracking, and a comprehensive suite of financial calculators called the **WOW Financial Freedom Toolkit**.
+Masterclass is a high-performance, premium web application built for wealth managers, advisors, and clients. It integrates structured learning via masterclasses, a shared content library, meeting scheduling with Google Calendar/Meet, automated notifications, feedback tracking, and a comprehensive suite of financial calculators called the **WOW Financial Freedom Toolkit**.
 
 ---
 
 ## 1. System Overview
 
-### Purpose of EduStream
-EduStream serves as a centralized hub that bridges the gap between financial advisors (Admins) and clients (Standard Users). The platform delivers high-value educational content, interactive tools for financial discovery and planning, and direct communication channels.
+### Purpose of Masterclass
+Masterclass serves as a centralized hub that bridges the gap between financial advisors (Admins) and clients (Standard Users). The platform delivers high-value educational content, interactive tools for financial discovery and planning, and direct communication channels.
 
 ### Major Modules
 1. **User Authentication & Management**: JWT-based authentication supporting normal login, temporary password resets, profile management, and multi-tenant organization classification. Includes bulk user imports via Excel.
@@ -54,7 +54,7 @@ graph TD
 
 ## 2. Architecture Diagram
 
-EduStream utilizes a modern decoupled frontend-backend architecture integrated with robust third-party cloud services.
+Masterclass utilizes a modern decoupled frontend-backend architecture integrated with robust third-party cloud services.
 
 ```mermaid
 graph TD
@@ -109,7 +109,7 @@ graph TD
 
 ## 3. Database Documentation
 
-EduStream's Neon PostgreSQL database schema consists of the following core tables, relationships, and constraints. All dates are persisted in UTC with timezones.
+Masterclass's Neon PostgreSQL database schema consists of the following core tables, relationships, and constraints. All dates are persisted in UTC with timezones.
 ### Users Management Schema
 
 #### `users` Table

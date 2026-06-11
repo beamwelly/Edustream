@@ -223,7 +223,7 @@ export function UserProfilePage() {
                 </div>
                 <div className="flex items-center gap-2.5 text-muted-foreground">
                   <Building2 className="h-4 w-4 text-primary/70 flex-shrink-0" />
-                  <span className="truncate">{profile?.organization_name || "EduStream Platform"}</span>
+                  <span className="truncate">{profile?.organization_name || "Masterclass Platform"}</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-muted-foreground">
                   <Shield className="h-4 w-4 text-primary/70 flex-shrink-0" />
