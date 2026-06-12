@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Upload, Search, X, Loader2, Download, AlertTriangle, CheckCircle2, Trash2, Power } from "lucide-react";
+import { Plus, Upload, Search, X, Loader2, Download, AlertTriangle, CheckCircle2, Trash2, Power, Save, Shield, LayoutDashboard, Library, GraduationCap, CalendarClock, MessageSquare, Wrench } from "lucide-react";
 import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { API_URL } from "@/constants/env";
@@ -33,6 +33,27 @@ export function UsersPage() {
   const { user } = useAuth();
   console.log("UsersPage admin user:", user);
   
+  // Tab control
+  const [activeTab, setActiveTab] = useState<"roster" | "policy">("roster");
+
+  // Access Policy States
+  const [policySettings, setPolicySettings] = useState<Record<string, boolean>>({
+    dashboard: true,
+    content_library: true,
+    masterclasses: true,
+    meetings: false,
+    feedback: true,
+    wow_toolkit: true,
+    retirement_predictor: true,
+    financial_freedom: true,
+    family_vault: true,
+    goal_visualization: true,
+    cost_of_delay: true,
+    sip_home_loan: true,
+  });
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policySaving, setPolicySaving] = useState(false);
+
   // Database States
   const [users, setUsers] = useState<UserMgmt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,16 +89,7 @@ export function UsersPage() {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
   const [newSelectedOrganizationId, setNewSelectedOrganizationId] = useState("");
 
-  // Employee permissions management state
-  const [accessDashboard, setAccessDashboard] = useState(false);
-  const [accessContentLibrary, setAccessContentLibrary] = useState(false);
-  const [accessMasterclasses, setAccessMasterclasses] = useState(false);
-  const [accessMeetings, setAccessMeetings] = useState(false);
-  const [accessFeedback, setAccessFeedback] = useState(false);
-  const [allowedTools, setAllowedTools] = useState<string[]>([]);
-  const [allowedContentCategories, setAllowedContentCategories] = useState<string[]>([]);
-  const [loadingPermissions, setLoadingPermissions] = useState(false);
-  const [allCategories, setAllCategories] = useState<any[]>([]);
+
 
   // Bulk Upload File State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -105,6 +117,49 @@ export function UsersPage() {
     fetchOrganizations();
   }, []);
 
+  // Fetch Access Policy settings
+  const fetchPolicy = async () => {
+    setPolicyLoading(true);
+    try {
+      const data = await apiFetch<any>("/users/employee-access-policy");
+      if (data && data.settings) {
+        setPolicySettings(data.settings);
+      }
+    } catch (err: any) {
+      toast.error("Failed to load global employee access policy: " + err.message);
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "policy") {
+      fetchPolicy();
+    }
+  }, [activeTab]);
+
+  const handleSavePolicy = async () => {
+    setPolicySaving(true);
+    try {
+      await apiFetch("/users/employee-access-policy", {
+        method: "PUT",
+        body: JSON.stringify({ settings: policySettings }),
+      });
+      toast.success("Employee access policy updated successfully!");
+    } catch (err: any) {
+      toast.error("Failed to save employee access policy: " + err.message);
+    } finally {
+      setPolicySaving(false);
+    }
+  };
+
+  const handleTogglePolicy = (key: string) => {
+    setPolicySettings((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   // Fetch Users
   const fetchUsersList = async (search: string = "") => {
     setIsLoading(true);
@@ -121,44 +176,7 @@ export function UsersPage() {
     }
   };
 
-  const fetchPermissions = async (userId: number) => {
-    setLoadingPermissions(true);
-    try {
-      const data = await apiFetch<any>(`/users/${userId}/permissions`);
-      if (data) {
-        setAccessDashboard(data.access_dashboard);
-        setAccessContentLibrary(data.access_content_library);
-        setAccessMasterclasses(data.access_masterclasses);
-        setAccessMeetings(data.access_meetings);
-        setAccessFeedback(data.access_feedback);
-        setAllowedTools(data.allowed_tools || []);
-        setAllowedContentCategories(data.allowed_content_categories || []);
-      }
-    } catch (err: any) {
-      console.error("Failed to load employee permissions:", err);
-    } finally {
-      setLoadingPermissions(false);
-    }
-  };
 
-  const fetchAllCategories = async () => {
-    try {
-      const data = await apiFetch<any[]>("/content/categories");
-      setAllCategories(data || []);
-    } catch (err) {
-      console.error("Failed to load categories", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchAllCategories();
-  }, []);
-
-  useEffect(() => {
-    if (selectedUserToManage && newRole === "employee") {
-      fetchPermissions(selectedUserToManage.id);
-    }
-  }, [selectedUserToManage?.id, newRole]);
 
   useEffect(() => {
     fetchUsersList(debouncedSearch);
@@ -289,20 +307,7 @@ export function UsersPage() {
         })
       });
 
-      if (newRole === "employee") {
-        await apiFetch(`/users/${selectedUserToManage.id}/permissions`, {
-          method: "PUT",
-          body: JSON.stringify({
-            access_dashboard: accessDashboard,
-            access_content_library: accessContentLibrary,
-            access_masterclasses: accessMasterclasses,
-            access_meetings: accessMeetings,
-            access_feedback: accessFeedback,
-            allowed_tools: allowedTools,
-            allowed_content_categories: allowedContentCategories
-          })
-        });
-      }
+
 
       toast.success("User details and permissions updated successfully!");
       setSelectedUserToManage(null);
@@ -424,110 +429,271 @@ export function UsersPage() {
         title="User Management"
         subtitle="Manage professional users, onboard new members, or handle bulk rosters."
         action={
-          <div className="flex gap-2.5">
-            <Button variant="outline" onClick={() => { setUploadResult(null); setSelectedFile(null); setIsBulkOpen(true); }}>
-              <Upload className="h-4 w-4 mr-1.5" /> Bulk upload
-            </Button>
-            <Button onClick={() => setIsCreateOpen(true)}>
-              <Plus className="h-4 w-4 mr-1.5" /> Create user
-            </Button>
-          </div>
+          activeTab === "roster" ? (
+            <div className="flex gap-2.5">
+              <Button variant="outline" onClick={() => { setUploadResult(null); setSelectedFile(null); setIsBulkOpen(true); }}>
+                <Upload className="h-4 w-4 mr-1.5" /> Bulk upload
+              </Button>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="h-4 w-4 mr-1.5" /> Create user
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
-      <Card className="p-0 border border-border shadow-card overflow-hidden">
-        {/* Search Header Container */}
-        <div className="border-b border-border p-4 bg-card/40">
-          <div className="relative max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by name, email, company, role..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-            />
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="flex border-b border-border/80 mb-6 mt-4">
+        <button
+          onClick={() => setActiveTab("roster")}
+          className={`pb-3 px-6 text-sm font-bold uppercase tracking-wider text-center border-b-2 transition-all ${
+            activeTab === "roster"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Users Roster
+        </button>
+        <button
+          onClick={() => setActiveTab("policy")}
+          className={`pb-3 px-6 text-sm font-bold uppercase tracking-wider text-center border-b-2 transition-all ${
+            activeTab === "policy"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Employee Access Policy
+        </button>
+      </div>
 
-        {/* Users Table */}
-        <div className="overflow-x-auto">
-          {isLoading && users.length === 0 ? (
+      {activeTab === "roster" && (
+        <Card className="p-0 border border-border shadow-card overflow-hidden">
+          {/* Search Header Container */}
+          <div className="border-b border-border p-4 bg-card/40">
+            <div className="relative max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search by name, email, company, role..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background py-2 pl-10 pr-4 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
+              />
+            </div>
+          </div>
+
+          {/* Users Table */}
+          <div className="overflow-x-auto">
+            {isLoading && users.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                <span>Fetching users from system database...</span>
+              </div>
+            ) : users.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+                <Search className="h-8 w-8 text-muted-foreground/60 mb-2" />
+                <span className="font-medium text-foreground">No users found</span>
+                <p className="text-xs max-w-xs mt-1">Try refining your search keyword or create a new user profile above.</p>
+              </div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-secondary/20 border-b border-border">
+                    <th className="px-6 py-3.5 font-semibold">User details</th>
+                    <th className="px-6 py-3.5 font-semibold">Company / Tenant</th>
+                    <th className="px-6 py-3.5 font-semibold">Department</th>
+                    <th className="px-6 py-3.5 font-semibold">Designation</th>
+                    <th className="px-6 py-3.5 font-semibold">Status</th>
+                    <th className="px-6 py-3.5" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-card">
+                  {users.map((u) => (
+                    <tr key={u.id} className="transition-colors hover:bg-secondary/40">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold text-primary select-none uppercase">
+                            {u.full_name[0]}
+                          </div>
+                          <div>
+                            <span className="font-semibold text-foreground block">{u.full_name}</span>
+                            <span className="text-[11px] text-muted-foreground font-mono font-medium block">{u.email}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-foreground">
+                        {u.company_name || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 text-muted-foreground">{u.department || "N/A"}</td>
+                      <td className="px-6 py-4 text-muted-foreground">{u.designation || "N/A"}</td>
+                      <td className="px-6 py-4">
+                        <Badge tone={u.is_active ? "success" : "neutral"}>
+                          {u.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button
+                          onClick={() => {
+                            setSelectedUserToManage(u);
+                            setNewFullName(u.full_name);
+                            setNewEmail(u.email);
+                            setNewCompanyName(u.company_name || "");
+                            setNewDepartment(u.department || "");
+                            setNewDesignation(u.designation || "");
+                            setNewRole(u.role);
+                            setNewSelectedOrganizationId(u.organization_id ? String(u.organization_id) : "");
+                          }}
+                          className="text-sm font-semibold text-primary hover:underline transition"
+                        >
+                          Manage
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {activeTab === "policy" && (
+        <Card className="p-6 border border-border shadow-card bg-card">
+          <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
+            <div>
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Global Employee Access Policies
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Configure module-level access and tool visibility restrictions for all employee accounts.
+              </p>
+            </div>
+            <Button onClick={handleSavePolicy} disabled={policySaving || policyLoading} className="flex items-center gap-2">
+              {policySaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              {policySaving ? "Saving..." : "Save Policies"}
+            </Button>
+          </div>
+
+          {policyLoading ? (
             <div className="flex flex-col items-center justify-center p-12 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-              <span>Fetching users from system database...</span>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
-              <Search className="h-8 w-8 text-muted-foreground/60 mb-2" />
-              <span className="font-medium text-foreground">No users found</span>
-              <p className="text-xs max-w-xs mt-1">Try refining your search keyword or create a new user profile above.</p>
+              <span>Fetching policy configuration...</span>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground bg-secondary/20 border-b border-border">
-                  <th className="px-6 py-3.5 font-semibold">User details</th>
-                  <th className="px-6 py-3.5 font-semibold">Company / Tenant</th>
-                  <th className="px-6 py-3.5 font-semibold">Department</th>
-                  <th className="px-6 py-3.5 font-semibold">Designation</th>
-                  <th className="px-6 py-3.5 font-semibold">Status</th>
-                  <th className="px-6 py-3.5" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border bg-card">
-                {users.map((u) => (
-                  <tr key={u.id} className="transition-colors hover:bg-secondary/40">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-sm font-semibold text-primary select-none uppercase">
-                          {u.full_name[0]}
+            <div className="space-y-8 animate-in fade-in duration-200">
+              {/* Section 1: Core Portal Modules */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-primary/10 pb-1">
+                  Core Portal Modules
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {[
+                    { key: "dashboard", label: "Overview Dashboard", icon: LayoutDashboard, desc: "Primary performance KPIs and system overview summary" },
+                    { key: "content_library", label: "Content Library", icon: Library, desc: "Shared catalog of resource documents and media uploads" },
+                    { key: "masterclasses", label: "Masterclasses", icon: GraduationCap, desc: "Access to webinars, registrations, and watch histories" },
+                    { key: "meetings", label: "Meetings Booking", icon: CalendarClock, desc: "Schedule syncs and book video-conferencing slots" },
+                    { key: "feedback", label: "Feedback Form", icon: MessageSquare, desc: "Submit critiques and feature requests to the system admins" }
+                  ].map((mod) => (
+                    <div key={mod.key} className="flex items-start justify-between p-4 bg-secondary/20 rounded-xl border border-border/60 hover:border-primary/20 transition-all duration-200">
+                      <div className="flex gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary shrink-0">
+                          <mod.icon className="h-4 w-4" />
                         </div>
-                        <div>
-                          <span className="font-semibold text-foreground block">{u.full_name}</span>
-                          <span className="text-[11px] text-muted-foreground font-mono font-medium block">{u.email}</span>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-foreground block">{mod.label}</span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">{mod.desc}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 font-semibold text-foreground">
-                      {u.company_name || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">{u.department || "N/A"}</td>
-                    <td className="px-6 py-4 text-muted-foreground">{u.designation || "N/A"}</td>
-                    <td className="px-6 py-4">
-                      <Badge tone={u.is_active ? "success" : "neutral"}>
-                        {u.is_active ? "Active" : "Inactive"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
                       <button
-                        onClick={() => {
-                          setSelectedUserToManage(u);
-                          setNewFullName(u.full_name);
-                          setNewEmail(u.email);
-                          setNewCompanyName(u.company_name || "");
-                          setNewDepartment(u.department || "");
-                          setNewDesignation(u.designation || "");
-                          setNewRole(u.role);
-                          setNewSelectedOrganizationId(u.organization_id ? String(u.organization_id) : "");
-                        }}
-                        className="text-sm font-semibold text-primary hover:underline transition"
+                        type="button"
+                        onClick={() => handleTogglePolicy(mod.key)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          policySettings[mod.key] ? "bg-primary" : "bg-muted"
+                        }`}
                       >
-                        Manage
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out ${
+                            policySettings[mod.key] ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
                       </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Section 2: WOW Financial Freedom Toolkit */}
+              <div className="space-y-4 pt-2">
+                <div className="flex items-center justify-between border-b border-primary/10 pb-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Financial Freedom WOW Toolkit
+                  </h4>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {policySettings.wow_toolkit ? "Toolkit Enabled" : "Toolkit Disabled"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleTogglePolicy("wow_toolkit")}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        policySettings.wow_toolkit ? "bg-primary" : "bg-muted"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out ${
+                          policySettings.wow_toolkit ? "translate-x-5" : "translate-x-0"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300 ${policySettings.wow_toolkit ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                  {[
+                    { key: "retirement_predictor", label: "Retirement Predictor", desc: "Project savings goals and target corpus milestones" },
+                    { key: "cost_of_delay", label: "Cost of Delay", desc: "Calculate the compound interest penalty of postponing investments" },
+                    { key: "sip_home_loan", label: "SIP & Home Loan Planner", desc: "Model mortgage prepayments against mutual fund returns" },
+                    { key: "financial_freedom", label: "Freedom Index Dashboard", desc: "Consolidate active and passive streams into one freedom score" },
+                    { key: "goal_visualization", label: "Goal Visualizer", desc: "Graphically monitor milestone paths and progress charts" },
+                    { key: "family_vault", label: "Family Vault Storage", desc: "Store credentials, nominee links, and banking profiles" }
+                  ].map((calc) => (
+                    <div key={calc.key} className="flex items-start justify-between p-4 bg-secondary/15 rounded-xl border border-border/50 hover:border-primary/20 transition-all duration-200">
+                      <div className="min-w-0 pr-2">
+                        <span className="text-xs font-bold text-foreground block">{calc.label}</span>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">{calc.desc}</p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={!policySettings.wow_toolkit}
+                        onClick={() => handleTogglePolicy(calc.key)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          policySettings[calc.key] && policySettings.wow_toolkit ? "bg-primary" : "bg-muted"
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out ${
+                            policySettings[calc.key] && policySettings.wow_toolkit ? "translate-x-5" : "translate-x-0"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
-        </div>
-      </Card>
+        </Card>
+      )}
 
       {/* CREATE USER MODAL OVERLAY */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="app-surface-panel relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
+          <div className="app-surface-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
               <div>
@@ -785,7 +951,7 @@ export function UsersPage() {
       {/* MANAGE USER MODAL OVERLAY */}
       {selectedUserToManage && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="app-surface-panel relative z-10 w-full max-w-lg rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
+          <div className="app-surface-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
               <div>
@@ -935,150 +1101,6 @@ export function UsersPage() {
                       <option value="employee">Employee (Tenant Worker)</option>
                     </select>
                   </div>
-
-                  {newRole === "employee" && (
-                    <div className="mt-4 pt-4 border-t border-border/60 space-y-4">
-                      <h5 className="text-xs font-bold uppercase tracking-wider text-primary">Employee Permissions</h5>
-                      {loadingPermissions ? (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading permissions...
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          {/* Module Access Checkboxes */}
-                          <div className="space-y-2">
-                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Access Modules</span>
-                            <div className="grid grid-cols-2 gap-2">
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={accessDashboard}
-                                  onChange={(e) => setAccessDashboard(e.target.checked)}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Dashboard
-                              </label>
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={accessContentLibrary}
-                                  onChange={(e) => setAccessContentLibrary(e.target.checked)}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Content Library
-                              </label>
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={accessMasterclasses}
-                                  onChange={(e) => setAccessMasterclasses(e.target.checked)}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Masterclasses
-                              </label>
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={accessMeetings}
-                                  onChange={(e) => setAccessMeetings(e.target.checked)}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Meetings
-                              </label>
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={accessFeedback}
-                                  onChange={(e) => setAccessFeedback(e.target.checked)}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Feedback
-                              </label>
-                            </div>
-                          </div>
-
-                          {/* Allowed Tools Checkboxes */}
-                          <div className="space-y-2 pt-2 border-t border-border/40">
-                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Allowed Tools</span>
-                            <div className="grid grid-cols-2 gap-2">
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={allowedTools.includes("wow_toolkit")}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setAllowedTools(prev => [...prev, "wow_toolkit"]);
-                                    } else {
-                                      setAllowedTools(prev => prev.filter(t => t !== "wow_toolkit"));
-                                    }
-                                  }}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                WoW Toolkit
-                              </label>
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={allowedTools.includes("needs_discovery")}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setAllowedTools(prev => [...prev, "needs_discovery"]);
-                                    } else {
-                                      setAllowedTools(prev => prev.filter(t => t !== "needs_discovery"));
-                                    }
-                                  }}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Needs Discovery
-                              </label>
-                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  checked={allowedTools.includes("financial_discovery")}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      setAllowedTools(prev => [...prev, "financial_discovery"]);
-                                    } else {
-                                      setAllowedTools(prev => prev.filter(t => t !== "financial_discovery"));
-                                    }
-                                  }}
-                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Financial Discovery
-                              </label>
-                            </div>
-                          </div>
-
-                          {/* Content Category Checkboxes */}
-                          <div className="space-y-2 pt-2 border-t border-border/40">
-                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Allowed Content Categories</span>
-                            <div className="grid grid-cols-2 gap-2 max-h-[100px] overflow-y-auto pr-1">
-                              {allCategories.map(cat => (
-                                <label key={cat.id} className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={allowedContentCategories.includes(cat.name)}
-                                    onChange={(e) => {
-                                      if (e.target.checked) {
-                                        setAllowedContentCategories(prev => [...prev, cat.name]);
-                                      } else {
-                                        setAllowedContentCategories(prev => prev.filter(c => c !== cat.name));
-                                      }
-                                    }}
-                                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
-                                  />
-                                  {cat.name}
-                                </label>
-                              ))}
-                              {allCategories.length === 0 && (
-                                <span className="text-[11px] text-muted-foreground italic">No categories available</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   <div className="flex justify-end pt-3">
                     <Button 

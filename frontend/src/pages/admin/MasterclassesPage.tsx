@@ -22,6 +22,7 @@ import {
 import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
+import { APP_PLACEHOLDER } from "@/constants/branding";
 
 interface Masterclass {
   masterclass_id: number;
@@ -733,12 +734,10 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {upcomingSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          {s.thumbnail_url && (
-                            <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative">
-                              <img src={s.thumbnail_url} alt={s.title} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            </div>
-                          )}
+                          <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                            <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          </div>
                           
                           <div>
                             <div className="mb-2 flex items-center justify-between">
@@ -843,12 +842,10 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {liveSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          {s.thumbnail_url && (
-                            <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative">
-                              <img src={s.thumbnail_url} alt={s.title} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            </div>
-                          )}
+                          <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                            <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          </div>
                           
                           <div>
                             <div className="mb-2 flex items-center justify-between">
@@ -914,12 +911,10 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {completedSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          {s.thumbnail_url && (
-                            <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative">
-                              <img src={s.thumbnail_url} alt={s.title} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            </div>
-                          )}
+                          <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                            <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          </div>
                           
                           <div>
                             <div className="mb-2 flex items-center justify-between">
@@ -1032,11 +1027,7 @@ export function MasterclassesPage() {
                       {recordedSessions.map((r) => (
                         <Card key={r.masterclass_id} className="!p-0 overflow-hidden flex flex-col justify-between hover:border-primary/20 transition-all group relative">
                           <div className="relative flex aspect-video items-center justify-center bg-zinc-950">
-                            {r.thumbnail_url ? (
-                              <img src={r.thumbnail_url} alt={r.title} className="w-full h-full object-cover" />
-                            ) : (
-                              <Video className="h-8 w-8 text-zinc-700" />
-                            )}
+                            <img src={r.thumbnail_url || APP_PLACEHOLDER} alt={r.title} className="w-full h-full object-cover" />
                             
                             {r.visibility === "hidden" && (
                               <div className="absolute top-3 left-3 bg-red-600/90 text-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 animate-pulse">

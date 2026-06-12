@@ -58,16 +58,30 @@ async def get_current_active_user(
             detail="User account is deactivated."
         )
     if user.role == "employee":
-        from app.models.employee_permission import EmployeePermission
-        perm_stmt = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
-        perm_res = await db.execute(perm_stmt)
-        perm = perm_res.scalar_one_or_none()
-        if not perm or "wow_toolkit" not in (perm.allowed_tools or []):
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        policy_res = await db.execute(policy_stmt)
+        policy = policy_res.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        if not settings.get("wow_toolkit", False):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access Denied. You do not have permission to access the WOW Toolkit."
+                detail="Access Denied. Global Employee Policy restricts access to the WOW Toolkit."
             )
     return user
+
+async def check_calculator_policy(db: AsyncSession, user: User, setting_key: str):
+    if user.role == "employee":
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        policy_res = await db.execute(policy_stmt)
+        policy = policy_res.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        if not settings.get("wow_toolkit", False) or not settings.get(setting_key, False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied. Global Employee Policy restricts access to {setting_key.replace('_', ' ').title()}."
+            )
 
 async def get_current_admin(
     current_user: User = Depends(get_current_active_user)
@@ -370,12 +384,13 @@ async def download_tool_file(
                 if not user.is_active:
                     raise HTTPException(status_code=403, detail="User account is deactivated.")
                 if user.role == "employee":
-                    from app.models.employee_permission import EmployeePermission
-                    perm_stmt = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
-                    perm_res = await db.execute(perm_stmt)
-                    perm = perm_res.scalar_one_or_none()
-                    if not perm or "wow_toolkit" not in (perm.allowed_tools or []):
-                        raise HTTPException(status_code=403, detail="Access Denied. You do not have permission to access the WOW Toolkit.")
+                    from app.models.employee_access_policy import EmployeeAccessPolicy
+                    policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+                    policy_res = await db.execute(policy_stmt)
+                    policy = policy_res.scalar_one_or_none()
+                    settings = policy.settings_json if policy else {}
+                    if not settings.get("wow_toolkit", False):
+                        raise HTTPException(status_code=403, detail="Access Denied. Global Employee Policy restricts access to the WOW Toolkit.")
 
     try:
         stmt = select(ToolRegistry).where(ToolRegistry.id == tool_id)
@@ -593,10 +608,12 @@ class RetirementResult(BaseModel):
     sensitivity_table: List[SensitivityPoint]
 
 @router.post("/retirement/calculate", response_model=RetirementResult)
-def calculate_retirement(
+async def calculate_retirement(
     inputs: RetirementInput,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "retirement_predictor")
     if inputs.current_age >= inputs.expected_retirement_age:
         raise HTTPException(status_code=400, detail="Current age must be less than expected retirement age.")
     if inputs.expected_retirement_age >= inputs.life_expectancy:
@@ -648,10 +665,12 @@ class DelayResult(BaseModel):
     delay_table: List[DelayPoint]
 
 @router.post("/cost-delay/calculate", response_model=DelayResult)
-def calculate_delay(
+async def calculate_delay(
     inputs: DelayInput,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "cost_of_delay")
     if inputs.monthly_sip_amount <= 0:
         raise HTTPException(status_code=400, detail="Monthly SIP Amount must be greater than zero.")
     if inputs.expected_annual_return < 0 or inputs.expected_annual_return > 1:
@@ -724,10 +743,12 @@ class SipLoanResult(BaseModel):
     loan_series: List[LoanSeriesPoint]
 
 @router.post("/sip-home-loan/calculate", response_model=SipLoanResult)
-def calculate_sip_loan(
+async def calculate_sip_loan(
     inputs: SipLoanInput,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "sip_home_loan")
     if inputs.monthly_sip < 0 or inputs.loan_amount < 0 or inputs.down_payment < 0:
         raise HTTPException(status_code=400, detail="Financial amounts cannot be negative.")
     if inputs.sip_duration <= 0 or inputs.loan_tenure <= 0:
@@ -793,10 +814,12 @@ class FreedomDateResult(BaseModel):
     timeline_series: List[TimelinePoint]
 
 @router.post("/freedom-date/calculate", response_model=FreedomDateResult)
-def calculate_freedom(
+async def calculate_freedom(
     inputs: FreedomDateInput,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "financial_freedom")
     results = calculate_freedom_date(
         current_age=inputs.current_age,
         birth_year=inputs.birth_year,
@@ -838,7 +861,12 @@ class GoalDashboardResult(BaseModel):
     overall_percent_achieved: float
 
 @router.post("/goal-dashboard/calculate", response_model=GoalDashboardResult)
-def calculate_goals(inputs: List[GoalItem]):
+async def calculate_goals(
+    inputs: List[GoalItem],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     goals_list = [g.model_dump() for g in inputs]
     results = calculate_goal_dashboard(goals_list)
     return GoalDashboardResult(
@@ -974,6 +1002,7 @@ async def get_goals(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     stmt = select(FinancialGoal).where(FinancialGoal.user_id == current_user.id)
     res = await db.execute(stmt)
     db_goals = res.scalars().all()
@@ -999,6 +1028,7 @@ async def create_goal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     goal = FinancialGoal(
         user_id=current_user.id,
         name=payload.name,
@@ -1019,6 +1049,7 @@ async def update_goal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     stmt = select(FinancialGoal).where(FinancialGoal.id == id, FinancialGoal.user_id == current_user.id)
     res = await db.execute(stmt)
     goal = res.scalar_one_or_none()
@@ -1039,6 +1070,7 @@ async def delete_goal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     stmt = select(FinancialGoal).where(FinancialGoal.id == id, FinancialGoal.user_id == current_user.id)
     res = await db.execute(stmt)
     goal = res.scalar_one_or_none()
@@ -1057,6 +1089,7 @@ async def get_vault(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     try:
         target_user_id = current_user.id
         if user_id and current_user.role == "admin":
@@ -1094,6 +1127,7 @@ async def create_vault_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     model_class = get_vault_model(type)
     
     item_data = None
@@ -1133,6 +1167,7 @@ async def update_vault_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     model_class = get_vault_model(type)
     stmt = select(model_class).where(model_class.id == id)
     if current_user.role != "admin":
@@ -1179,6 +1214,7 @@ async def delete_vault_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     model_class = get_vault_model(type)
     stmt = select(model_class).where(model_class.id == id)
     if current_user.role != "admin":

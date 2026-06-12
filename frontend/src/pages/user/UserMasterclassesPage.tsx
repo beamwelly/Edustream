@@ -17,6 +17,7 @@ import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/comm
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { APP_PLACEHOLDER } from "@/constants/branding";
 
 interface Masterclass {
   masterclass_id: number;
@@ -350,16 +351,14 @@ export function UserMasterclassesPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {upcomingSessions.map((s) => (
                 <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all duration-200 group relative overflow-hidden">
-                  {s.thumbnail_url && (
-                    <div className="relative w-full h-44 -mx-6 -mt-6 mb-4 overflow-hidden">
-                      <img 
-                        src={s.thumbnail_url} 
-                        alt={s.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    </div>
-                  )}
+                  <div className="relative w-full h-44 -mx-6 -mt-6 mb-4 overflow-hidden bg-zinc-950">
+                    <img 
+                      src={s.thumbnail_url || APP_PLACEHOLDER} 
+                      alt={s.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  </div>
                   
                   <div>
                     <div className="mb-3 flex items-center justify-between">
@@ -518,15 +517,11 @@ export function UserMasterclassesPage() {
               {recordedSessions.map((r) => (
                 <Card key={r.masterclass_id} className="!p-0 overflow-hidden flex flex-col justify-between hover:border-primary/20 transition-all duration-200 group relative">
                   <div className="relative flex aspect-video items-center justify-center bg-zinc-950 overflow-hidden">
-                    {r.thumbnail_url ? (
-                      <img 
-                        src={r.thumbnail_url} 
-                        alt={r.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <Video className="h-10 w-10 text-zinc-700" />
-                    )}
+                    <img 
+                      src={r.thumbnail_url || APP_PLACEHOLDER} 
+                      alt={r.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                     
                     <button 
                       onClick={() => handleOpenVideo(r)}

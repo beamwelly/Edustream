@@ -151,12 +151,8 @@ async def list_categories(
         cache_set("content:categories", cats_data, ttl=3600)
     
     if current_user.role == "employee":
-        from app.models.employee_permission import EmployeePermission
-        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
-        res_perm = await db.execute(stmt_perm)
-        perm = res_perm.scalar_one_or_none()
-        allowed_cats = perm.allowed_content_categories if perm else []
-        cats_data = [c for c in cats_data if c["name"] in allowed_cats]
+        # Removed category-specific filtering under global policy model
+        pass
         
     return cats_data
 
@@ -300,12 +296,6 @@ async def list_content_items(
 
         if current_user.role == "employee":
             stmt = stmt.where(ContentItem.visibility != "owner_only")
-            from app.models.employee_permission import EmployeePermission
-            stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
-            res_perm = await db.execute(stmt_perm)
-            perm = res_perm.scalar_one_or_none()
-            allowed_cats = perm.allowed_content_categories if perm else []
-            stmt = stmt.where(ContentItem.category.in_(allowed_cats))
 
     # Filters
     if search:
@@ -750,14 +740,13 @@ async def download_content_file(
                 if not user.is_active:
                     raise HTTPException(status_code=403, detail="User account is inactive.")
                 if user.role == "employee":
-                    from app.models.employee_permission import EmployeePermission
-                    stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
-                    res_perm = await db.execute(stmt_perm)
-                    perm = res_perm.scalar_one_or_none()
-                    if not perm or not perm.access_content_library:
-                        raise HTTPException(status_code=403, detail="Access denied. You do not have permission to access Content Library.")
-                    if item.category not in perm.allowed_content_categories:
-                        raise HTTPException(status_code=403, detail="Access denied. You do not have permission to access this category.")
+                    from app.models.employee_access_policy import EmployeeAccessPolicy
+                    policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+                    policy_res = await db.execute(policy_stmt)
+                    policy = policy_res.scalar_one_or_none()
+                    settings = policy.settings_json if policy else {}
+                    if not settings.get("content_library", True):
+                        raise HTTPException(status_code=403, detail="Access denied. Global Employee Policy restricts access to Content Library.")
                     if item.visibility == "owner_only":
                         raise HTTPException(status_code=403, detail="Access denied. This file is restricted to owner only.")
 

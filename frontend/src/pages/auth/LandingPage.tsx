@@ -13,7 +13,7 @@ import {
   Check
 } from "lucide-react";
 import { Button } from "@/components/common";
-import { APP_NAME, APP_TAGLINE } from "@/constants/branding";
+import { APP_NAME, APP_TAGLINE, APP_LOGO } from "@/constants/branding";
 
 export function LandingPage() {
   const scrollToSection = (id: string) => {
@@ -30,7 +30,7 @@ export function LandingPage() {
       <header className="sticky top-0 z-50 w-full border-b border-[#E5E7EB] bg-white/90 backdrop-blur-md shadow-sm">
         <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src="/logo.png" alt="Masterclass Logo" className="h-10 w-auto object-contain" />
+            <img src={APP_LOGO} alt="Masterclass Logo" className="h-10 w-auto object-contain" />
             <div className="text-left">
               <h1 className="text-xl font-bold tracking-tight text-[#1F2937]">{APP_NAME}</h1>
               <p className="text-[10px] text-muted-foreground tracking-wider uppercase font-semibold">{APP_TAGLINE}</p>
@@ -398,7 +398,7 @@ export function LandingPage() {
         <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 text-left">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="Masterclass Logo" className="h-8 w-auto object-contain" />
+              <img src={APP_LOGO} alt="Masterclass Logo" className="h-8 w-auto object-contain" />
               <span className="font-extrabold text-[#1F2937] text-base">{APP_NAME}</span>
             </div>
             <p className="text-[#4B5563] leading-relaxed">

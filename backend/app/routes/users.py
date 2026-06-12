@@ -52,12 +52,23 @@ def require_permission(category: str):
         if current_user.role in ("admin", "owner", "user"):
             return current_user
         if current_user.role == "employee":
-            from app.models.employee_permission import EmployeePermission
-            stmt = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
             res = await db.execute(stmt)
-            perm = res.scalar_one_or_none()
-            if perm and getattr(perm, f"access_{category}", False):
-                return current_user
+            policy = res.scalar_one_or_none()
+            if policy:
+                settings = policy.settings_json or {}
+                # Map standard category name to settings key if they differ slightly
+                key = category
+                if category == "content":
+                    key = "content_library"
+                
+                if settings.get(key, False):
+                    return current_user
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied. Global Employee Policy restricts access to {category}."
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access Denied. You do not have permission to access {category}."
@@ -74,12 +85,30 @@ def require_tool_permission(tool_id: str):
         if current_user.role in ("admin", "owner", "user"):
             return current_user
         if current_user.role == "employee":
-            from app.models.employee_permission import EmployeePermission
-            stmt = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
             res = await db.execute(stmt)
-            perm = res.scalar_one_or_none()
-            if perm and tool_id in (perm.allowed_tools or []):
+            policy = res.scalar_one_or_none()
+            if policy:
+                settings = policy.settings_json or {}
+                # Ensure wow_toolkit itself is enabled
+                if not settings.get("wow_toolkit", False):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Access Denied. Global Employee Policy restricts access to WOW Toolkit."
+                    )
+                # Map backend tool_id to policy settings
+                # needs_discovery, financial_discovery
+                if tool_id in settings and not settings.get(tool_id, False):
+                     raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail=f"Access Denied. Global Employee Policy restricts access to tool: {tool_id}."
+                     )
                 return current_user
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied. You do not have permission to access the tool: {tool_id}."
+            )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=f"Access Denied. You do not have permission to access the tool: {tool_id}."
@@ -135,30 +164,26 @@ async def get_current_user_profile(
     """
     user_perms = None
     if current_user.role == "employee":
-        from app.models.employee_permission import EmployeePermission
-        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
-        res_perm = await db.execute(stmt_perm)
-        perm = res_perm.scalar_one_or_none()
-        if perm:
-            user_perms = {
-                "access_dashboard": perm.access_dashboard,
-                "access_content": perm.access_content,
-                "access_masterclasses": perm.access_masterclasses,
-                "access_meetings": perm.access_meetings,
-                "access_feedback": perm.access_feedback,
-                "allowed_tools": perm.allowed_tools or [],
-                "allowed_categories": perm.allowed_categories or []
-            }
-        else:
-            user_perms = {
-                "access_dashboard": False,
-                "access_content": False,
-                "access_masterclasses": False,
-                "access_meetings": False,
-                "access_feedback": False,
-                "allowed_tools": [],
-                "allowed_categories": []
-            }
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        stmt_policy = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        res_policy = await db.execute(stmt_policy)
+        policy = res_policy.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        wow_enabled = settings.get("wow_toolkit", True)
+        user_perms = {
+            "access_dashboard": settings.get("dashboard", True),
+            "access_content": settings.get("content_library", True),
+            "access_masterclasses": settings.get("masterclasses", True),
+            "access_meetings": settings.get("meetings", False),
+            "access_feedback": settings.get("feedback", True),
+            "allowed_tools": [
+                k for k, v in settings.items()
+                if k in ("retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan", "needs_discovery", "financial_discovery")
+                and v
+                and (k not in ("retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan") or wow_enabled)
+            ],
+            "allowed_categories": []
+        }
     else:
         user_perms = {
             "access_dashboard": True,
@@ -166,7 +191,10 @@ async def get_current_user_profile(
             "access_masterclasses": True,
             "access_meetings": True,
             "access_feedback": True,
-            "allowed_tools": ["needs_discovery", "financial_discovery", "wow_toolkit"],
+            "allowed_tools": [
+                "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
+                "cost_of_delay", "sip_home_loan", "wow_toolkit", "needs_discovery", "financial_discovery"
+            ],
             "allowed_categories": []
         }
 

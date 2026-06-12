@@ -15,6 +15,7 @@ from app.models.tool import ToolRegistry
 from app.models.masterclass import Masterclass, MasterclassRecording, MasterclassRegistration, MasterclassWatchHistory, MasterclassEmailLog
 from app.models.notification import Notification
 from app.models.employee_permission import EmployeePermission
+from app.models.employee_access_policy import EmployeeAccessPolicy
 from app.models.feedback import Feedback
 from app.models.wow import (
     FinancialGoal,
@@ -95,6 +96,7 @@ async def lifespan(app: FastAPI):
             # Tools registry table migrations
             await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500);"))
             await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS storage_filename VARCHAR(500);"))
+            await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_only';"))
             
             # Masterclasses migrations
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS recording_filename VARCHAR(500);"))
@@ -107,8 +109,11 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS tags VARCHAR(1000);"))
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS learning_outcomes VARCHAR(2000);"))
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS max_attendees INTEGER;"))
-            await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public';"))
+            await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_only';"))
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'edustream';"))
+
+            # Masterclass recordings migration
+            await conn.execute(text("ALTER TABLE masterclass_recordings ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_only';"))
             
             # User table migrations
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);"))
@@ -132,7 +137,13 @@ async def lifespan(app: FastAPI):
                 SET company_name = 'Masterclass'
                 WHERE (company_name IS NULL OR company_name = '');
             """))
-            # Role migration removed to prevent resetting admin users to standard users on reload
+
+            # Seed global employee access policy
+            await conn.execute(text("""
+                INSERT INTO employee_access_policy (id, settings_json, updated_by, updated_at)
+                VALUES (1, '{"dashboard": true, "content_library": true, "masterclasses": true, "meetings": false, "feedback": true, "wow_toolkit": true, "retirement_predictor": true, "financial_freedom": true, "family_vault": true, "goal_visualization": true, "cost_of_delay": true, "sip_home_loan": true}', 'system', NOW())
+                ON CONFLICT (id) DO NOTHING;
+            """))
             pass
         except Exception as e:
             print("DB Migration Alter Query Warning:", str(e))

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -149,6 +149,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       });
       if (res.ok) {
         setSaveStatus("Saved");
+        setInitialInputs(payload);
         setTimeout(() => setSaveStatus(""), 2000);
       } else {
         setSaveStatus("Save failed");
@@ -199,7 +200,11 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       }
     };
 
-    calculate();
+    const timer = setTimeout(() => {
+      calculate();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [inputs]);
 
   const handleInputChange = (key: keyof WowInputs, value: number) => {
@@ -1711,14 +1716,16 @@ function CostOfDelayTab({
     target_age: 60,
     current_age: 35
   });
+  const isInitialized = useRef(false);
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial inputs
   useEffect(() => {
-    if (initialInputs?.cost_of_delay_inputs && Object.keys(initialInputs.cost_of_delay_inputs).length > 0) {
+    if (initialInputs?.cost_of_delay_inputs && Object.keys(initialInputs.cost_of_delay_inputs).length > 0 && !isInitialized.current) {
       setInputs(initialInputs.cost_of_delay_inputs);
+      isInitialized.current = true;
     }
   }, [initialInputs]);
 
@@ -2047,14 +2054,16 @@ function SipHomeLoanTab({
     appreciation_rate: 0.06,
     tax_benefit: 50000
   });
+  const isInitialized = useRef(false);
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial inputs
   useEffect(() => {
-    if (initialInputs?.sip_home_loan_inputs && Object.keys(initialInputs.sip_home_loan_inputs).length > 0) {
+    if (initialInputs?.sip_home_loan_inputs && Object.keys(initialInputs.sip_home_loan_inputs).length > 0 && !isInitialized.current) {
       setInputs(initialInputs.sip_home_loan_inputs);
+      isInitialized.current = true;
     }
   }, [initialInputs]);
 
@@ -2106,7 +2115,7 @@ function SipHomeLoanTab({
 
     const debounceTimer = setTimeout(() => {
       calculate();
-    }, 200);
+    }, 500);
     return () => clearTimeout(debounceTimer);
   }, [inputs]);
 
@@ -2424,14 +2433,16 @@ function FinancialFreedomDateTab({
     monthly_savings: 20000,
     stepup_rate: 0.05
   });
+  const isInitialized = useRef(false);
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial inputs
   useEffect(() => {
-    if (initialInputs?.freedom_date_inputs && Object.keys(initialInputs.freedom_date_inputs).length > 0) {
+    if (initialInputs?.freedom_date_inputs && Object.keys(initialInputs.freedom_date_inputs).length > 0 && !isInitialized.current) {
       setInputs(initialInputs.freedom_date_inputs);
+      isInitialized.current = true;
     }
   }, [initialInputs]);
 
@@ -2483,7 +2494,7 @@ function FinancialFreedomDateTab({
 
     const debounceTimer = setTimeout(() => {
       calculate();
-    }, 200);
+    }, 500);
     return () => clearTimeout(debounceTimer);
   }, [inputs]);
 

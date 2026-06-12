@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import type { NavItem } from "@/components/common/types";
 import { useAuth } from "@/context/AuthContext";
+import { APP_LOGO, APP_NAME } from "@/constants/branding";
 
 interface DashboardSidebarProps {
   roleLabel: string;
@@ -15,11 +16,11 @@ export function DashboardSidebar({ roleLabel, nav, footerNav }: DashboardSidebar
 
   return (
     <aside className="app-surface-sidebar fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
-      <div className="mb-8 flex items-center gap-3 px-2">
-        <img src="/logo.png" alt="Masterclass Logo" className="h-10 w-auto object-contain" />
-        <div>
-          <h1 className="text-base font-semibold text-foreground">Masterclass</h1>
-          <p className="text-xs text-muted-foreground capitalize">
+      <div className="mb-8 flex items-center gap-3 px-2 min-w-0 w-full">
+        <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-10 w-auto object-contain flex-shrink-0" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-base font-semibold text-foreground truncate">{APP_NAME}</h1>
+          <p className="text-xs text-muted-foreground capitalize truncate">
             {user?.role ? (user.role === "admin" ? "Admin Dashboard" : "User Dashboard") : roleLabel}
           </p>
         </div>

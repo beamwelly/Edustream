@@ -19,7 +19,8 @@ from app.services.user_mgmt_service import (
     get_all_users_mgmt,
     process_bulk_upload_users,
     generate_random_password,
-    hash_password
+    hash_password,
+    get_or_create_organization
 )
 
 router = APIRouter(prefix="/users", tags=["Users Management"])
@@ -127,6 +128,9 @@ class EmployeePermissionResponse(BaseModel):
     allowed_tools: List[str]
     allowed_content_categories: List[str]
 
+class EmployeeAccessPolicyPayload(BaseModel):
+    settings: dict
+
 # --- Organization Endpoints ---
 
 @router.get("/organizations", response_model=List[OrganizationResponse])
@@ -215,30 +219,21 @@ async def get_employee_permissions(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin)
 ):
-    from app.models.employee_permission import EmployeePermission
-    stmt = select(EmployeePermission).where(EmployeePermission.user_id == user_id)
-    res = await db.execute(stmt)
-    perm = res.scalar_one_or_none()
-    if not perm:
-        stmt_user = select(User).where(User.id == user_id, User.role == "employee")
-        res_user = await db.execute(stmt_user)
-        user = res_user.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="Employee permissions not found or user is not an employee.")
-        perm = EmployeePermission(
-            user_id=user_id,
-            access_dashboard=False,
-            access_content_library=False,
-            access_masterclasses=False,
-            access_meetings=False,
-            access_feedback=False,
-            allowed_tools=[],
-            allowed_content_categories=[]
-        )
-        db.add(perm)
-        await db.commit()
-        await db.refresh(perm)
-    return perm
+    stmt_user = select(User).where(User.id == user_id, User.role == "employee")
+    res_user = await db.execute(stmt_user)
+    user = res_user.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User is not an employee.")
+    return EmployeePermissionResponse(
+        user_id=user_id,
+        access_dashboard=True,
+        access_content_library=True,
+        access_masterclasses=True,
+        access_meetings=True,
+        access_feedback=True,
+        allowed_tools=[],
+        allowed_content_categories=[]
+    )
 
 @router.put("/{user_id}/permissions", response_model=EmployeePermissionResponse)
 async def update_employee_permissions(
@@ -247,30 +242,22 @@ async def update_employee_permissions(
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin)
 ):
-    from app.models.employee_permission import EmployeePermission
-    stmt = select(EmployeePermission).where(EmployeePermission.user_id == user_id)
-    res = await db.execute(stmt)
-    perm = res.scalar_one_or_none()
-    if not perm:
-        stmt_user = select(User).where(User.id == user_id, User.role == "employee")
-        res_user = await db.execute(stmt_user)
-        user = res_user.scalar_one_or_none()
-        if not user:
-            raise HTTPException(status_code=404, detail="Employee permissions not found or user is not an employee.")
-        perm = EmployeePermission(user_id=user_id)
-        db.add(perm)
-
-    perm.access_dashboard = payload.access_dashboard
-    perm.access_content_library = payload.access_content_library
-    perm.access_masterclasses = payload.access_masterclasses
-    perm.access_meetings = payload.access_meetings
-    perm.access_feedback = payload.access_feedback
-    perm.allowed_tools = payload.allowed_tools
-    perm.allowed_content_categories = payload.allowed_content_categories
-    
-    await db.commit()
-    await db.refresh(perm)
-    return perm
+    stmt_user = select(User).where(User.id == user_id, User.role == "employee")
+    res_user = await db.execute(stmt_user)
+    user = res_user.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User is not an employee.")
+    # Stube response - individual employee permission modifications are deprecated
+    return EmployeePermissionResponse(
+        user_id=user_id,
+        access_dashboard=payload.access_dashboard,
+        access_content_library=payload.access_content_library,
+        access_masterclasses=payload.access_masterclasses,
+        access_meetings=payload.access_meetings,
+        access_feedback=payload.access_feedback,
+        allowed_tools=payload.allowed_tools,
+        allowed_content_categories=payload.allowed_content_categories
+    )
 
 # --- User Management Endpoints ---
 
@@ -374,13 +361,18 @@ async def update_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
+    org_id = payload.organization_id
+    if payload.role in ["owner", "user"]:
+        if not org_id and payload.company_name.strip():
+            org_id = await get_or_create_organization(db, payload.company_name)
+
     if payload.role == "employee":
-        if not payload.organization_id:
+        if not org_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Employee must belong to a company."
             )
-        has_owner = await check_organization_has_owner(db, payload.organization_id)
+        has_owner = await check_organization_has_owner(db, org_id)
         if not has_owner:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -397,9 +389,9 @@ async def update_user(
 
     # Resolve organization name if ID is provided
     company_name_resolved = payload.company_name.strip()
-    if payload.organization_id:
+    if org_id:
         from app.models.organization import Organization
-        org = await db.get(Organization, payload.organization_id)
+        org = await db.get(Organization, org_id)
         if org:
             company_name_resolved = org.organization_name
 
@@ -410,33 +402,8 @@ async def update_user(
     user.department = payload.department.strip()
     user.designation = payload.designation.strip()
     user.role = payload.role
-    user.organization_id = payload.organization_id
-
-
-    # Handle employee permissions setup or cleanup
-    from app.models.employee_permission import EmployeePermission
-    if payload.role == "employee" and old_role != "employee":
-        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
-        res_perm = await db.execute(stmt_perm)
-        if not res_perm.scalar_one_or_none():
-            new_perm = EmployeePermission(
-                user_id=user.id,
-                access_dashboard=False,
-                access_content_library=False,
-                access_masterclasses=False,
-                access_meetings=False,
-                access_feedback=False,
-                allowed_tools=[],
-                allowed_content_categories=[]
-            )
-            db.add(new_perm)
-    elif payload.role != "employee" and old_role == "employee":
-        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
-        res_perm = await db.execute(stmt_perm)
-        existing_perm = res_perm.scalar_one_or_none()
-        if existing_perm:
-            await db.delete(existing_perm)
-
+    user.organization_id = org_id
+    # Handle employee permissions setup or cleanup (removed user-specific permissions check under RBAC model)
     await db.commit()
     await db.refresh(user)
 
@@ -550,3 +517,70 @@ async def download_template(
         headers=headers,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@router.get("/employee-access-policy", response_model=dict)
+async def get_employee_access_policy(
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    from app.models.employee_access_policy import EmployeeAccessPolicy
+    stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+    res = await db.execute(stmt)
+    policy = res.scalar_one_or_none()
+    if not policy:
+        return {
+            "id": 1,
+            "settings": {
+                "dashboard": True,
+                "content_library": True,
+                "masterclasses": True,
+                "meetings": False,
+                "feedback": True,
+                "wow_toolkit": True,
+                "retirement_predictor": True,
+                "financial_freedom": True,
+                "family_vault": True,
+                "goal_visualization": True,
+                "cost_of_delay": True,
+                "sip_home_loan": True
+            },
+            "updated_by": "system",
+            "updated_at": datetime.utcnow()
+        }
+    return {
+        "id": policy.id,
+        "settings": policy.settings_json,
+        "updated_by": policy.updated_by,
+        "updated_at": policy.updated_at
+    }
+
+@router.put("/employee-access-policy", response_model=dict)
+async def update_employee_access_policy(
+    payload: EmployeeAccessPolicyPayload,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    from app.models.employee_access_policy import EmployeeAccessPolicy
+    stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+    res = await db.execute(stmt)
+    policy = res.scalar_one_or_none()
+    if not policy:
+        policy = EmployeeAccessPolicy(
+            id=1,
+            settings_json=payload.settings,
+            updated_by=admin.email
+        )
+        db.add(policy)
+    else:
+        policy.settings_json = payload.settings
+        policy.updated_by = admin.email
+        policy.updated_at = datetime.utcnow()
+    
+    await db.commit()
+    await db.refresh(policy)
+    return {
+        "id": policy.id,
+        "settings": policy.settings_json,
+        "updated_by": policy.updated_by,
+        "updated_at": policy.updated_at
+    }

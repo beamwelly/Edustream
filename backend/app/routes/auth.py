@@ -58,30 +58,23 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     
     # Fetch permissions
     if user_role == "employee":
-        from app.models.employee_permission import EmployeePermission
-        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == user_id)
-        res_perm = await db.execute(stmt_perm)
-        perm = res_perm.scalar_one_or_none()
-        if perm:
-            user_info["permissions"] = {
-                "access_dashboard": perm.access_dashboard,
-                "access_content": perm.access_content,
-                "access_masterclasses": perm.access_masterclasses,
-                "access_meetings": perm.access_meetings,
-                "access_feedback": perm.access_feedback,
-                "allowed_tools": perm.allowed_tools or [],
-                "allowed_categories": perm.allowed_categories or []
-            }
-        else:
-            user_info["permissions"] = {
-                "access_dashboard": False,
-                "access_content": False,
-                "access_masterclasses": False,
-                "access_meetings": False,
-                "access_feedback": False,
-                "allowed_tools": [],
-                "allowed_categories": []
-            }
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        stmt_policy = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        res_policy = await db.execute(stmt_policy)
+        policy = res_policy.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        user_info["permissions"] = {
+            "access_dashboard": settings.get("dashboard", True),
+            "access_content": settings.get("content_library", True),
+            "access_masterclasses": settings.get("masterclasses", True),
+            "access_meetings": settings.get("meetings", False),
+            "access_feedback": settings.get("feedback", True),
+            "allowed_tools": [
+                k for k, v in settings.items()
+                if k in ("retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan", "wow_toolkit", "needs_discovery", "financial_discovery") and v
+            ],
+            "allowed_categories": []
+        }
     else:
         user_info["permissions"] = {
             "access_dashboard": True,
@@ -89,7 +82,10 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
             "access_masterclasses": True,
             "access_meetings": True,
             "access_feedback": True,
-            "allowed_tools": ["needs_discovery", "financial_discovery", "wow_toolkit"],
+            "allowed_tools": [
+                "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
+                "cost_of_delay", "sip_home_loan", "wow_toolkit", "needs_discovery", "financial_discovery"
+            ],
             "allowed_categories": []
         }
     

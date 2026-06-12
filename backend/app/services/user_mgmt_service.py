@@ -71,6 +71,11 @@ async def create_standard_user(
     if result_user.scalar_one_or_none():
         raise ValueError(f"Email address '{email_clean}' is already registered.")
 
+    # Resolve or create organization for Owner / User roles if organization_id is not provided
+    if role in ["owner", "user"]:
+        if not organization_id and company_name_clean:
+            organization_id = await get_or_create_organization(db, company_name_clean)
+
     # Resolve organization name if id is given
     if organization_id:
         from app.models.organization import Organization
@@ -99,20 +104,8 @@ async def create_standard_user(
     db.add(new_user)
     await db.flush()
 
-    # Create permissions if role is employee
-    if role == "employee":
-        from app.models.employee_permission import EmployeePermission
-        perm = EmployeePermission(
-            user_id=new_user.id,
-            access_dashboard=False,
-            access_content_library=False,
-            access_masterclasses=False,
-            access_meetings=False,
-            access_feedback=False,
-            allowed_tools=[],
-            allowed_content_categories=[]
-        )
-        db.add(perm)
+    # Create permissions if role is employee - REMOVED under new centralized access architecture
+    pass
 
     # Assemble HTML Email content (using the new red #E53935 branding)
     email_subject = "Welcome to Masterclass - Onboarding Credentials"
