@@ -15,6 +15,7 @@ interface UserMgmt {
   designation: string | null;
   is_active: boolean;
   role: string;
+  organization_id?: number | null;
 }
 
 interface UploadError {
@@ -48,6 +49,7 @@ export function UsersPage() {
   const [companyName, setCompanyName] = useState("");
   const [department, setDepartment] = useState("");
   const [designation, setDesignation] = useState("");
+  const [role, setRole] = useState("owner");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Management Modal Form State
@@ -57,8 +59,25 @@ export function UsersPage() {
   const [newCompanyName, setNewCompanyName] = useState("");
   const [newDepartment, setNewDepartment] = useState("");
   const [newDesignation, setNewDesignation] = useState("");
+  const [newRole, setNewRole] = useState("owner");
   const [isManageSubmitting, setIsManageSubmitting] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  // Organizations List & Selection States
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
+  const [newSelectedOrganizationId, setNewSelectedOrganizationId] = useState("");
+
+  // Employee permissions management state
+  const [accessDashboard, setAccessDashboard] = useState(false);
+  const [accessContentLibrary, setAccessContentLibrary] = useState(false);
+  const [accessMasterclasses, setAccessMasterclasses] = useState(false);
+  const [accessMeetings, setAccessMeetings] = useState(false);
+  const [accessFeedback, setAccessFeedback] = useState(false);
+  const [allowedTools, setAllowedTools] = useState<string[]>([]);
+  const [allowedContentCategories, setAllowedContentCategories] = useState<string[]>([]);
+  const [loadingPermissions, setLoadingPermissions] = useState(false);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
 
   // Bulk Upload File State
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -72,6 +91,19 @@ export function UsersPage() {
     }, 300);
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  const fetchOrganizations = async () => {
+    try {
+      const data = await apiFetch<any[]>("/users/organizations");
+      setOrganizations(data || []);
+    } catch (err) {
+      console.error("Failed to load organizations:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
 
   // Fetch Users
   const fetchUsersList = async (search: string = "") => {
@@ -89,6 +121,45 @@ export function UsersPage() {
     }
   };
 
+  const fetchPermissions = async (userId: number) => {
+    setLoadingPermissions(true);
+    try {
+      const data = await apiFetch<any>(`/users/${userId}/permissions`);
+      if (data) {
+        setAccessDashboard(data.access_dashboard);
+        setAccessContentLibrary(data.access_content_library);
+        setAccessMasterclasses(data.access_masterclasses);
+        setAccessMeetings(data.access_meetings);
+        setAccessFeedback(data.access_feedback);
+        setAllowedTools(data.allowed_tools || []);
+        setAllowedContentCategories(data.allowed_content_categories || []);
+      }
+    } catch (err: any) {
+      console.error("Failed to load employee permissions:", err);
+    } finally {
+      setLoadingPermissions(false);
+    }
+  };
+
+  const fetchAllCategories = async () => {
+    try {
+      const data = await apiFetch<any[]>("/content/categories");
+      setAllCategories(data || []);
+    } catch (err) {
+      console.error("Failed to load categories", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllCategories();
+  }, []);
+
+  useEffect(() => {
+    if (selectedUserToManage && newRole === "employee") {
+      fetchPermissions(selectedUserToManage.id);
+    }
+  }, [selectedUserToManage?.id, newRole]);
+
   useEffect(() => {
     fetchUsersList(debouncedSearch);
   }, [debouncedSearch]);
@@ -96,9 +167,29 @@ export function UsersPage() {
   // Single User Submission
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fullName.trim() || !email.trim() || !companyName.trim() || !department.trim() || !designation.trim()) {
+    const isEmployee = role === "employee";
+    const compName = isEmployee
+      ? (organizations.find(o => String(o.id) === selectedOrganizationId)?.organization_name || "")
+      : companyName.trim();
+
+    if (!fullName.trim() || !email.trim() || !compName || !department.trim() || !designation.trim()) {
       toast.warning("Please fill in all fields.");
       return;
+    }
+
+    if (isEmployee && !selectedOrganizationId) {
+      toast.warning("Please select a company for the employee.");
+      return;
+    }
+
+    if (isEmployee && selectedOrganizationId) {
+      const hasOwner = users.some(
+        u => String(u.organization_id) === selectedOrganizationId && (u.role === "owner" || u.role === "user") && u.is_active
+      );
+      if (!hasOwner) {
+        toast.error("Please create an Owner account first.");
+        return;
+      }
     }
 
     const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
@@ -114,10 +205,12 @@ export function UsersPage() {
         body: JSON.stringify({
           full_name: fullName,
           email: email,
-          company_name: companyName,
+          company_name: compName,
           department: department,
           designation: designation,
-          is_active: true
+          is_active: true,
+          role: role,
+          organization_id: isEmployee ? Number(selectedOrganizationId) : undefined
         }),
       });
       
@@ -126,11 +219,14 @@ export function UsersPage() {
       setFullName("");
       setEmail("");
       setCompanyName("");
+      setSelectedOrganizationId("");
       setDepartment("");
       setDesignation("");
+      setRole("owner");
       setIsCreateOpen(false);
       // Refresh list
       fetchUsersList(debouncedSearch);
+      fetchOrganizations();
     } catch (err: any) {
       toast.error(err.message || "Failed to create user");
     } finally {
@@ -143,15 +239,33 @@ export function UsersPage() {
     e.preventDefault();
     if (!selectedUserToManage) return;
     
+    const isEmployee = newRole === "employee";
+    const companyTrim = isEmployee
+      ? (organizations.find(o => String(o.id) === newSelectedOrganizationId)?.organization_name || "")
+      : newCompanyName.trim();
     const nameTrim = newFullName.trim();
     const emailTrim = newEmail.trim();
-    const companyTrim = newCompanyName.trim();
     const deptTrim = newDepartment.trim();
     const desigTrim = newDesignation.trim();
 
     if (!nameTrim || !emailTrim || !companyTrim || !deptTrim || !desigTrim) {
       toast.warning("All fields are required.");
       return;
+    }
+
+    if (isEmployee && !newSelectedOrganizationId) {
+      toast.warning("Please select a company for the employee.");
+      return;
+    }
+
+    if (isEmployee && newSelectedOrganizationId) {
+      const hasOwner = users.some(
+        u => String(u.organization_id) === newSelectedOrganizationId && (u.role === "owner" || u.role === "user") && u.is_active
+      );
+      if (!hasOwner) {
+        toast.error("Please create an Owner account first.");
+        return;
+      }
     }
 
     const emailRegex = /^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/;
@@ -169,12 +283,31 @@ export function UsersPage() {
           email: emailTrim,
           company_name: companyTrim,
           department: deptTrim,
-          designation: desigTrim
+          designation: desigTrim,
+          role: newRole,
+          organization_id: isEmployee ? Number(newSelectedOrganizationId) : undefined
         })
       });
-      toast.success("User details updated successfully!");
+
+      if (newRole === "employee") {
+        await apiFetch(`/users/${selectedUserToManage.id}/permissions`, {
+          method: "PUT",
+          body: JSON.stringify({
+            access_dashboard: accessDashboard,
+            access_content_library: accessContentLibrary,
+            access_masterclasses: accessMasterclasses,
+            access_meetings: accessMeetings,
+            access_feedback: accessFeedback,
+            allowed_tools: allowedTools,
+            allowed_content_categories: allowedContentCategories
+          })
+        });
+      }
+
+      toast.success("User details and permissions updated successfully!");
       setSelectedUserToManage(null);
       fetchUsersList(debouncedSearch);
+      fetchOrganizations();
     } catch (err: any) {
       toast.error(err.message || "Failed to update user details");
     } finally {
@@ -375,6 +508,8 @@ export function UsersPage() {
                           setNewCompanyName(u.company_name || "");
                           setNewDepartment(u.department || "");
                           setNewDesignation(u.designation || "");
+                          setNewRole(u.role);
+                          setNewSelectedOrganizationId(u.organization_id ? String(u.organization_id) : "");
                         }}
                         className="text-sm font-semibold text-primary hover:underline transition"
                       >
@@ -440,18 +575,41 @@ export function UsersPage() {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-primary/10 pb-1">Work Profile</h4>
                 
                 <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label htmlFor="modal-company-name" className="text-xs font-medium text-muted-foreground">Company Name</label>
-                    <input
-                      id="modal-company-name"
-                      type="text"
-                      required
-                      placeholder="e.g. Ayusha Nilayam"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm outline-none focus:border-primary transition"
-                    />
-                  </div>
+                  {role === "employee" ? (
+                    <div className="space-y-1.5">
+                      <label htmlFor="modal-company-select" className="text-xs font-medium text-muted-foreground font-semibold">Select Company</label>
+                      <select
+                        id="modal-company-select"
+                        required
+                        value={selectedOrganizationId}
+                        onChange={(e) => setSelectedOrganizationId(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm outline-none focus:border-primary transition cursor-pointer text-foreground font-medium"
+                      >
+                        <option value="">-- Choose Company --</option>
+                        {organizations.map((org) => (
+                          <option key={org.id} value={String(org.id)}>{org.organization_name}</option>
+                        ))}
+                      </select>
+                      {selectedOrganizationId && !users.some(u => String(u.organization_id) === selectedOrganizationId && (u.role === "owner" || u.role === "user") && u.is_active) && (
+                        <p className="text-xs text-destructive font-semibold mt-1">
+                          ⚠️ Please create an Owner account first.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label htmlFor="modal-company-name" className="text-xs font-medium text-muted-foreground">Company Name</label>
+                      <input
+                        id="modal-company-name"
+                        type="text"
+                        required
+                        placeholder="e.g. Ayusha Nilayam"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm outline-none focus:border-primary transition"
+                      />
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <label htmlFor="modal-dept" className="text-xs font-medium text-muted-foreground">Department</label>
@@ -477,6 +635,18 @@ export function UsersPage() {
                         className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm outline-none focus:border-primary transition"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="modal-role" className="text-xs font-medium text-muted-foreground">Role</label>
+                    <select
+                      id="modal-role"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-sm outline-none focus:border-primary transition"
+                    >
+                      <option value="owner">Owner (Tenant Admin)</option>
+                      <option value="employee">Employee (Tenant Worker)</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -692,17 +862,40 @@ export function UsersPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label htmlFor="edit-company" className="text-xs font-medium text-muted-foreground">Company Name</label>
-                    <input
-                      id="edit-company"
-                      type="text"
-                      className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-primary transition"
-                      value={newCompanyName}
-                      onChange={(e) => setNewCompanyName(e.target.value)}
-                      required
-                    />
-                  </div>
+                  {newRole === "employee" ? (
+                    <div className="space-y-1.5 mt-3">
+                      <label htmlFor="edit-company-select" className="text-xs font-medium text-muted-foreground font-semibold">Select Company</label>
+                      <select
+                        id="edit-company-select"
+                        required
+                        value={newSelectedOrganizationId}
+                        onChange={(e) => setNewSelectedOrganizationId(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm outline-none focus:border-primary transition cursor-pointer text-foreground font-medium"
+                      >
+                        <option value="">-- Choose Company --</option>
+                        {organizations.map((org) => (
+                          <option key={org.id} value={String(org.id)}>{org.organization_name}</option>
+                        ))}
+                      </select>
+                      {newSelectedOrganizationId && !users.some(u => String(u.organization_id) === newSelectedOrganizationId && (u.role === "owner" || u.role === "user") && u.is_active) && (
+                        <p className="text-xs text-destructive font-semibold mt-1">
+                          ⚠️ Please create an Owner account first.
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5 mt-3">
+                      <label htmlFor="edit-company" className="text-xs font-medium text-muted-foreground font-semibold">Company Name</label>
+                      <input
+                        id="edit-company"
+                        type="text"
+                        className="w-full rounded-lg border border-border bg-background py-2 px-3 text-sm text-foreground outline-none focus:border-primary transition"
+                        value={newCompanyName}
+                        onChange={(e) => setNewCompanyName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-1.5">
@@ -729,18 +922,169 @@ export function UsersPage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end pt-1.5">
+                  <div className="space-y-1.5 mt-3">
+                    <label htmlFor="edit-role" className="text-xs font-medium text-muted-foreground">Role</label>
+                    <select
+                      id="edit-role"
+                      value={newRole}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-background py-2.5 px-3 text-sm outline-none focus:border-primary transition"
+                    >
+                      {newRole === "user" && <option value="user">User (Tenant Client)</option>}
+                      <option value="owner">Owner (Tenant Admin)</option>
+                      <option value="employee">Employee (Tenant Worker)</option>
+                    </select>
+                  </div>
+
+                  {newRole === "employee" && (
+                    <div className="mt-4 pt-4 border-t border-border/60 space-y-4">
+                      <h5 className="text-xs font-bold uppercase tracking-wider text-primary">Employee Permissions</h5>
+                      {loadingPermissions ? (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading permissions...
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {/* Module Access Checkboxes */}
+                          <div className="space-y-2">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Access Modules</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={accessDashboard}
+                                  onChange={(e) => setAccessDashboard(e.target.checked)}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Dashboard
+                              </label>
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={accessContentLibrary}
+                                  onChange={(e) => setAccessContentLibrary(e.target.checked)}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Content Library
+                              </label>
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={accessMasterclasses}
+                                  onChange={(e) => setAccessMasterclasses(e.target.checked)}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Masterclasses
+                              </label>
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={accessMeetings}
+                                  onChange={(e) => setAccessMeetings(e.target.checked)}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Meetings
+                              </label>
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={accessFeedback}
+                                  onChange={(e) => setAccessFeedback(e.target.checked)}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Feedback
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Allowed Tools Checkboxes */}
+                          <div className="space-y-2 pt-2 border-t border-border/40">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Allowed Tools</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={allowedTools.includes("wow_toolkit")}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setAllowedTools(prev => [...prev, "wow_toolkit"]);
+                                    } else {
+                                      setAllowedTools(prev => prev.filter(t => t !== "wow_toolkit"));
+                                    }
+                                  }}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                WoW Toolkit
+                              </label>
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={allowedTools.includes("needs_discovery")}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setAllowedTools(prev => [...prev, "needs_discovery"]);
+                                    } else {
+                                      setAllowedTools(prev => prev.filter(t => t !== "needs_discovery"));
+                                    }
+                                  }}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Needs Discovery
+                              </label>
+                              <label className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={allowedTools.includes("financial_discovery")}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setAllowedTools(prev => [...prev, "financial_discovery"]);
+                                    } else {
+                                      setAllowedTools(prev => prev.filter(t => t !== "financial_discovery"));
+                                    }
+                                  }}
+                                  className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Financial Discovery
+                              </label>
+                            </div>
+                          </div>
+
+                          {/* Content Category Checkboxes */}
+                          <div className="space-y-2 pt-2 border-t border-border/40">
+                            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">Allowed Content Categories</span>
+                            <div className="grid grid-cols-2 gap-2 max-h-[100px] overflow-y-auto pr-1">
+                              {allCategories.map(cat => (
+                                <label key={cat.id} className="flex items-center gap-2 text-xs font-medium text-foreground cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={allowedContentCategories.includes(cat.name)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setAllowedContentCategories(prev => [...prev, cat.name]);
+                                      } else {
+                                        setAllowedContentCategories(prev => prev.filter(c => c !== cat.name));
+                                      }
+                                    }}
+                                    className="rounded border-border text-primary focus:ring-primary h-3.5 w-3.5"
+                                  />
+                                  {cat.name}
+                                </label>
+                              ))}
+                              {allCategories.length === 0 && (
+                                <span className="text-[11px] text-muted-foreground italic">No categories available</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-3">
                     <Button 
                       type="submit" 
                       className="text-xs font-semibold px-5 h-9"
-                      disabled={
-                        isManageSubmitting || 
-                        (newFullName.trim() === selectedUserToManage.full_name && 
-                         newEmail.trim() === selectedUserToManage.email && 
-                         newCompanyName.trim() === (selectedUserToManage.company_name || "") && 
-                         newDepartment.trim() === (selectedUserToManage.department || "") && 
-                         newDesignation.trim() === (selectedUserToManage.designation || ""))
-                      }
+                      disabled={isManageSubmitting}
                     >
                       {isManageSubmitting && <Loader2 className="h-3 w-3 animate-spin mr-1.5" />}
                       Save Changes

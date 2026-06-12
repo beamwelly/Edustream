@@ -18,9 +18,10 @@ import {
   LayoutGrid,
   List
 } from "lucide-react";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import { 
   PDFThumbnail, 
   DocxThumbnail, 
@@ -90,6 +91,7 @@ const triggerDownload = (item: ContentItem) => {
 };
 
 export function UserContentPage() {
+  const { user } = useAuth();
   // DB States
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -206,9 +208,13 @@ export function UserContentPage() {
   }, [groupedByMonth, dateSort]);
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_content) {
+      setIsLoading(false);
+      return;
+    }
     fetchCategories();
     fetchContentItems();
-  }, [searchQuery, activeCategory, typeFilter, dateSort]);
+  }, [user, searchQuery, activeCategory, typeFilter, dateSort]);
 
   const fetchCategories = async () => {
     try {
@@ -426,6 +432,10 @@ export function UserContentPage() {
   };
 
   const uniqueFileTypes = ["PDF", "DOCX", "XLSX", "PPTX", "Video", "Image", "Archive"];
+
+  if (user && user.role === "employee" && !user.permissions?.access_content) {
+    return <AccessDenied message="You do not have permission to access the Content Library." />;
+  }
 
   return (
     <>

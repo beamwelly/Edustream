@@ -57,6 +57,16 @@ async def get_current_active_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated."
         )
+    if user.role == "employee":
+        from app.models.employee_permission import EmployeePermission
+        perm_stmt = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
+        perm_res = await db.execute(perm_stmt)
+        perm = perm_res.scalar_one_or_none()
+        if not perm or "wow_toolkit" not in (perm.allowed_tools or []):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access Denied. You do not have permission to access the WOW Toolkit."
+            )
     return user
 
 async def get_current_admin(
@@ -351,6 +361,21 @@ async def download_tool_file(
         payload = decode_access_token(token)
         if not payload:
             raise HTTPException(status_code=401, detail="Session expired or invalid token.")
+        user_id = payload.get("user_id")
+        if user_id:
+            stmt_user = select(User).where(User.id == int(user_id))
+            res_user = await db.execute(stmt_user)
+            user = res_user.scalar_one_or_none()
+            if user:
+                if not user.is_active:
+                    raise HTTPException(status_code=403, detail="User account is deactivated.")
+                if user.role == "employee":
+                    from app.models.employee_permission import EmployeePermission
+                    perm_stmt = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
+                    perm_res = await db.execute(perm_stmt)
+                    perm = perm_res.scalar_one_or_none()
+                    if not perm or "wow_toolkit" not in (perm.allowed_tools or []):
+                        raise HTTPException(status_code=403, detail="Access Denied. You do not have permission to access the WOW Toolkit.")
 
     try:
         stmt = select(ToolRegistry).where(ToolRegistry.id == tool_id)
@@ -568,7 +593,10 @@ class RetirementResult(BaseModel):
     sensitivity_table: List[SensitivityPoint]
 
 @router.post("/retirement/calculate", response_model=RetirementResult)
-def calculate_retirement(inputs: RetirementInput):
+def calculate_retirement(
+    inputs: RetirementInput,
+    current_user: User = Depends(get_current_active_user)
+):
     if inputs.current_age >= inputs.expected_retirement_age:
         raise HTTPException(status_code=400, detail="Current age must be less than expected retirement age.")
     if inputs.expected_retirement_age >= inputs.life_expectancy:
@@ -620,7 +648,10 @@ class DelayResult(BaseModel):
     delay_table: List[DelayPoint]
 
 @router.post("/cost-delay/calculate", response_model=DelayResult)
-def calculate_delay(inputs: DelayInput):
+def calculate_delay(
+    inputs: DelayInput,
+    current_user: User = Depends(get_current_active_user)
+):
     if inputs.monthly_sip_amount <= 0:
         raise HTTPException(status_code=400, detail="Monthly SIP Amount must be greater than zero.")
     if inputs.expected_annual_return < 0 or inputs.expected_annual_return > 1:
@@ -693,7 +724,10 @@ class SipLoanResult(BaseModel):
     loan_series: List[LoanSeriesPoint]
 
 @router.post("/sip-home-loan/calculate", response_model=SipLoanResult)
-def calculate_sip_loan(inputs: SipLoanInput):
+def calculate_sip_loan(
+    inputs: SipLoanInput,
+    current_user: User = Depends(get_current_active_user)
+):
     if inputs.monthly_sip < 0 or inputs.loan_amount < 0 or inputs.down_payment < 0:
         raise HTTPException(status_code=400, detail="Financial amounts cannot be negative.")
     if inputs.sip_duration <= 0 or inputs.loan_tenure <= 0:
@@ -759,7 +793,10 @@ class FreedomDateResult(BaseModel):
     timeline_series: List[TimelinePoint]
 
 @router.post("/freedom-date/calculate", response_model=FreedomDateResult)
-def calculate_freedom(inputs: FreedomDateInput):
+def calculate_freedom(
+    inputs: FreedomDateInput,
+    current_user: User = Depends(get_current_active_user)
+):
     results = calculate_freedom_date(
         current_age=inputs.current_age,
         birth_year=inputs.birth_year,

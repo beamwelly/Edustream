@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { FileText, CalendarClock, Wrench, Play, Loader2, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface UserProfile {
   id: number;
@@ -28,14 +29,19 @@ interface MeetingItem {
 }
 
 export function UserDashboardPage() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recentDocs, setRecentDocs] = useState<ContentItem[]>([]);
   const [meetings, setMeetings] = useState<MeetingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_dashboard) {
+      setIsLoading(false);
+      return;
+    }
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -62,6 +68,10 @@ export function UserDashboardPage() {
       setIsLoading(false);
     }
   };
+
+  if (user && user.role === "employee" && !user.permissions?.access_dashboard) {
+    return <AccessDenied message="You do not have permission to access the Dashboard." />;
+  }
 
   return (
     <>

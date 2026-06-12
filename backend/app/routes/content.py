@@ -14,6 +14,7 @@ from sqlalchemy import select, update, delete, or_, func
 
 from app.database.session import get_db
 from app.models.user import User
+from app.routes.users import require_permission
 from app.models.content import ContentCategory, ContentItem
 from app.utils.security import decode_access_token
 from app.utils.supabase_storage import (
@@ -137,18 +138,26 @@ class CategoryUpdate(BaseModel):
 @router.get("/categories")
 async def list_categories(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("content_library"))
 ):
     cached_cats = cache_get("content:categories")
     if cached_cats is not None:
-        return cached_cats
-
-    stmt = select(ContentCategory).order_by(ContentCategory.name.asc())
-    res = await db.execute(stmt)
-    cats = res.scalars().all()
+        cats_data = list(cached_cats)
+    else:
+        stmt = select(ContentCategory).order_by(ContentCategory.name.asc())
+        res = await db.execute(stmt)
+        cats = res.scalars().all()
+        cats_data = [{"id": c.id, "name": c.name} for c in cats]
+        cache_set("content:categories", cats_data, ttl=3600)
     
-    cats_data = [{"id": c.id, "name": c.name} for c in cats]
-    cache_set("content:categories", cats_data, ttl=3600)
+    if current_user.role == "employee":
+        from app.models.employee_permission import EmployeePermission
+        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+        res_perm = await db.execute(stmt_perm)
+        perm = res_perm.scalar_one_or_none()
+        allowed_cats = perm.allowed_content_categories if perm else []
+        cats_data = [c for c in cats_data if c["name"] in allowed_cats]
+        
     return cats_data
 
 @router.post("/categories")
@@ -258,6 +267,7 @@ class ContentUpdatePayload(BaseModel):
     description: Optional[str] = None
     category: str
     is_active: bool
+    visibility: Optional[str] = "owner_employee"
 
 # --- Content Endpoints ---
 
@@ -268,20 +278,34 @@ async def list_content_items(
     file_type: Optional[str] = None,
     sort: Optional[str] = "newest",
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("content_library"))
 ):
     role = current_user.role
+    org_id = current_user.organization_id or 0
     ttl = 300
-    cache_key = f"content:list:{role}:{search or ''}:{category or ''}:{file_type or ''}:{sort or ''}"
+    cache_key = f"content:list:{role}:{org_id}:{search or ''}:{category or ''}:{file_type or ''}:{sort or ''}"
     cached_data = cache_get(cache_key)
     if cached_data is not None:
         return cached_data
 
     stmt = select(ContentItem)
 
-    # For standard users, only active files are served
+    # For standard users, only active files are served and strictly isolated by organization
     if current_user.role != "admin":
         stmt = stmt.where(ContentItem.is_active == True)
+        if current_user.organization_id is not None:
+            stmt = stmt.where(or_(ContentItem.organization_id == current_user.organization_id, ContentItem.organization_id == None))
+        else:
+            stmt = stmt.where(ContentItem.organization_id == None)
+
+        if current_user.role == "employee":
+            stmt = stmt.where(ContentItem.visibility != "owner_only")
+            from app.models.employee_permission import EmployeePermission
+            stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+            res_perm = await db.execute(stmt_perm)
+            perm = res_perm.scalar_one_or_none()
+            allowed_cats = perm.allowed_content_categories if perm else []
+            stmt = stmt.where(ContentItem.category.in_(allowed_cats))
 
     # Filters
     if search:
@@ -373,6 +397,8 @@ async def upload_content(
     description: Optional[str] = Form(None),
     category: str = Form(...),
     folder: Optional[str] = Form("General"),
+    visibility: Optional[str] = Form("owner_employee"),
+    organization_id: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
@@ -447,7 +473,9 @@ async def upload_content(
         original_filename=file.filename,
         storage_filename=unique_filename,
         warning=None,
-        mime_type=content_type
+        mime_type=content_type,
+        visibility=visibility or "owner_employee",
+        organization_id=organization_id
     )
     db.add(new_item)
     await db.commit()
@@ -675,6 +703,7 @@ async def update_content_metadata(
     item.description = payload.description.strip() if payload.description else None
     item.category = payload.category
     item.is_active = payload.is_active
+    item.visibility = payload.visibility or "owner_employee"
 
     await db.commit()
     await db.refresh(item)
@@ -700,18 +729,37 @@ async def download_content_file(
     """
     from fastapi.responses import StreamingResponse
 
-    # 1. Authenticate session if token query param is provided
-    if token:
-        payload = decode_access_token(token)
-        if not payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Download aborted: Session has expired.")
-
-    # 2. Query Neon DB metadata
+    # Query Neon DB metadata
     stmt = select(ContentItem).where(ContentItem.id == item_id)
     res = await db.execute(stmt)
     item = res.scalar_one_or_none()
     if not item:
         raise HTTPException(status_code=404, detail="Requested file not found in database catalog.")
+
+    # 1. Authenticate session if token query param is provided
+    if token:
+        payload = decode_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Download aborted: Session has expired.")
+        user_id = payload.get("user_id")
+        if user_id:
+            stmt_user = select(User).where(User.id == int(user_id))
+            res_user = await db.execute(stmt_user)
+            user = res_user.scalar_one_or_none()
+            if user:
+                if not user.is_active:
+                    raise HTTPException(status_code=403, detail="User account is inactive.")
+                if user.role == "employee":
+                    from app.models.employee_permission import EmployeePermission
+                    stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == user.id)
+                    res_perm = await db.execute(stmt_perm)
+                    perm = res_perm.scalar_one_or_none()
+                    if not perm or not perm.access_content_library:
+                        raise HTTPException(status_code=403, detail="Access denied. You do not have permission to access Content Library.")
+                    if item.category not in perm.allowed_content_categories:
+                        raise HTTPException(status_code=403, detail="Access denied. You do not have permission to access this category.")
+                    if item.visibility == "owner_only":
+                        raise HTTPException(status_code=403, detail="Access denied. This file is restricted to owner only.")
 
     # 3. Create signed URL for physical bucket query validation
     signed_url, _ = await create_signed_url(item.storage_path)
@@ -835,6 +883,7 @@ class BulkUploadFile(BaseModel):
 
 class BulkUploadRequest(BaseModel):
     files: List[BulkUploadFile]
+    organization_id: Optional[int] = None
 
 @router.post("/bulk-upload")
 async def bulk_upload_content_multi(
@@ -936,7 +985,8 @@ async def bulk_upload_content_multi(
                 bucket_name=BUCKET_NAME,
                 original_filename=f.filename,
                 storage_filename=unique_filename,
-                mime_type=content_type
+                mime_type=content_type,
+                organization_id=payload.organization_id
             )
             db.add(new_item)
             success_count += 1

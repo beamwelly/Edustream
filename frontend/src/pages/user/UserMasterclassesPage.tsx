@@ -13,9 +13,10 @@ import {
   Award,
   BookOpen
 } from "lucide-react";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface Masterclass {
   masterclass_id: number;
@@ -45,12 +46,17 @@ interface WatchProgress {
 }
 
 export function UserMasterclassesPage() {
+  const { user } = useAuth();
   const [masterclasses, setMasterclasses] = useState<Masterclass[]>([]);
   const [registrations, setRegistrations] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [nowTime, setNowTime] = useState<Date>(new Date());
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_masterclasses) {
+      setLoading(false);
+      return;
+    }
     const timer = setInterval(() => {
       setNowTime(new Date());
     }, 1000);
@@ -118,8 +124,11 @@ export function UserMasterclassesPage() {
   };
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_masterclasses) {
+      return;
+    }
     fetchMasterclasses();
-  }, []);
+  }, [user]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -280,6 +289,10 @@ export function UserMasterclassesPage() {
   const recordedSessions = filteredMasterclasses.filter(
     (m) => (m.status === "recorded" || m.status === "completed") && m.recording_url
   );
+
+  if (user && user.role === "employee" && !user.permissions?.access_masterclasses) {
+    return <AccessDenied message="You do not have permission to access Masterclasses." />;
+  }
 
   return (
     <>

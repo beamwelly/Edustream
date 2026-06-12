@@ -10,6 +10,15 @@ export interface User {
   organization_name?: string | null;
   is_temp_password: boolean;
   is_active: boolean;
+  permissions?: {
+    access_dashboard: boolean;
+    access_content: boolean;
+    access_masterclasses: boolean;
+    access_meetings: boolean;
+    access_feedback: boolean;
+    allowed_tools: string[];
+    allowed_categories: string[];
+  } | null;
 }
 
 interface LoginResponse {

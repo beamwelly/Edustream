@@ -8,7 +8,7 @@ from sqlalchemy import select, update, func
 from app.database.session import get_db
 from app.models.user import User
 from app.models.feedback import Feedback
-from app.routes.content import get_current_active_user
+from app.routes.users import require_permission
 from app.routes.users_mgmt import get_current_admin
 from app.services.notification_service import create_notification
 
@@ -50,7 +50,7 @@ class FeedbackStatusUpdate(BaseModel):
 async def submit_feedback(
     payload: FeedbackCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("feedback"))
 ):
     """
     Submit feedback. Triggers an admin notification.
@@ -93,7 +93,7 @@ async def submit_feedback(
 @router.get("/my", response_model=List[FeedbackResponse])
 async def get_my_feedback(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("feedback"))
 ):
     """
     Get current user's feedback history.

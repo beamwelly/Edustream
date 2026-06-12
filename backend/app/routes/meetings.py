@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 
 from app.database.session import get_db
 from app.models.user import User
+from app.routes.users import require_permission
 from app.models.meeting import Meeting, GoogleIntegration
 from app.utils.security import decode_access_token
 from app.utils.google_api import (
@@ -128,19 +129,19 @@ async def get_valid_google_token(db: AsyncSession) -> Optional[str]:
 @router.get("/users", response_model=List[UserInfoResponse])
 async def list_available_users(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("meetings"))
 ):
     """
     Returns filtered list of active users that can be scheduled for meetings, based on role permissions.
     """
     stmt = select(User).where(User.is_active == True)
     
-    if current_user.role == "user":
-        # User requests Admin
+    if current_user.role in ("owner", "employee", "user"):
+        # Standard users request Admin
         stmt = stmt.where(User.role == "admin")
     elif current_user.role == "admin":
         # Admin requests standard Users
-        stmt = stmt.where(User.role == "user")
+        stmt = stmt.where(User.role.in_(["owner", "employee", "user"]))
         
     res = await db.execute(stmt)
     users = res.scalars().all()
@@ -160,7 +161,7 @@ async def list_available_users(
 async def request_meeting(
     payload: MeetingRequestPayload,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("meetings"))
 ):
     """
     Enables any authenticated user (Super Admin, Admin, standard User) to request a meeting.
@@ -203,7 +204,7 @@ async def request_meeting(
 @router.get("/list")
 async def list_meetings(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("meetings"))
 ):
     """
     Fetches real database-driven meetings depending on role permissions.
@@ -423,7 +424,7 @@ async def schedule_meeting(
 async def accept_meeting(
     meeting_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("meetings"))
 ):
     stmt = select(Meeting).where(Meeting.id == meeting_id)
     res = await db.execute(stmt)
@@ -443,7 +444,7 @@ async def accept_meeting(
 async def reject_meeting(
     meeting_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("meetings"))
 ):
     stmt = select(Meeting).where(Meeting.id == meeting_id)
     res = await db.execute(stmt)

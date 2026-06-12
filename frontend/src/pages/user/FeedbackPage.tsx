@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Loader2, MessageSquare, Star, Send, History, CheckCircle2 } from "lucide-react";
-import { PageHeader, Card, Button } from "@/components/common";
+import { PageHeader, Card, Button, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface FeedbackItem {
   id: number;
@@ -23,6 +24,7 @@ interface OptionItem {
 }
 
 export function FeedbackPage() {
+  const { user } = useAuth();
   const [feedbackType, setFeedbackType] = useState("Platform Feedback");
   const [sessionId, setSessionId] = useState("");
   const [sessionTitle, setSessionTitle] = useState("");
@@ -55,8 +57,12 @@ export function FeedbackPage() {
   };
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_feedback) {
+      setLoadingHistory(false);
+      return;
+    }
     fetchHistory();
-  }, []);
+  }, [user]);
 
   // Fetch session options dynamically based on feedbackType
   useEffect(() => {
@@ -173,6 +179,10 @@ export function FeedbackPage() {
         return <span className="inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-bold text-gray-600 ring-1 ring-inset ring-gray-500/15">Submitted</span>;
     }
   };
+
+  if (user && user.role === "employee" && !user.permissions?.access_feedback) {
+    return <AccessDenied message="You do not have permission to access Feedback." />;
+  }
 
   return (
     <>

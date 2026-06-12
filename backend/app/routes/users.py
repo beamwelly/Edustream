@@ -42,6 +42,51 @@ async def get_current_user(
         
     return user
 
+def require_permission(category: str):
+    async def dependency(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> User:
+        if not current_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive."
+            )
+        if current_user.role in ("admin", "owner", "user"):
+            return current_user
+        if current_user.role == "employee":
+            from app.models.employee_permission import EmployeePermission
+            stmt = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+            res = await db.execute(stmt)
+            perm = res.scalar_one_or_none()
+            if perm and getattr(perm, f"access_{category}", False):
+                return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access Denied. You do not have permission to access {category}."
+        )
+    return dependency
+
+def require_tool_permission(tool_id: str):
+    async def dependency(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> User:
+        if not current_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive."
+            )
+        if current_user.role in ("admin", "owner", "user"):
+            return current_user
+        if current_user.role == "employee":
+            from app.models.employee_permission import EmployeePermission
+            stmt = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+            res = await db.execute(stmt)
+            perm = res.scalar_one_or_none()
+            if perm and tool_id in (perm.allowed_tools or []):
+                return current_user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access Denied. You do not have permission to access the tool: {tool_id}."
+        )
+    return dependency
+
+
 # Pydantic Schemas for Profile
 class UserProfileResponseSchema(BaseModel):
     id: int
@@ -64,6 +109,7 @@ class UserProfileResponseSchema(BaseModel):
     pref_masterclass_notifications: bool
     pref_email_notifications: bool
     pref_recording_notifications: bool
+    permissions: Optional[dict] = None
 
 class UserProfileUpdate(BaseModel):
     full_name: str
@@ -87,6 +133,43 @@ async def get_current_user_profile(
     """
     Get current logged-in user profile, with company_name mapped to organization_name.
     """
+    user_perms = None
+    if current_user.role == "employee":
+        from app.models.employee_permission import EmployeePermission
+        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == current_user.id)
+        res_perm = await db.execute(stmt_perm)
+        perm = res_perm.scalar_one_or_none()
+        if perm:
+            user_perms = {
+                "access_dashboard": perm.access_dashboard,
+                "access_content": perm.access_content,
+                "access_masterclasses": perm.access_masterclasses,
+                "access_meetings": perm.access_meetings,
+                "access_feedback": perm.access_feedback,
+                "allowed_tools": perm.allowed_tools or [],
+                "allowed_categories": perm.allowed_categories or []
+            }
+        else:
+            user_perms = {
+                "access_dashboard": False,
+                "access_content": False,
+                "access_masterclasses": False,
+                "access_meetings": False,
+                "access_feedback": False,
+                "allowed_tools": [],
+                "allowed_categories": []
+            }
+    else:
+        user_perms = {
+            "access_dashboard": True,
+            "access_content": True,
+            "access_masterclasses": True,
+            "access_meetings": True,
+            "access_feedback": True,
+            "allowed_tools": ["needs_discovery", "financial_discovery", "wow_toolkit"],
+            "allowed_categories": []
+        }
+
     return {
         "id": current_user.id,
         "full_name": current_user.full_name,
@@ -107,7 +190,8 @@ async def get_current_user_profile(
         "is_active": current_user.is_active,
         "pref_masterclass_notifications": current_user.pref_masterclass_notifications,
         "pref_email_notifications": current_user.pref_email_notifications,
-        "pref_recording_notifications": current_user.pref_recording_notifications
+        "pref_recording_notifications": current_user.pref_recording_notifications,
+        "permissions": user_perms
     }
 
 @router.put("/me", response_model=UserProfileResponseSchema)

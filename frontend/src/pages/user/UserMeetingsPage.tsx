@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Calendar, Video, FileText, Clock, Loader2 } from "lucide-react";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 interface UserInfo {
   id: number;
@@ -41,6 +42,7 @@ interface MeetingResponse {
 const slots = ["10:00 AM", "11:30 AM", "02:00 PM", "04:30 PM"];
 
 export function UserMeetingsPage() {
+  const { user } = useAuth();
   const [meetings, setMeetings] = useState<MeetingResponse[]>([]);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,8 +82,12 @@ export function UserMeetingsPage() {
   };
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_meetings) {
+      setLoading(false);
+      return;
+    }
     fetchMeetingsData();
-  }, []);
+  }, [user]);
 
   const handleRequestMeeting = async () => {
     if (!topic.trim()) {
@@ -167,6 +173,10 @@ export function UserMeetingsPage() {
       toast.error(err.message || "Failed to reject request.");
     }
   };
+
+  if (user && user.role === "employee" && !user.permissions?.access_meetings) {
+    return <AccessDenied message="You do not have permission to access Meetings." />;
+  }
 
   return (
     <>

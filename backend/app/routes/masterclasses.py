@@ -17,6 +17,7 @@ from sqlalchemy import select, or_, update, delete
 from app.database.session import get_db
 from app.database.database import SessionLocal
 from app.models.user import User
+from app.routes.users import require_permission
 from app.models.masterclass import (
     Masterclass, 
     MasterclassRecording, 
@@ -440,7 +441,7 @@ async def notify_recording_available(webinar_id: int):
 @router.get("", response_model=List[MasterclassResponse])
 async def list_masterclasses(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     """
     Fetch masterclasses created by Masterclass.
@@ -455,7 +456,10 @@ async def list_masterclasses(
             Masterclass.source == "edustream",
             Masterclass.visibility != "draft",
             Masterclass.visibility != "hidden"
-        ).order_by(Masterclass.scheduled_at.desc())
+        )
+        if current_user.role == "employee":
+            stmt = stmt.where(Masterclass.visibility != "owner_only")
+        stmt = stmt.order_by(Masterclass.scheduled_at.desc())
         
     res = await db.execute(stmt)
     items = res.scalars().all()
@@ -557,7 +561,7 @@ async def schedule_masterclass(
 async def get_masterclass_detail(
     masterclass_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     stmt = select(Masterclass).where(
         Masterclass.masterclass_id == masterclass_id,
@@ -567,6 +571,9 @@ async def get_masterclass_detail(
     mc = res.scalar_one_or_none()
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
+        
+    if current_user.role == "employee" and mc.visibility == "owner_only":
+        raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
     await sign_masterclass_thumbnail(mc)
     return mc
 
@@ -708,7 +715,7 @@ async def delete_masterclass(
 async def stream_recording(
     masterclass_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     """
     Directly streams recording by redirecting user to Zoom Cloud Recording URL.
@@ -721,13 +728,17 @@ async def stream_recording(
     mc = res.scalar_one_or_none()
     if not mc or not mc.recording_url:
          raise HTTPException(status_code=404, detail="Streaming URL not found.")
+         
+    if current_user.role == "employee" and mc.visibility == "owner_only":
+        raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
+        
     return RedirectResponse(mc.recording_url)
 
 @router.post("/{masterclass_id}/register")
 async def register_for_masterclass(
     masterclass_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     stmt = select(Masterclass).where(
         Masterclass.masterclass_id == masterclass_id,
@@ -737,6 +748,9 @@ async def register_for_masterclass(
     mc = res.scalar_one_or_none()
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
+        
+    if current_user.role == "employee" and mc.visibility == "owner_only":
+        raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
 
     reg_stmt = select(MasterclassRegistration).where(
         MasterclassRegistration.masterclass_id == masterclass_id,
@@ -779,7 +793,7 @@ async def update_watch_progress(
     masterclass_id: int,
     payload: WatchProgressPayload,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     stmt = select(MasterclassWatchHistory).where(
         MasterclassWatchHistory.masterclass_id == masterclass_id,
@@ -809,7 +823,7 @@ async def update_watch_progress(
 async def get_watch_progress(
     masterclass_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     stmt = select(MasterclassWatchHistory).where(
         MasterclassWatchHistory.masterclass_id == masterclass_id,
@@ -870,7 +884,7 @@ async def start_masterclass(
 async def join_masterclass(
     masterclass_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("masterclasses"))
 ):
     stmt = select(Masterclass).where(
         Masterclass.masterclass_id == masterclass_id,
@@ -880,6 +894,9 @@ async def join_masterclass(
     mc = res.scalar_one_or_none()
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
+        
+    if current_user.role == "employee" and mc.visibility == "owner_only":
+        raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
         
     if current_user.role != "admin":
         reg_stmt = select(MasterclassRegistration).where(

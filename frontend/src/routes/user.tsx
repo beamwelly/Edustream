@@ -25,13 +25,13 @@ function Layout() {
     if (!isLoading) {
       if (!user) {
         navigate({ to: "/login" });
-      } else if (user.role !== "user") {
+      } else if (user.role !== "user" && user.role !== "owner" && user.role !== "employee") {
         navigate({ to: "/admin" });
       }
     }
   }, [user, isLoading, navigate]);
 
-  if (isLoading || !user || user.role !== "user") {
+  if (isLoading || !user || (user.role !== "user" && user.role !== "owner" && user.role !== "employee")) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#FFF7F7]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -39,19 +39,32 @@ function Layout() {
     );
   }
 
+  const navItems = [
+    { to: "/user", label: "Dashboard", icon: LayoutDashboard, permission: "access_dashboard" },
+    { to: "/user/content", label: "Content Library", icon: Library, permission: "access_content" },
+    { to: "/user/masterclasses", label: "Masterclasses", icon: GraduationCap, permission: "access_masterclasses" },
+    { to: "/user/tools", label: "Tools", icon: Wrench, isTools: true },
+    { to: "/user/meetings", label: "Meetings", icon: CalendarClock, permission: "access_meetings" },
+    { to: "/user/feedback", label: "Feedback", icon: MessageSquare, permission: "access_feedback" },
+    { to: "/user/profile", label: "Profile", icon: User },
+  ];
+
+  const filteredNav = navItems.filter(item => {
+    if (user.role !== "employee") return true;
+    if (item.permission) {
+      return !!(user.permissions as any)?.[item.permission];
+    }
+    if (item.isTools) {
+      return (user.permissions?.allowed_tools || []).length > 0;
+    }
+    return true;
+  });
+
   return (
     <DashboardLayout
-      roleLabel="User"
+      roleLabel={user.role === "owner" ? "Owner" : user.role === "employee" ? "Employee" : "User"}
       userName={user?.full_name || "User"}
-      nav={[
-        { to: "/user", label: "Dashboard", icon: LayoutDashboard },
-        { to: "/user/content", label: "Content Library", icon: Library },
-        { to: "/user/masterclasses", label: "Masterclasses", icon: GraduationCap },
-        { to: "/user/tools", label: "Tools", icon: Wrench },
-        { to: "/user/meetings", label: "Meetings", icon: CalendarClock },
-        { to: "/user/feedback", label: "Feedback", icon: MessageSquare },
-        { to: "/user/profile", label: "Profile", icon: User },
-      ]}
+      nav={filteredNav}
     />
   );
 }

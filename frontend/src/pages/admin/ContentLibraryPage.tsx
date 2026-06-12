@@ -142,6 +142,9 @@ export function ContentLibraryPage() {
   const [uploadCustomFolder, setUploadCustomFolder] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSingleSubmitting, setIsSingleSubmitting] = useState(false);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
+  const [selectedBulkOrgId, setSelectedBulkOrgId] = useState<string>("");
 
   // Bulk Upload Form States
   const [bulkCategory, setBulkCategory] = useState("");
@@ -339,6 +342,19 @@ export function ContentLibraryPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const fetchOrganizations = async () => {
+    try {
+      const data = await apiFetch<any[]>("/users/organizations");
+      setOrganizations(data || []);
+    } catch (err) {
+      console.error("Failed to load organizations:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrganizations();
+  }, []);
+
   // --- API Fetch Helpers ---
 
   const fetchCategories = async () => {
@@ -468,6 +484,9 @@ export function ContentLibraryPage() {
     
     const folderVal = uploadFolder === "Custom" ? uploadCustomFolder.trim() : uploadFolder;
     formData.append("folder", folderVal || "General");
+    if (selectedOrgId) {
+      formData.append("organization_id", selectedOrgId);
+    }
 
     try {
       // Send dynamic multipart data to upload
@@ -491,6 +510,7 @@ export function ContentLibraryPage() {
       setUploadDesc("");
       setUploadFolder("General");
       setUploadCustomFolder("");
+      setSelectedOrgId("");
       setIsUploadOpen(false);
       fetchContentItems();
     } catch (err: any) {
@@ -593,7 +613,10 @@ export function ContentLibraryPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ files: payloadFiles })
+        body: JSON.stringify({
+          files: payloadFiles,
+          organization_id: selectedBulkOrgId ? Number(selectedBulkOrgId) : undefined
+        })
       }).then(async (res) => {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -610,6 +633,7 @@ export function ContentLibraryPage() {
       setSelectedBulkFiles(null);
       setSelectedZipFile(null);
       setBulkFileMetadata({});
+      setSelectedBulkOrgId("");
       setIsBulkOpen(false);
       fetchContentItems();
     } catch (err: any) {
@@ -1522,6 +1546,20 @@ export function ContentLibraryPage() {
                 </div>
               )}
 
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Target Organization (Optional)</label>
+                <select
+                  value={selectedOrgId}
+                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground font-medium"
+                >
+                  <option value="">All Organizations (Global / Public)</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={String(org.id)}>{org.organization_name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
                 <Button 
                   type="button" 
@@ -1744,6 +1782,20 @@ export function ContentLibraryPage() {
                   </select>
                 </div>
               )}
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Target Organization for Batch (Optional)</label>
+                <select
+                  value={selectedBulkOrgId}
+                  onChange={(e) => setSelectedBulkOrgId(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground font-medium"
+                >
+                  <option value="">All Organizations (Global / Public)</option>
+                  {organizations.map((org) => (
+                    <option key={org.id} value={String(org.id)}>{org.organization_name}</option>
+                  ))}
+                </select>
+              </div>
 
               <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
                 <Button 

@@ -19,8 +19,10 @@ import { WowToolkitPage } from "./WowToolkitPage";
 import { FinancialDiscoveryPage } from "./FinancialDiscoveryPage";
 import { NeedsDiscoveryPage } from "./NeedsDiscoveryPage";
 import { API_URL } from "@/constants/env";
+import { useAuth } from "@/context/AuthContext";
 
 export function UserToolsPage() {
+  const { user } = useAuth();
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -63,6 +65,19 @@ export function UserToolsPage() {
   };
 
   const filteredTools = tools.filter(t => {
+    if (user && user.role === "employee") {
+      const allowed = user.permissions?.allowed_tools || [];
+      const toolName = t.name.toLowerCase();
+      if ((toolName.includes("wow") || toolName.includes("retirement")) && !allowed.includes("wow_toolkit")) {
+        return false;
+      }
+      if (toolName.includes("needs discovery") && !allowed.includes("needs_discovery")) {
+        return false;
+      }
+      if (toolName.includes("discovery") && !toolName.includes("needs discovery") && !allowed.includes("financial_discovery")) {
+        return false;
+      }
+    }
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           t.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === "all" || t.type === selectedType;

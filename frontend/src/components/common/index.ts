@@ -5,3 +5,5 @@ export { StatCard } from "./StatCard";
 export { Button } from "./Button";
 export { Badge } from "./Badge";
 export { FilterChip, FilterChipGroup } from "./FilterChips";
+export { AccessDenied } from "./AccessDenied";
+

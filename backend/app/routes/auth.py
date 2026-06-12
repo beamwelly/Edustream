@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -24,6 +25,7 @@ class UserResponse(BaseModel):
     organization_name: str | None = None
     is_temp_password: bool
     is_active: bool
+    permissions: Optional[dict] = None
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -51,6 +53,45 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
         
     user_info = auth_data.get("user", {})
+    user_id = user_info.get("id")
+    user_role = user_info.get("role")
+    
+    # Fetch permissions
+    if user_role == "employee":
+        from app.models.employee_permission import EmployeePermission
+        stmt_perm = select(EmployeePermission).where(EmployeePermission.user_id == user_id)
+        res_perm = await db.execute(stmt_perm)
+        perm = res_perm.scalar_one_or_none()
+        if perm:
+            user_info["permissions"] = {
+                "access_dashboard": perm.access_dashboard,
+                "access_content": perm.access_content,
+                "access_masterclasses": perm.access_masterclasses,
+                "access_meetings": perm.access_meetings,
+                "access_feedback": perm.access_feedback,
+                "allowed_tools": perm.allowed_tools or [],
+                "allowed_categories": perm.allowed_categories or []
+            }
+        else:
+            user_info["permissions"] = {
+                "access_dashboard": False,
+                "access_content": False,
+                "access_masterclasses": False,
+                "access_meetings": False,
+                "access_feedback": False,
+                "allowed_tools": [],
+                "allowed_categories": []
+            }
+    else:
+        user_info["permissions"] = {
+            "access_dashboard": True,
+            "access_content": True,
+            "access_masterclasses": True,
+            "access_meetings": True,
+            "access_feedback": True,
+            "allowed_tools": ["needs_discovery", "financial_discovery", "wow_toolkit"],
+            "allowed_categories": []
+        }
     
     # Audit logging for role-routing: decode JWT to verify claims
     from app.utils.security import decode_access_token

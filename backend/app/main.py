@@ -14,6 +14,7 @@ from app.models.meeting import GoogleIntegration, Meeting
 from app.models.tool import ToolRegistry
 from app.models.masterclass import Masterclass, MasterclassRecording, MasterclassRegistration, MasterclassWatchHistory, MasterclassEmailLog
 from app.models.notification import Notification
+from app.models.employee_permission import EmployeePermission
 from app.models.feedback import Feedback
 from app.models.wow import (
     FinancialGoal,
@@ -88,6 +89,8 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS warning VARCHAR(500);"))
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS mime_type VARCHAR(255);"))
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS folder VARCHAR(255) DEFAULT 'General';"))
+            await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_employee';"))
+            await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS organization_id INTEGER;"))
             
             # Tools registry table migrations
             await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500);"))
