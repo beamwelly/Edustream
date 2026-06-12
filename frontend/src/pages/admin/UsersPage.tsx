@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Upload, Search, X, Loader2, Download, AlertTriangle, CheckCircle2, Trash2, Power, Save, Shield, LayoutDashboard, Library, GraduationCap, CalendarClock, MessageSquare, Wrench } from "lucide-react";
+import { Plus, Upload, Search, X, Loader2, Download, AlertTriangle, CheckCircle2, Trash2, Power, Save, Shield, LayoutDashboard, Library, GraduationCap, CalendarClock, MessageSquare, Wrench, Coins, Compass, FileSpreadsheet, Activity } from "lucide-react";
 import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { API_URL } from "@/constants/env";
@@ -44,12 +44,10 @@ export function UsersPage() {
     meetings: false,
     feedback: true,
     wow_toolkit: true,
-    retirement_predictor: true,
-    financial_freedom: true,
-    family_vault: true,
-    goal_visualization: true,
-    cost_of_delay: true,
-    sip_home_loan: true,
+    financial_discovery: true,
+    needs_discovery: true,
+    resource_downloads: true,
+    future_tools: false,
   });
   const [policyLoading, setPolicyLoading] = useState(false);
   const [policySaving, setPolicySaving] = useState(false);
@@ -627,57 +625,39 @@ export function UsersPage() {
                 </div>
               </div>
 
-              {/* Section 2: WOW Financial Freedom Toolkit */}
+              {/* Section 2: Global Tool & Calculator Permissions */}
               <div className="space-y-4 pt-2">
-                <div className="flex items-center justify-between border-b border-primary/10 pb-1">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
-                    Financial Freedom WOW Toolkit
-                  </h4>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold text-muted-foreground">
-                      {policySettings.wow_toolkit ? "Toolkit Enabled" : "Toolkit Disabled"}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleTogglePolicy("wow_toolkit")}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                        policySettings.wow_toolkit ? "bg-primary" : "bg-muted"
-                      }`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out ${
-                          policySettings.wow_toolkit ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 transition-all duration-300 ${policySettings.wow_toolkit ? "opacity-100" : "opacity-40 pointer-events-none"}`}>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-primary/10 pb-1">
+                  Global Tool & Calculator Permissions
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {[
-                    { key: "retirement_predictor", label: "Retirement Predictor", desc: "Project savings goals and target corpus milestones" },
-                    { key: "cost_of_delay", label: "Cost of Delay", desc: "Calculate the compound interest penalty of postponing investments" },
-                    { key: "sip_home_loan", label: "SIP & Home Loan Planner", desc: "Model mortgage prepayments against mutual fund returns" },
-                    { key: "financial_freedom", label: "Freedom Index Dashboard", desc: "Consolidate active and passive streams into one freedom score" },
-                    { key: "goal_visualization", label: "Goal Visualizer", desc: "Graphically monitor milestone paths and progress charts" },
-                    { key: "family_vault", label: "Family Vault Storage", desc: "Store credentials, nominee links, and banking profiles" }
-                  ].map((calc) => (
-                    <div key={calc.key} className="flex items-start justify-between p-4 bg-secondary/15 rounded-xl border border-border/50 hover:border-primary/20 transition-all duration-200">
-                      <div className="min-w-0 pr-2">
-                        <span className="text-xs font-bold text-foreground block">{calc.label}</span>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">{calc.desc}</p>
+                    { key: "wow_toolkit", label: "WOW Financial Freedom Toolkit", icon: Coins, desc: "Gated access to the WOW Financial Freedom Toolkit and all calculators/sub-modules" },
+                    { key: "financial_discovery", label: "Financial Discovery", icon: FileSpreadsheet, desc: "Gated access to the Financial Discovery / Comprehensive Financial Planning page" },
+                    { key: "needs_discovery", label: "Needs Discovery", icon: Compass, desc: "Gated access to the Needs Discovery / Client Risk Profiling page" },
+                    { key: "resource_downloads", label: "Resource Downloads", icon: Download, desc: "Gated access to Excel spreadsheet calculators & downloadable tools" },
+                    { key: "future_tools", label: "Future Tools", icon: Activity, desc: "Gated access to future development modules and tools" }
+                  ].map((tool) => (
+                    <div key={tool.key} className="flex items-start justify-between p-4 bg-secondary/15 rounded-xl border border-border/50 hover:border-primary/20 transition-all duration-200">
+                      <div className="flex gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-soft text-primary shrink-0">
+                          <tool.icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 pr-2">
+                          <span className="text-xs font-bold text-foreground block">{tool.label}</span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 leading-normal">{tool.desc}</p>
+                        </div>
                       </div>
                       <button
                         type="button"
-                        disabled={!policySettings.wow_toolkit}
-                        onClick={() => handleTogglePolicy(calc.key)}
+                        onClick={() => handleTogglePolicy(tool.key)}
                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                          policySettings[calc.key] && policySettings.wow_toolkit ? "bg-primary" : "bg-muted"
+                          policySettings[tool.key] ? "bg-primary" : "bg-muted"
                         }`}
                       >
                         <span
                           className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-card shadow ring-0 transition duration-200 ease-in-out ${
-                            policySettings[calc.key] && policySettings.wow_toolkit ? "translate-x-5" : "translate-x-0"
+                            policySettings[tool.key] ? "translate-x-5" : "translate-x-0"
                           }`}
                         />
                       </button>

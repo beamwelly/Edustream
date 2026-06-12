@@ -68,14 +68,24 @@ export function UserToolsPage() {
     if (user && user.role === "employee") {
       const allowed = user.permissions?.allowed_tools || [];
       const toolName = t.name.toLowerCase();
-      if ((toolName.includes("wow") || toolName.includes("retirement")) && !allowed.includes("wow_toolkit")) {
+      if (t.type === "downloadable" && !allowed.includes("resource_downloads")) {
         return false;
       }
-      if (toolName.includes("needs discovery") && !allowed.includes("needs_discovery")) {
-        return false;
-      }
-      if (toolName.includes("discovery") && !toolName.includes("needs discovery") && !allowed.includes("financial_discovery")) {
-        return false;
+      if (t.type === "interactive") {
+        if ((toolName.includes("wow") || toolName.includes("retirement")) && !allowed.includes("wow_toolkit")) {
+          return false;
+        }
+        if (toolName.includes("needs discovery") && !allowed.includes("needs_discovery")) {
+          return false;
+        }
+        if (toolName.includes("discovery") && !toolName.includes("needs discovery") && !allowed.includes("financial_discovery")) {
+          return false;
+        }
+        if (!toolName.includes("wow") && !toolName.includes("retirement") && !toolName.includes("needs discovery") && !toolName.includes("discovery")) {
+          if (!allowed.includes("future_tools")) {
+            return false;
+          }
+        }
       }
     }
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 

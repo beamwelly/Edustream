@@ -91,19 +91,39 @@ def require_tool_permission(tool_id: str):
             policy = res.scalar_one_or_none()
             if policy:
                 settings = policy.settings_json or {}
-                # Ensure wow_toolkit itself is enabled
-                if not settings.get("wow_toolkit", False):
-                    raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail="Access Denied. Global Employee Policy restricts access to WOW Toolkit."
-                    )
                 # Map backend tool_id to policy settings
-                # needs_discovery, financial_discovery
-                if tool_id in settings and not settings.get(tool_id, False):
-                     raise HTTPException(
-                        status_code=status.HTTP_403_FORBIDDEN,
-                        detail=f"Access Denied. Global Employee Policy restricts access to tool: {tool_id}."
-                     )
+                # If tool_id is one of the calculators of WOW, gate it by wow_toolkit
+                WOW_CALCULATORS = {"retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan", "wow_toolkit"}
+                if tool_id in WOW_CALCULATORS:
+                    if not settings.get("wow_toolkit", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to WOW Toolkit."
+                        )
+                elif tool_id == "financial_discovery":
+                    if not settings.get("financial_discovery", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Financial Discovery."
+                        )
+                elif tool_id == "needs_discovery":
+                    if not settings.get("needs_discovery", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Needs Discovery."
+                        )
+                elif tool_id == "resource_downloads":
+                    if not settings.get("resource_downloads", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Resource Downloads."
+                        )
+                elif tool_id == "future_tools":
+                    if not settings.get("future_tools", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Future Tools."
+                        )
                 return current_user
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -169,7 +189,6 @@ async def get_current_user_profile(
         res_policy = await db.execute(stmt_policy)
         policy = res_policy.scalar_one_or_none()
         settings = policy.settings_json if policy else {}
-        wow_enabled = settings.get("wow_toolkit", True)
         user_perms = {
             "access_dashboard": settings.get("dashboard", True),
             "access_content": settings.get("content_library", True),
@@ -177,10 +196,8 @@ async def get_current_user_profile(
             "access_meetings": settings.get("meetings", False),
             "access_feedback": settings.get("feedback", True),
             "allowed_tools": [
-                k for k, v in settings.items()
-                if k in ("retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan", "needs_discovery", "financial_discovery")
-                and v
-                and (k not in ("retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan") or wow_enabled)
+                k for k in ("wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools")
+                if settings.get(k, False)
             ],
             "allowed_categories": []
         }
@@ -192,8 +209,7 @@ async def get_current_user_profile(
             "access_meetings": True,
             "access_feedback": True,
             "allowed_tools": [
-                "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
-                "cost_of_delay", "sip_home_loan", "wow_toolkit", "needs_discovery", "financial_discovery"
+                "wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools"
             ],
             "allowed_categories": []
         }

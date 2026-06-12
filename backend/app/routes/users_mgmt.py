@@ -537,12 +537,10 @@ async def get_employee_access_policy(
                 "meetings": False,
                 "feedback": True,
                 "wow_toolkit": True,
-                "retirement_predictor": True,
-                "financial_freedom": True,
-                "family_vault": True,
-                "goal_visualization": True,
-                "cost_of_delay": True,
-                "sip_home_loan": True
+                "financial_discovery": True,
+                "needs_discovery": True,
+                "resource_downloads": True,
+                "future_tools": False
             },
             "updated_by": "system",
             "updated_at": datetime.utcnow()

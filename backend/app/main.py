@@ -190,12 +190,14 @@ app = FastAPI(
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from fastapi.encoders import jsonable_encoder
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     print("VALIDATION ERROR DETAILS:", exc.errors())
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()},
+        content={"detail": jsonable_encoder(exc.errors())},
     )
 frontend_origins_str = os.getenv("FRONTEND_URL", "")
 frontend_origins = [origin.strip() for origin in frontend_origins_str.split(",") if origin.strip()]

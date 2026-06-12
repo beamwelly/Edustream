@@ -57,6 +57,9 @@ async def get_current_active_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is deactivated."
         )
+    return user
+
+async def check_calculator_policy(db: AsyncSession, user: User, setting_key: str):
     if user.role == "employee":
         from app.models.employee_access_policy import EmployeeAccessPolicy
         policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
@@ -67,20 +70,6 @@ async def get_current_active_user(
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access Denied. Global Employee Policy restricts access to the WOW Toolkit."
-            )
-    return user
-
-async def check_calculator_policy(db: AsyncSession, user: User, setting_key: str):
-    if user.role == "employee":
-        from app.models.employee_access_policy import EmployeeAccessPolicy
-        policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
-        policy_res = await db.execute(policy_stmt)
-        policy = policy_res.scalar_one_or_none()
-        settings = policy.settings_json if policy else {}
-        if not settings.get("wow_toolkit", False) or not settings.get(setting_key, False):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access Denied. Global Employee Policy restricts access to {setting_key.replace('_', ' ').title()}."
             )
 
 async def get_current_admin(
@@ -179,7 +168,39 @@ async def list_tools(
     # Filter visible tools for standard users
     if current_user.role == "admin":
         return tools
-    return [t for t in tools if t.is_active and not (current_user.role == "employee" and getattr(t, "visibility", "owner_only") == "owner_only")]
+
+    policy_settings = {}
+    if current_user.role == "employee":
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        policy_res = await db.execute(policy_stmt)
+        policy = policy_res.scalar_one_or_none()
+        policy_settings = policy.settings_json if policy else {}
+
+    filtered = []
+    for t in tools:
+        if not t.is_active:
+            continue
+        if current_user.role == "employee":
+            if getattr(t, "visibility", "owner_only") == "owner_only":
+                continue
+            tool_name = t.name.lower() if t.name else ""
+            if t.type == "downloadable":
+                if not policy_settings.get("resource_downloads", False):
+                    continue
+            else: # interactive
+                if ("wow" in tool_name or "retirement" in tool_name) and not policy_settings.get("wow_toolkit", False):
+                    continue
+                elif "needs discovery" in tool_name and not policy_settings.get("needs_discovery", False):
+                    continue
+                elif "discovery" in tool_name and "needs discovery" not in tool_name and not policy_settings.get("financial_discovery", False):
+                    continue
+                else: # future tools
+                    if not ("wow" in tool_name or "retirement" in tool_name or "needs discovery" in tool_name or "discovery" in tool_name):
+                        if not policy_settings.get("future_tools", False):
+                            continue
+        filtered.append(t)
+    return filtered
 
 @router.post("/tools")
 async def create_tool(
@@ -393,8 +414,8 @@ async def download_tool_file(
                     policy_res = await db.execute(policy_stmt)
                     policy = policy_res.scalar_one_or_none()
                     settings = policy.settings_json if policy else {}
-                    if not settings.get("wow_toolkit", False):
-                        raise HTTPException(status_code=403, detail="Access Denied. Global Employee Policy restricts access to the WOW Toolkit.")
+                    if not settings.get("resource_downloads", False):
+                        raise HTTPException(status_code=403, detail="Access Denied. Global Employee Policy restricts access to Resource Downloads.")
 
     try:
         stmt = select(ToolRegistry).where(ToolRegistry.id == tool_id)
@@ -486,8 +507,16 @@ async def preview_tool_file(
         if not tool or tool.type != "downloadable":
             raise HTTPException(status_code=404, detail="Tool not found or is not downloadable.")
 
-        if current_user.role == "employee" and getattr(tool, "visibility", "owner_only") == "owner_only":
-            raise HTTPException(status_code=403, detail="Access denied. This tool is restricted to owners only.")
+        if current_user.role == "employee":
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+            policy_res = await db.execute(policy_stmt)
+            policy = policy_res.scalar_one_or_none()
+            settings = policy.settings_json if policy else {}
+            if not settings.get("resource_downloads", False):
+                raise HTTPException(status_code=403, detail="Access Denied. Global Employee Policy restricts access to Resource Downloads.")
+            if getattr(tool, "visibility", "owner_only") == "owner_only":
+                raise HTTPException(status_code=403, detail="Access denied. This tool is restricted to owners only.")
             
         if not tool.file_path:
             raise HTTPException(status_code=404, detail="Tool has no associated spreadsheet file.")

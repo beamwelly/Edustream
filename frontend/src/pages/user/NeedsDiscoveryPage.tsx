@@ -1328,11 +1328,11 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
     let allocation = { equity: "—", debt: "—", gold: "—", liquid: "—" };
     if (calculatedRiskProfile === "Conservative") {
       allocation = { equity: "15%", debt: "65%", gold: "10%", liquid: "10%" };
-    } else if (calculatedRiskProfile === "Mod. Conservative") {
+    } else if (calculatedRiskProfile === "Moderately Conservative") {
       allocation = { equity: "30%", debt: "50%", gold: "10%", liquid: "10%" };
     } else if (calculatedRiskProfile === "Moderate") {
       allocation = { equity: "45%", debt: "35%", gold: "10%", liquid: "10%" };
-    } else if (calculatedRiskProfile === "Mod. Aggressive") {
+    } else if (calculatedRiskProfile === "Moderately Aggressive") {
       allocation = { equity: "60%", debt: "25%", gold: "10%", liquid: "5%" };
     } else if (calculatedRiskProfile === "Aggressive") {
       allocation = { equity: "75%", debt: "15%", gold: "5%", liquid: "5%" };

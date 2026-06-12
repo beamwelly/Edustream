@@ -580,7 +580,7 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
 
   const handleListChange = <T extends {}>(listName: keyof DiscoveryData, id: string, key: keyof T, val: any) => {
     setData(prev => {
-      const list = prev[listName] as T[];
+      const list = prev[listName] as unknown as T[];
       const updated = list.map((item: any) => {
         if (item.id === id) {
           return { ...item, [key]: val };
