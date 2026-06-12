@@ -16,8 +16,8 @@ export function DashboardSidebar({ roleLabel, nav, footerNav }: DashboardSidebar
 
   return (
     <aside className="app-surface-sidebar fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
-      <div className="mb-8 flex items-center gap-3 px-2 min-w-0 w-full">
-        <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-10 w-auto object-contain flex-shrink-0" />
+      <div className="mb-8 px-2 min-w-0 w-full" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+        <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-8 w-auto object-contain flex-shrink-0" style={{ maxHeight: "32px" }} />
         <div className="min-w-0 flex-1">
           <h1 className="text-base font-semibold text-foreground truncate">{APP_NAME}</h1>
           <p className="text-xs text-muted-foreground capitalize truncate">

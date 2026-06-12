@@ -285,17 +285,10 @@ async def list_content_items(
         return cached_data
 
     stmt = select(ContentItem)
-
-    # For standard users, only active files are served and strictly isolated by organization
-    if current_user.role != "admin":
+    # For standard users, only active files are served. Admins and Owners can see all.
+    if current_user.role not in ("admin", "owner"):
         stmt = stmt.where(ContentItem.is_active == True)
-        if current_user.organization_id is not None:
-            stmt = stmt.where(or_(ContentItem.organization_id == current_user.organization_id, ContentItem.organization_id == None))
-        else:
-            stmt = stmt.where(ContentItem.organization_id == None)
-
-        if current_user.role == "employee":
-            stmt = stmt.where(ContentItem.visibility != "owner_only")
+        stmt = stmt.where(ContentItem.visibility == "owner_employee")
 
     # Filters
     if search:
@@ -388,7 +381,6 @@ async def upload_content(
     category: str = Form(...),
     folder: Optional[str] = Form("General"),
     visibility: Optional[str] = Form("owner_employee"),
-    organization_id: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
@@ -464,8 +456,7 @@ async def upload_content(
         storage_filename=unique_filename,
         warning=None,
         mime_type=content_type,
-        visibility=visibility or "owner_employee",
-        organization_id=organization_id
+        visibility=visibility or "owner_employee"
     )
     db.add(new_item)
     await db.commit()
@@ -872,7 +863,7 @@ class BulkUploadFile(BaseModel):
 
 class BulkUploadRequest(BaseModel):
     files: List[BulkUploadFile]
-    organization_id: Optional[int] = None
+    visibility: Optional[str] = "owner_employee"
 
 @router.post("/bulk-upload")
 async def bulk_upload_content_multi(
@@ -975,7 +966,7 @@ async def bulk_upload_content_multi(
                 original_filename=f.filename,
                 storage_filename=unique_filename,
                 mime_type=content_type,
-                organization_id=payload.organization_id
+                visibility=payload.visibility or "owner_employee"
             )
             db.add(new_item)
             success_count += 1

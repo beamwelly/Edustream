@@ -66,6 +66,7 @@ interface ContentItem {
   warning?: string;
   organization_name?: string;
   folder?: string;
+  visibility?: string;
 }
 
 const getDownloadUrl = (item: ContentItem) => {
@@ -143,8 +144,8 @@ export function ContentLibraryPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSingleSubmitting, setIsSingleSubmitting] = useState(false);
   const [organizations, setOrganizations] = useState<any[]>([]);
-  const [selectedOrgId, setSelectedOrgId] = useState<string>("");
-  const [selectedBulkOrgId, setSelectedBulkOrgId] = useState<string>("");
+  const [uploadVisibility, setUploadVisibility] = useState("owner_employee");
+  const [bulkVisibility, setBulkVisibility] = useState("owner_employee");
 
   // Bulk Upload Form States
   const [bulkCategory, setBulkCategory] = useState("");
@@ -165,6 +166,7 @@ export function ContentLibraryPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editVisibility, setEditVisibility] = useState("owner_employee");
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Delete Action State
@@ -484,9 +486,7 @@ export function ContentLibraryPage() {
     
     const folderVal = uploadFolder === "Custom" ? uploadCustomFolder.trim() : uploadFolder;
     formData.append("folder", folderVal || "General");
-    if (selectedOrgId) {
-      formData.append("organization_id", selectedOrgId);
-    }
+    formData.append("visibility", uploadVisibility);
 
     try {
       // Send dynamic multipart data to upload
@@ -615,7 +615,7 @@ export function ContentLibraryPage() {
         },
         body: JSON.stringify({
           files: payloadFiles,
-          organization_id: selectedBulkOrgId ? Number(selectedBulkOrgId) : undefined
+          visibility: bulkVisibility
         })
       }).then(async (res) => {
         if (!res.ok) {
@@ -633,7 +633,7 @@ export function ContentLibraryPage() {
       setSelectedBulkFiles(null);
       setSelectedZipFile(null);
       setBulkFileMetadata({});
-      setSelectedBulkOrgId("");
+      setBulkVisibility("owner_employee");
       setIsBulkOpen(false);
       fetchContentItems();
     } catch (err: any) {
@@ -690,6 +690,7 @@ export function ContentLibraryPage() {
     setEditDesc(item.description || "");
     setEditCategory(item.category);
     setEditIsActive(item.is_active);
+    setEditVisibility(item.visibility || "owner_employee");
     setActiveDropdownId(null);
   };
 
@@ -709,7 +710,8 @@ export function ContentLibraryPage() {
           title: editTitle.trim(),
           description: editDesc.trim(),
           category: editCategory,
-          is_active: editIsActive
+          is_active: editIsActive,
+          visibility: editVisibility
         })
       });
 
@@ -902,10 +904,12 @@ export function ContentLibraryPage() {
           )}
 
           <div className="mt-auto pt-3">
-            {/* Organization / Company Uploader Info Display */}
+            {/* Visibility / Uploader Info Display */}
             <div className="flex flex-col text-left mb-2.5 border-t border-border/40 pt-2.5">
               <span className="text-xs font-bold text-foreground truncate">Uploaded by: {item.uploaded_by}</span>
-              <span className="text-[10px] text-muted-foreground truncate">{item.organization_name || "Masterclass"}</span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                Visibility: {item.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}
+              </span>
             </div>
 
             {/* Premium details */}
@@ -1375,7 +1379,9 @@ export function ContentLibraryPage() {
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-foreground">{item.uploaded_by}</span>
-                        <span className="text-[10px] text-muted-foreground">{item.organization_name || "Masterclass"}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {item.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}
+                        </span>
                       </div>
                     </td>
                     <td className="p-4 text-muted-foreground text-xs font-bold">{mockDownloads}</td>
@@ -1547,17 +1553,31 @@ export function ContentLibraryPage() {
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Target Organization (Optional)</label>
-                <select
-                  value={selectedOrgId}
-                  onChange={(e) => setSelectedOrgId(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground font-medium"
-                >
-                  <option value="">All Organizations (Global / Public)</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={String(org.id)}>{org.organization_name}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Visibility</label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="uploadVisibility"
+                      value="owner_only"
+                      checked={uploadVisibility === "owner_only"}
+                      onChange={(e) => setUploadVisibility(e.target.value)}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Owners Only
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="uploadVisibility"
+                      value="owner_employee"
+                      checked={uploadVisibility === "owner_employee"}
+                      onChange={(e) => setUploadVisibility(e.target.value)}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Owners + Employees
+                  </label>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
@@ -1784,17 +1804,31 @@ export function ContentLibraryPage() {
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Target Organization for Batch (Optional)</label>
-                <select
-                  value={selectedBulkOrgId}
-                  onChange={(e) => setSelectedBulkOrgId(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground font-medium"
-                >
-                  <option value="">All Organizations (Global / Public)</option>
-                  {organizations.map((org) => (
-                    <option key={org.id} value={String(org.id)}>{org.organization_name}</option>
-                  ))}
-                </select>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Visibility</label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="bulkVisibility"
+                      value="owner_only"
+                      checked={bulkVisibility === "owner_only"}
+                      onChange={(e) => setBulkVisibility(e.target.value)}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Owners Only
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="bulkVisibility"
+                      value="owner_employee"
+                      checked={bulkVisibility === "owner_employee"}
+                      onChange={(e) => setBulkVisibility(e.target.value)}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Owners + Employees
+                  </label>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
@@ -1956,6 +1990,34 @@ export function ContentLibraryPage() {
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Visibility</label>
+                <div className="flex gap-4 mt-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="editVisibility"
+                      value="owner_only"
+                      checked={editVisibility === "owner_only"}
+                      onChange={(e) => setEditVisibility(e.target.value)}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Owners Only
+                  </label>
+                  <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="editVisibility"
+                      value="owner_employee"
+                      checked={editVisibility === "owner_employee"}
+                      onChange={(e) => setEditVisibility(e.target.value)}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    Owners + Employees
+                  </label>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pt-1.5">
