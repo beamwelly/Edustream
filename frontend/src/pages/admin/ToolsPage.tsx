@@ -43,6 +43,7 @@ export function ToolsPage() {
   const [originalFilename, setOriginalFilename] = useState("");
   const [storageFilename, setStorageFilename] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [visibility, setVisibility] = useState("owner_only");
   const [formError, setFormError] = useState<string | null>(null);
 
   // File Upload State
@@ -97,6 +98,7 @@ export function ToolsPage() {
     setOriginalFilename("");
     setStorageFilename("");
     setIsActive(true);
+    setVisibility("owner_only");
     setUploadError(null);
     setFormError(null);
     setIsModalOpen(true);
@@ -112,6 +114,7 @@ export function ToolsPage() {
     setOriginalFilename(tool.original_filename || "");
     setStorageFilename(tool.storage_filename || "");
     setIsActive(tool.is_active);
+    setVisibility(tool.visibility || "owner_only");
     setUploadError(null);
     setFormError(null);
     setIsModalOpen(true);
@@ -169,7 +172,8 @@ export function ToolsPage() {
       file_path: type === "downloadable" ? filePath : null,
       original_filename: type === "downloadable" ? originalFilename : null,
       storage_filename: type === "downloadable" ? storageFilename : null,
-      is_active: isActive
+      is_active: isActive,
+      visibility
     };
 
     try {
@@ -653,6 +657,34 @@ export function ToolsPage() {
                   </div>
                 </div>
               )}
+
+              <div className="space-y-1.5 py-1">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase">Visibility</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="tool-visibility"
+                      value="owner_only"
+                      checked={visibility === "owner_only"}
+                      onChange={() => setVisibility("owner_only")}
+                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Owners Only</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="tool-visibility"
+                      value="owner_employee"
+                      checked={visibility === "owner_employee"}
+                      onChange={() => setVisibility("owner_employee")}
+                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Owners + Employees</span>
+                  </label>
+                </div>
+              </div>
 
               <div className="flex items-center gap-2 py-2">
                 <input 

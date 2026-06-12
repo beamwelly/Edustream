@@ -597,15 +597,30 @@ export function MasterclassesPage() {
                   <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
                     Visibility
                   </label>
-                  <select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-card border border-border rounded-xl focus:outline-none focus:border-primary text-xs shadow-sm"
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                    <option value="draft">Draft</option>
-                  </select>
+                  <div className="flex flex-col gap-2 mt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="mc-visibility"
+                        value="owner_only"
+                        checked={visibility === "owner_only"}
+                        onChange={() => setVisibility("owner_only")}
+                        className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Owners Only</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="mc-visibility"
+                        value="public"
+                        checked={visibility === "public" || visibility === "owner_employee"}
+                        onChange={() => setVisibility("public")}
+                        className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Owners + Employees</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex items-center pt-5">
@@ -743,7 +758,7 @@ export function MasterclassesPage() {
                             <div className="mb-2 flex items-center justify-between">
                               <div className="flex gap-1.5">
                                 <Badge tone="primary">Upcoming</Badge>
-                                <Badge tone="neutral">{s.visibility}</Badge>
+                                <Badge tone="neutral">{s.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}</Badge>
                               </div>
                               <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} Mins
@@ -851,7 +866,7 @@ export function MasterclassesPage() {
                             <div className="mb-2 flex items-center justify-between">
                               <div className="flex gap-1.5">
                                 <Badge tone="warning">Live</Badge>
-                                <Badge tone="neutral">{s.visibility}</Badge>
+                                <Badge tone="neutral">{s.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}</Badge>
                               </div>
                               <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} Mins
@@ -920,7 +935,7 @@ export function MasterclassesPage() {
                             <div className="mb-2 flex items-center justify-between">
                               <div className="flex gap-1.5">
                                 <Badge tone="success">Completed</Badge>
-                                <Badge tone="neutral">{s.visibility}</Badge>
+                                <Badge tone="neutral">{s.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}</Badge>
                               </div>
                               <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} Mins

@@ -106,6 +106,7 @@ class ToolResponse(BaseModel):
     storage_filename: Optional[str] = None
     icon_name: str
     is_active: bool
+    visibility: str
     created_at: datetime
     updated_at: datetime
 
@@ -121,6 +122,7 @@ class ToolCreate(BaseModel):
     storage_filename: Optional[str] = None
     icon_name: str
     is_active: bool = True
+    visibility: Optional[str] = "owner_only"
 
 class ToolUpdate(BaseModel):
     name: Optional[str] = None
@@ -131,6 +133,7 @@ class ToolUpdate(BaseModel):
     storage_filename: Optional[str] = None
     icon_name: Optional[str] = None
     is_active: Optional[bool] = None
+    visibility: Optional[str] = None
 
 
 # --- Tool Registry API Endpoints ---
@@ -176,7 +179,7 @@ async def list_tools(
     # Filter visible tools for standard users
     if current_user.role == "admin":
         return tools
-    return [t for t in tools if t.is_active]
+    return [t for t in tools if t.is_active and not (current_user.role == "employee" and getattr(t, "visibility", "owner_only") == "owner_only")]
 
 @router.post("/tools")
 async def create_tool(
@@ -371,6 +374,7 @@ async def download_tool_file(
     # Log [TOOL_DOWNLOAD]
     print(f"[TOOL_DOWNLOAD] Download proxy triggered for tool ID: {tool_id}")
 
+    user = None
     if token:
         payload = decode_access_token(token)
         if not payload:
@@ -399,6 +403,9 @@ async def download_tool_file(
         
         if not tool or tool.type != "downloadable":
             raise HTTPException(status_code=404, detail="Tool not found or is not downloadable.")
+            
+        if user and user.role == "employee" and getattr(tool, "visibility", "owner_only") == "owner_only":
+            raise HTTPException(status_code=403, detail="Access denied. This tool is restricted to owners only.")
             
         if not tool.file_path:
             raise HTTPException(status_code=404, detail="Requested tool does not contain a file path.")
@@ -478,6 +485,9 @@ async def preview_tool_file(
         
         if not tool or tool.type != "downloadable":
             raise HTTPException(status_code=404, detail="Tool not found or is not downloadable.")
+
+        if current_user.role == "employee" and getattr(tool, "visibility", "owner_only") == "owner_only":
+            raise HTTPException(status_code=403, detail="Access denied. This tool is restricted to owners only.")
             
         if not tool.file_path:
             raise HTTPException(status_code=404, detail="Tool has no associated spreadsheet file.")
