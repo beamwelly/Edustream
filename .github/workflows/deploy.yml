@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false   # never cancel a running deploy; queue instead
 
 env:
-  PROJECT_DIR: ~/Edustream
+  PROJECT_DIR: /home/ubuntu/Edustream
   COMPOSE_FILE: docker-compose.yml
   KEEP_BACKUPS: 2             # how many tagged backup sets to retain
 
