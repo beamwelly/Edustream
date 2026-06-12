@@ -1,0 +1,195 @@
+name: Deploy Edustream
+
+on:
+  push:
+    branches:
+      - host
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false   # never cancel a running deploy; queue instead
+
+env:
+  PROJECT_DIR: ~/Edustream
+  COMPOSE_FILE: docker-compose.yml
+  KEEP_BACKUPS: 2             # how many tagged backup sets to retain
+
+jobs:
+  # ── 1. Validate ─────────────────────────────────────────────────────────────
+  validate:
+    name: Validate Compose File
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate docker-compose syntax
+        run: |
+          docker compose -f ${{ env.COMPOSE_FILE }} config --quiet
+          echo "✅ docker-compose.yml is valid"
+
+  # ── 2. Deploy ────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: production
+    timeout-minutes: 20
+
+    steps:
+      # ── Setup SSH ──────────────────────────────────────────────────────────
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts
+
+      # ── Deploy via remote script ───────────────────────────────────────────
+      - name: Run deployment on server
+        id: deploy
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "bash -s" << 'ENDSSH'
+            set -euo pipefail
+
+            PROJECT_DIR="${{ env.PROJECT_DIR }}"
+            COMPOSE_FILE="${{ env.COMPOSE_FILE }}"
+            KEEP_BACKUPS="${{ env.KEEP_BACKUPS }}"
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_TAG="backup_${TIMESTAMP}"
+
+            echo "▶ [1/6] Entering project directory..."
+            cd "$PROJECT_DIR"
+
+            echo "▶ [2/6] Pulling latest changes from 'host' branch..."
+            git fetch origin host
+            git reset --hard origin/host
+
+            echo "▶ [3/6] Tagging current images as backup (${BACKUP_TAG})..."
+            # Tag each running image so we can restore them on rollback
+            docker compose -f "$COMPOSE_FILE" images -q | while read IMAGE_ID; do
+              SERVICE=$(docker inspect --format='{{index .Config.Labels "com.docker.compose.service"}}' "$IMAGE_ID" 2>/dev/null || true)
+              if [ -n "$SERVICE" ]; then
+                docker tag "$IMAGE_ID" "edustream_${SERVICE}:${BACKUP_TAG}" 2>/dev/null || true
+              fi
+            done
+
+            echo "▶ [4/6] Building new images..."
+            docker compose -f "$COMPOSE_FILE" build --pull
+
+            echo "▶ [5/6] Deploying containers..."
+            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+
+            echo "▶ [6/6] Health check..."
+            sleep 10
+            if ! docker compose -f "$COMPOSE_FILE" ps | grep -E "(Up|running)" | grep -v "Exit"; then
+              echo "❌ Health check failed — containers not running"
+              exit 1
+            fi
+
+            echo "✅ Deployment successful: ${TIMESTAMP}"
+          ENDSSH
+
+      # ── Rollback on failure ────────────────────────────────────────────────
+      - name: Rollback on failure
+        if: failure() && steps.deploy.outcome == 'failure'
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "bash -s" << 'ENDSSH'
+            set -euo pipefail
+            PROJECT_DIR="${{ env.PROJECT_DIR }}"
+            COMPOSE_FILE="${{ env.COMPOSE_FILE }}"
+
+            echo "⚠️  Deployment failed — starting rollback..."
+            cd "$PROJECT_DIR"
+
+            # Find the most recent backup tag
+            LATEST_BACKUP=$(docker images --format '{{.Tag}}' \
+              | grep '^backup_' | sort -r | head -n1)
+
+            if [ -z "$LATEST_BACKUP" ]; then
+              echo "❌ No backup images found — cannot roll back automatically"
+              exit 1
+            fi
+
+            echo "🔄 Rolling back to: ${LATEST_BACKUP}"
+            for SERVICE in backend frontend; do
+              BACKUP_IMAGE="edustream_${SERVICE}:${LATEST_BACKUP}"
+              if docker image inspect "$BACKUP_IMAGE" &>/dev/null; then
+                docker tag "$BACKUP_IMAGE" "edustream-${SERVICE}:latest" 2>/dev/null || true
+              fi
+            done
+
+            docker compose -f "$COMPOSE_FILE" up -d --no-build --remove-orphans
+            echo "✅ Rollback complete — running on ${LATEST_BACKUP}"
+          ENDSSH
+
+      # ── Prune old backups (keep last N) ───────────────────────────────────
+      - name: Prune old backup images
+        if: success()
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "bash -s" << 'ENDSSH'
+            set -euo pipefail
+            KEEP_BACKUPS="${{ env.KEEP_BACKUPS }}"
+
+            # List all backup tags sorted newest-first
+            ALL_BACKUPS=$(docker images --format '{{.Tag}}' \
+              | grep '^backup_' | sort -ru | uniq)
+
+            BACKUP_TIMESTAMPS=$(echo "$ALL_BACKUPS" | cut -d_ -f2- | sort -ru | uniq)
+            TOTAL=$(echo "$BACKUP_TIMESTAMPS" | grep -c . || true)
+
+            if [ "$TOTAL" -le "$KEEP_BACKUPS" ]; then
+              echo "ℹ️  Only ${TOTAL} backup(s) found — nothing to prune (keep=${KEEP_BACKUPS})"
+              exit 0
+            fi
+
+            # Drop oldest timestamps beyond the keep limit
+            OLD_TIMESTAMPS=$(echo "$BACKUP_TIMESTAMPS" | tail -n +"$((KEEP_BACKUPS + 1))")
+            echo "🗑  Pruning old backups: ${OLD_TIMESTAMPS}"
+
+            for TS in $OLD_TIMESTAMPS; do
+              docker images --format '{{.Repository}}:{{.Tag}}' \
+                | grep "backup_${TS}" \
+                | xargs -r docker rmi -f 2>/dev/null || true
+            done
+
+            docker image prune -f
+            echo "✅ Pruning complete"
+          ENDSSH
+
+  # ── 3. Notify ────────────────────────────────────────────────────────────────
+  notify:
+    name: Notify on Result
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+
+    steps:
+      - name: Notify success
+        if: needs.deploy.result == 'success'
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "✅ *Edustream deployed successfully*\nBranch: `host` | Commit: `${{ github.sha }}` | Actor: `${{ github.actor }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Notify failure
+        if: needs.deploy.result == 'failure'
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "🚨 *Edustream deployment FAILED*\nBranch: `host` | Commit: `${{ github.sha }}` | Actor: `${{ github.actor }}`\nAuto-rollback was attempted.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
