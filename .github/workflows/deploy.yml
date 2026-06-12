@@ -170,26 +170,43 @@ jobs:
     if: always()
 
     steps:
-      - name: Notify success
+      - name: Send success email
         if: needs.deploy.result == 'success'
-        uses: slackapi/slack-github-action@v1.27.0
+        uses: dawidd6/action-send-mail@v3
         with:
-          payload: |
-            {
-              "text": "✅ *Edustream deployed successfully*\nBranch: `host` | Commit: `${{ github.sha }}` | Actor: `${{ github.actor }}`\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "✅ Edustream Deployed Successfully"
+          to: ${{ secrets.MAIL_TO }}
+          from: "GitHub Actions <${{ secrets.MAIL_USERNAME }}>"
+          body: |
+            Edustream deployed successfully to production.
+            
+            Branch: host
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            
+            View Action Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - name: Notify failure
+      - name: Send failure email
         if: needs.deploy.result == 'failure'
-        uses: slackapi/slack-github-action@v1.27.0
+        uses: dawidd6/action-send-mail@v3
         with:
-          payload: |
-            {
-              "text": "🚨 *Edustream deployment FAILED*\nBranch: `host` | Commit: `${{ github.sha }}` | Actor: `${{ github.actor }}`\nAuto-rollback was attempted.\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Logs>"
-            }
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "🚨 Edustream Deployment FAILED"
+          to: ${{ secrets.MAIL_TO }}
+          from: "GitHub Actions <${{ secrets.MAIL_USERNAME }}>"
+          body: |
+            Edustream deployment failed on the production server.
+            Auto-rollback to the previous version was attempted.
+            
+            Branch: host
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+            
+            Check the logs immediately: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
