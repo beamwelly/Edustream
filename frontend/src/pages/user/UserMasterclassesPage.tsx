@@ -47,7 +47,7 @@ interface WatchProgress {
 }
 
 export function UserMasterclassesPage() {
-  const { user } = useAuth();
+  const { user, searchQuery, setSearchQuery } = useAuth();
   const [masterclasses, setMasterclasses] = useState<Masterclass[]>([]);
   const [registrations, setRegistrations] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
@@ -65,7 +65,6 @@ export function UserMasterclassesPage() {
   }, []);
 
   // Search and Filters
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
   // Video Player Modal State

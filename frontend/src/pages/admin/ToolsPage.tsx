@@ -24,13 +24,21 @@ import { WowToolkitPage } from "../user/WowToolkitPage";
 import { FinancialDiscoveryPage } from "../user/FinancialDiscoveryPage";
 import { NeedsDiscoveryPage } from "../user/NeedsDiscoveryPage";
 
+import { useAuth } from "@/context/AuthContext";
+
 export function ToolsPage() {
+  const { searchQuery } = useAuth();
   const [tools, setTools] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   // Active interactive tool
   const [activeTool, setActiveTool] = useState<string | null>(null);
+
+  const filteredTools = tools.filter(t => 
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   // Modal & Form State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -404,7 +412,7 @@ export function ToolsPage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {tools.map((t) => (
+          {filteredTools.map((t) => (
             <Card key={t.id} className="flex flex-col justify-between h-full hover:border-primary/30 transition-all duration-200">
               <div>
                 <div className="flex items-center justify-between mb-4">

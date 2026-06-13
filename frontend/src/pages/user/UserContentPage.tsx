@@ -91,7 +91,7 @@ const triggerDownload = (item: ContentItem) => {
 };
 
 export function UserContentPage() {
-  const { user } = useAuth();
+  const { user, searchQuery, setSearchQuery } = useAuth();
   // DB States
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -100,7 +100,6 @@ export function UserContentPage() {
 
   // Filter States
   const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateSort, setDateSort] = useState<"newest" | "oldest" | "month-wise" | "file-type">("newest");
 

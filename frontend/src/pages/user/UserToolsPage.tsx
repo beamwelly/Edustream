@@ -22,13 +22,12 @@ import { API_URL } from "@/constants/env";
 import { useAuth } from "@/context/AuthContext";
 
 export function UserToolsPage() {
-  const { user } = useAuth();
+  const { user, searchQuery, setSearchQuery } = useAuth();
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
   // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all"); // "all", "interactive", "downloadable"
 
   // Workbook Preview Modal State

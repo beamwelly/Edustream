@@ -196,7 +196,7 @@ async def get_current_user_profile(
             "access_meetings": settings.get("meetings", False),
             "access_feedback": settings.get("feedback", True),
             "allowed_tools": [
-                k for k in ("wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools")
+                k for k in ("wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools", "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan")
                 if settings.get(k, False)
             ],
             "allowed_categories": []
@@ -209,7 +209,9 @@ async def get_current_user_profile(
             "access_meetings": True,
             "access_feedback": True,
             "allowed_tools": [
-                "wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools"
+                "wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools",
+                "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
+                "cost_of_delay", "sip_home_loan"
             ],
             "allowed_categories": []
         }
@@ -329,7 +331,7 @@ async def get_super_dashboard_kpis(
     from app.models.meeting import Meeting
     
     # 1. Total standard users
-    user_count_stmt = select(func.count(User.id)).where(User.role == "user")
+    user_count_stmt = select(func.count(User.id)).where(User.role.in_(["admin", "owner", "employee", "user"]))
     user_count_res = await db.execute(user_count_stmt)
     total_users = user_count_res.scalar_one()
     
@@ -347,7 +349,7 @@ async def get_super_dashboard_kpis(
     recent_uploads = total_documents
     
     # 5. Formulate dynamic activity list
-    users_stmt = select(User).where(User.role == "user").order_by(User.id.desc()).limit(2)
+    users_stmt = select(User).where(User.role.in_(["admin", "owner", "employee", "user"])).order_by(User.id.desc()).limit(2)
     users_res = await db.execute(users_stmt)
     recent_users = users_res.scalars().all()
     

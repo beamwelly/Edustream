@@ -30,7 +30,7 @@ interface BulkUploadResult {
 }
 
 export function UsersPage() {
-  const { user } = useAuth();
+  const { user, searchQuery, setSearchQuery } = useAuth();
   console.log("UsersPage admin user:", user);
   
   // Tab control
@@ -43,10 +43,10 @@ export function UsersPage() {
     masterclasses: true,
     meetings: false,
     feedback: true,
-    wow_toolkit: true,
-    financial_discovery: true,
-    needs_discovery: true,
-    resource_downloads: true,
+    wow_toolkit: false,
+    financial_discovery: false,
+    needs_discovery: false,
+    resource_downloads: false,
     future_tools: false,
   });
   const [policyLoading, setPolicyLoading] = useState(false);
@@ -55,7 +55,6 @@ export function UsersPage() {
   // Database States
   const [users, setUsers] = useState<UserMgmt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
   // Modals Toggle States

@@ -32,6 +32,7 @@ import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import JSZip from "jszip";
 import { 
   PDFThumbnail, 
@@ -103,6 +104,8 @@ const triggerDownload = (item: ContentItem) => {
 };
 
 export function ContentLibraryPage() {
+  const { searchQuery, setSearchQuery } = useAuth();
+
   // DB States
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -111,7 +114,6 @@ export function ContentLibraryPage() {
 
   // Filter & Search States
   const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateSort, setDateSort] = useState<"newest" | "oldest" | "month-wise" | "file-type">("newest");
 

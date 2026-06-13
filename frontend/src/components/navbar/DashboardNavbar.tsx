@@ -13,7 +13,7 @@ interface DashboardNavbarProps {
 }
 
 export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, searchQuery, setSearchQuery } = useAuth();
   console.log("DashboardNavbar user:", user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -295,6 +295,8 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
         <input
           type="search"
           placeholder="Search..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full rounded-full border border-border bg-card py-2 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         />
       </div>

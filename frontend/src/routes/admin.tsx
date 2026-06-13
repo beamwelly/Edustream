@@ -7,9 +7,9 @@ import {
   GraduationCap,
   Wrench,
   CalendarClock,
-  Settings,
   Loader2,
   MessageSquare,
+  User,
 } from "lucide-react";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { useAuth } from "@/context/AuthContext";
@@ -52,6 +52,7 @@ function Layout() {
         { to: "/admin/tools", label: "Tools", icon: Wrench },
         { to: "/admin/meetings", label: "Meetings", icon: CalendarClock },
         { to: "/admin/feedback", label: "Feedback", icon: MessageSquare },
+        { to: "/admin/profile", label: "Profile", icon: User },
       ]}
     />
   );

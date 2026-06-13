@@ -70,8 +70,8 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
             "access_meetings": settings.get("meetings", False),
             "access_feedback": settings.get("feedback", True),
             "allowed_tools": [
-                k for k, v in settings.items()
-                if k in ("retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan", "wow_toolkit", "needs_discovery", "financial_discovery") and v
+                k for k in ("wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools", "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan")
+                if settings.get(k, False)
             ],
             "allowed_categories": []
         }
@@ -83,8 +83,9 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
             "access_meetings": True,
             "access_feedback": True,
             "allowed_tools": [
+                "wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools",
                 "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
-                "cost_of_delay", "sip_home_loan", "wow_toolkit", "needs_discovery", "financial_discovery"
+                "cost_of_delay", "sip_home_loan"
             ],
             "allowed_categories": []
         }

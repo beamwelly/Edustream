@@ -46,6 +46,8 @@ interface Masterclass {
   created_at: string;
 }
 
+import { useAuth } from "@/context/AuthContext";
+
 interface Registration {
   user_id: number;
   full_name: string;
@@ -53,6 +55,7 @@ interface Registration {
 }
 
 export function MasterclassesPage() {
+  const { searchQuery } = useAuth();
   const [masterclasses, setMasterclasses] = useState<Masterclass[]>([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
@@ -450,10 +453,18 @@ export function MasterclassesPage() {
     }
   };
 
-  const upcomingSessions = masterclasses.filter((m) => m.status === "upcoming");
-  const liveSessions = masterclasses.filter((m) => m.status === "live");
-  const completedSessions = masterclasses.filter((m) => m.status === "completed");
-  const recordedSessions = masterclasses.filter((m) => m.status === "recorded");
+  const filteredMasterclasses = masterclasses.filter(m => 
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (m.speaker && m.speaker.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (m.category && m.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (m.tags && m.tags.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const upcomingSessions = filteredMasterclasses.filter((m) => m.status === "upcoming");
+  const liveSessions = filteredMasterclasses.filter((m) => m.status === "live");
+  const completedSessions = filteredMasterclasses.filter((m) => m.status === "completed");
+  const recordedSessions = filteredMasterclasses.filter((m) => m.status === "recorded");
 
   return (
     <>
