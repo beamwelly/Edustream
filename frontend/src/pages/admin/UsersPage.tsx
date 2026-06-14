@@ -514,7 +514,9 @@ export function UsersPage() {
                           </div>
                           <div>
                             <span className="font-semibold text-foreground block">{u.full_name}</span>
-                            <span className="text-[11px] text-muted-foreground font-mono font-medium block">{u.email}</span>
+                            <span className="text-[11px] text-muted-foreground font-mono font-medium block">
+                              {u.email} • <span className="capitalize">{u.role === "user" ? "User (Tenant Client)" : u.role === "owner" ? "Owner (Tenant Admin)" : u.role === "employee" ? "Employee (Tenant Worker)" : u.role}</span>
+                            </span>
                           </div>
                         </div>
                       </td>

@@ -258,24 +258,44 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
   // Reusable PDF Generator
   const drawFlowText = (doc: jsPDF, text: string, x: number, y: number, maxWidth: number, fontSize: number, fontStyle = "normal") => {
-    const lines = doc.splitTextToSize(text, maxWidth);
-    const lineHeight = fontSize * 0.45;
-    const blockHeight = lines.length * lineHeight;
-    
-    if (y + blockHeight > 275) {
-      doc.addPage();
-      y = 20;
-    }
+    const cleanedText = text
+      .replace(/✅/g, "")
+      .replace(/⚠️/g, "")
+      .replace(/₹/g, "Rs. ")
+      .trim();
+
+    const lines = doc.splitTextToSize(cleanedText, maxWidth);
+    const spacingMultiplier = 1.15;
+    const lineHeight = fontSize * 0.352778 * spacingMultiplier;
     
     doc.setFont("helvetica", fontStyle);
     doc.setFontSize(fontSize);
-    doc.text(lines, x, y + lineHeight);
-    return y + blockHeight + 2;
+    
+    let currentY = y;
+    for (let i = 0; i < lines.length; i++) {
+      if (currentY + lineHeight > 275) {
+        doc.addPage();
+        currentY = 20;
+      }
+      doc.text(lines[i], x, currentY + lineHeight);
+      currentY += lineHeight;
+    }
+    
+    return currentY + 2;
   };
 
   const drawTable = (doc: jsPDF, headers: string[], rows: any[][], x: number, startY: number, width: number, rowHeight = 6) => {
     const colWidth = width / headers.length;
     let currentY = startY;
+
+    const cleanCell = (val: any) => {
+      if (val === null || val === undefined) return "";
+      return String(val)
+        .replace(/✅/g, "")
+        .replace(/⚠️/g, "")
+        .replace(/₹/g, "Rs. ")
+        .trim();
+    };
 
     const drawHeaders = (yPos: number) => {
       doc.setFillColor(220, 38, 38);
@@ -284,7 +304,8 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setFontSize(8.5);
       doc.setTextColor(255, 255, 255);
       headers.forEach((h, idx) => {
-        const headerLines = doc.splitTextToSize(h, colWidth - 4);
+        const cleanedH = cleanCell(h);
+        const headerLines = doc.splitTextToSize(cleanedH, colWidth - 4);
         doc.text(headerLines, x + idx * colWidth + 2, yPos + rowHeight - 1);
       });
       return yPos + rowHeight + 1;
@@ -297,7 +318,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
     doc.setTextColor(31, 41, 55);
 
     rows.forEach((row, rowIdx) => {
-      const splitCells = row.map(cell => doc.splitTextToSize(String(cell || ""), colWidth - 4));
+      const splitCells = row.map(cell => doc.splitTextToSize(cleanCell(cell), colWidth - 4));
       const maxLines = Math.max(1, ...splitCells.map(lines => lines.length));
       const dynamicRowHeight = Math.max(rowHeight, maxLines * 4.5);
 
@@ -337,6 +358,26 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
     
     const inputs = tabInputs || {};
     const results = tabResults || {};
+    
+    // Shadow helpers locally inside PDF exporter to replace ₹ with Rs. and clean emojis to avoid rendering glitches in jsPDF
+    const formatCurrency = (val: any) => {
+      if (val === null || val === undefined || val === "") return "Not Provided";
+      const num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ""));
+      if (isNaN(num)) return "Not Provided";
+      return "Rs. " + Math.round(num).toLocaleString("en-IN");
+    };
+
+    const safeVal = (val: any, suffix = "") => {
+      if (val === null || val === undefined || val === "" || (typeof val === "number" && isNaN(val))) {
+        return "Not Provided";
+      }
+      return String(val)
+        .replace(/✅/g, "")
+        .replace(/⚠️/g, "")
+        .replace(/₹/g, "Rs. ")
+        .trim() + suffix;
+    };
+
     const dateStr = new Date().toLocaleDateString("en-IN", {
       day: "numeric",
       month: "long",
@@ -418,7 +459,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(isDeficit ? 153 : 21, isDeficit ? 27 : 80, isDeficit ? 27 : 56);
-      doc.text(`Status: ${safeVal(results.track_status)}`, 20, y + 95 * 0.1); 
+      doc.text(`Status: ${safeVal(results.track_status)}`, 20, y + 9.5); 
 
       y += 22;
 

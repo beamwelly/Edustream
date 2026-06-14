@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Bell, Search, LogOut, User, ShieldAlert, Key, X, Loader2, Eye, EyeOff } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ interface DashboardNavbarProps {
 
 export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
   const { user, logout, searchQuery, setSearchQuery } = useAuth();
+  const navigate = useNavigate();
   console.log("DashboardNavbar user:", user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -288,9 +289,31 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
     </div>
   );
 
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return;
+
+    const isAdmin = user?.role === "admin";
+
+    if (query.includes("user") || query.includes("mgmt") || query.includes("management")) {
+      if (isAdmin) {
+        navigate({ to: "/admin/users" });
+      }
+    } else if (query.includes("content") || query.includes("library") || query.includes("file") || query.includes("doc")) {
+      navigate({ to: isAdmin ? "/admin/content" : "/user/content" });
+    } else if (query.includes("masterclass") || query.includes("class") || query.includes("record") || query.includes("webinar")) {
+      navigate({ to: isAdmin ? "/admin/masterclasses" : "/user/masterclasses" });
+    } else if (query.includes("tool") || query.includes("calc")) {
+      navigate({ to: isAdmin ? "/admin/tools" : "/user/tools" });
+    } else if (query.includes("profile") || query.includes("setting") || query.includes("me")) {
+      navigate({ to: isAdmin ? "/admin/profile" : "/user/profile" });
+    }
+  };
+
   return (
     <header className="app-surface-nav sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
-      <div className="relative w-full max-w-md">
+      <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           type="search"
@@ -299,7 +322,7 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full rounded-full border border-border bg-card py-2 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         />
-      </div>
+      </form>
 
       <div className="ml-4 flex items-center gap-2">
         {/* Notifications Dropdown */}

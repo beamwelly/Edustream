@@ -279,12 +279,19 @@ async def list_content_items(
     role = current_user.role
     org_id = current_user.organization_id or 0
     ttl = 300
-    cache_key = f"content:list:{role}:{org_id}:{search or ''}:{category or ''}:{file_type or ''}:{sort or ''}"
+    user_suffix = f":{current_user.id}" if current_user.role != "admin" else ""
+    cache_key = f"content:list:{role}:{org_id}:{search or ''}:{category or ''}:{file_type or ''}:{sort or ''}{user_suffix}"
     cached_data = cache_get(cache_key)
     if cached_data is not None:
         return cached_data
 
     stmt = select(ContentItem)
+    # 30-day registration visibility filter for non-admin users
+    if current_user.role != "admin":
+        from datetime import timedelta
+        threshold = current_user.created_at - timedelta(days=30)
+        stmt = stmt.where(ContentItem.uploaded_at >= threshold)
+
     # For standard users, only active files are served. Admins and Owners can see all.
     if current_user.role not in ("admin", "owner"):
         stmt = stmt.where(ContentItem.is_active == True)
@@ -730,6 +737,10 @@ async def download_content_file(
             if user:
                 if not user.is_active:
                     raise HTTPException(status_code=403, detail="User account is inactive.")
+                if user.role != "admin":
+                    from datetime import timedelta
+                    if item.uploaded_at < user.created_at - timedelta(days=30):
+                        raise HTTPException(status_code=403, detail="Access denied. Asset is outside of your account registration 30-day visibility window.")
                 if user.role == "employee":
                     from app.models.employee_access_policy import EmployeeAccessPolicy
                     policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)

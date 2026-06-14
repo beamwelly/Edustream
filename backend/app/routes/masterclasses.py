@@ -457,6 +457,10 @@ async def list_masterclasses(
             Masterclass.visibility != "draft",
             Masterclass.visibility != "hidden"
         )
+        from datetime import timedelta
+        threshold = current_user.created_at - timedelta(days=30)
+        stmt = stmt.where(Masterclass.created_at >= threshold)
+
         if current_user.role == "employee":
             stmt = stmt.where(Masterclass.visibility != "owner_only")
         stmt = stmt.order_by(Masterclass.scheduled_at.desc())
@@ -572,6 +576,11 @@ async def get_masterclass_detail(
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
         
+    if current_user.role != "admin":
+        from datetime import timedelta
+        if mc.created_at < current_user.created_at - timedelta(days=30):
+            raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
+
     if current_user.role == "employee" and mc.visibility == "owner_only":
         raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
     await sign_masterclass_thumbnail(mc)
@@ -729,6 +738,11 @@ async def stream_recording(
     if not mc or not mc.recording_url:
          raise HTTPException(status_code=404, detail="Streaming URL not found.")
          
+    if current_user.role != "admin":
+        from datetime import timedelta
+        if mc.created_at < current_user.created_at - timedelta(days=30):
+            raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
+
     if current_user.role == "employee" and mc.visibility == "owner_only":
         raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
         
@@ -749,6 +763,11 @@ async def register_for_masterclass(
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
         
+    if current_user.role != "admin":
+        from datetime import timedelta
+        if mc.created_at < current_user.created_at - timedelta(days=30):
+            raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
+
     if current_user.role == "employee" and mc.visibility == "owner_only":
         raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
 
@@ -795,6 +814,16 @@ async def update_watch_progress(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission("masterclasses"))
 ):
+    mc_stmt = select(Masterclass).where(Masterclass.masterclass_id == masterclass_id)
+    mc_res = await db.execute(mc_stmt)
+    mc = mc_res.scalar_one_or_none()
+    if not mc:
+        raise HTTPException(status_code=404, detail="Masterclass not found.")
+    if current_user.role != "admin":
+        from datetime import timedelta
+        if mc.created_at < current_user.created_at - timedelta(days=30):
+            raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
+
     stmt = select(MasterclassWatchHistory).where(
         MasterclassWatchHistory.masterclass_id == masterclass_id,
         MasterclassWatchHistory.user_id == current_user.id
@@ -825,6 +854,16 @@ async def get_watch_progress(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permission("masterclasses"))
 ):
+    mc_stmt = select(Masterclass).where(Masterclass.masterclass_id == masterclass_id)
+    mc_res = await db.execute(mc_stmt)
+    mc = mc_res.scalar_one_or_none()
+    if not mc:
+        raise HTTPException(status_code=404, detail="Masterclass not found.")
+    if current_user.role != "admin":
+        from datetime import timedelta
+        if mc.created_at < current_user.created_at - timedelta(days=30):
+            raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
+
     stmt = select(MasterclassWatchHistory).where(
         MasterclassWatchHistory.masterclass_id == masterclass_id,
         MasterclassWatchHistory.user_id == current_user.id
@@ -895,6 +934,11 @@ async def join_masterclass(
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
         
+    if current_user.role != "admin":
+        from datetime import timedelta
+        if mc.created_at < current_user.created_at - timedelta(days=30):
+            raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
+
     if current_user.role == "employee" and mc.visibility == "owner_only":
         raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
         
