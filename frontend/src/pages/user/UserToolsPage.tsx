@@ -366,8 +366,8 @@ export function UserToolsPage() {
 
       {/* Spreadsheet Sandbox Preview Modal */}
       {previewTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-3xl shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-[92vw] sm:w-full sm:max-w-3xl my-auto shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 p-0 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
             {/* Modal Header */}
             <div className="p-4 border-b border-border bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
               <div className="flex items-center gap-3">

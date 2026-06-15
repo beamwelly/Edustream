@@ -673,21 +673,22 @@ export function UsersPage() {
 
       {/* CREATE USER MODAL OVERLAY */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="app-surface-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="app-surface-panel relative z-10 w-[92vw] sm:w-full sm:max-w-lg my-auto flex flex-col max-h-[92vh] sm:max-h-[85vh] rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-large animate-in zoom-in duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
+            <div className="flex items-center justify-between border-b border-border pb-4 mb-5 flex-shrink-0">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Create User</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Register a brand new professional user and assign their credentials.</p>
               </div>
-              <button onClick={() => setIsCreateOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition">
+              <button onClick={() => setIsCreateOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition z-10">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleCreateSubmit} className="space-y-5">
+            <form onSubmit={handleCreateSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="space-y-5 flex-1 overflow-y-auto pr-1">
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-primary/10 pb-1">Personal Details</h4>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -798,7 +799,9 @@ export function UsersPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2.5 pt-4 border-t border-border mt-6">
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-4 border-t border-border mt-6 flex-shrink-0">
                 <Button type="button" variant="outline" onClick={() => setIsCreateOpen(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
@@ -820,21 +823,21 @@ export function UsersPage() {
 
       {/* BULK UPLOAD MODAL OVERLAY */}
       {isBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="app-surface-panel relative z-10 w-full max-w-2xl rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="app-surface-panel relative z-10 w-[92vw] sm:w-full sm:max-w-2xl my-auto flex flex-col max-h-[92vh] sm:max-h-[85vh] rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-large animate-in zoom-in duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
+            <div className="flex items-center justify-between border-b border-border pb-4 mb-5 flex-shrink-0">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Bulk Upload Users</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Upload a CSV or XLSX workbook to register multiple users instantly.</p>
               </div>
-              <button onClick={() => setIsBulkOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition">
+              <button onClick={() => setIsBulkOpen(false)} className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition z-10">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="space-y-6">
+            <div className="space-y-6 flex-1 overflow-y-auto pr-1">
               {/* Template Download Section */}
               <div className="rounded-xl border border-primary-soft bg-primary-soft/10 p-4 flex items-center justify-between gap-4">
                 <div className="space-y-0.5">
@@ -931,23 +934,23 @@ export function UsersPage() {
 
       {/* MANAGE USER MODAL OVERLAY */}
       {selectedUserToManage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="app-surface-panel relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-large animate-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="app-surface-panel relative z-10 w-[92vw] sm:w-full sm:max-w-lg my-auto flex flex-col max-h-[92vh] sm:max-h-[85vh] rounded-2xl border border-border bg-card p-5 sm:p-6 shadow-large animate-in zoom-in duration-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between border-b border-border pb-4 mb-5">
+            <div className="flex items-center justify-between border-b border-border pb-4 mb-5 flex-shrink-0">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Manage User Profile</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">Configure platform access and update professional metadata fields.</p>
               </div>
               <button 
                 onClick={() => setSelectedUserToManage(null)} 
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition"
+                className="rounded-md p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition z-10"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="space-y-5">
+            <div className="space-y-5 flex-1 overflow-y-auto pr-1">
               {/* Status Section */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-primary border-b border-primary/10 pb-1">Access Status</h4>
@@ -1124,10 +1127,10 @@ export function UsersPage() {
 
       {/* DELETE CONFIRMATION MODAL OVERLAY */}
       {isDeleteConfirmOpen && selectedUserToManage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="app-surface-panel relative z-10 w-full max-w-md rounded-2xl border border-destructive/30 bg-card p-6 shadow-large animate-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="app-surface-panel relative z-10 w-[92vw] sm:w-full sm:max-w-md my-auto flex flex-col max-h-[92vh] sm:max-h-[85vh] rounded-2xl border border-destructive/30 bg-card p-5 sm:p-6 shadow-large animate-in zoom-in duration-200">
             {/* Modal Header */}
-            <div className="flex items-center gap-3 border-b border-border pb-4 mb-4">
+            <div className="flex items-center gap-3 border-b border-border pb-4 mb-4 flex-shrink-0">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
               </div>
@@ -1138,7 +1141,7 @@ export function UsersPage() {
             </div>
 
             {/* Warning Message */}
-            <div className="space-y-4 text-sm">
+            <div className="space-y-4 text-sm flex-1 overflow-y-auto pr-1">
               <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-4 text-muted-foreground leading-relaxed">
                 <p className="font-semibold text-destructive mb-2 text-xs uppercase tracking-wider">This will permanently remove:</p>
                 <ul className="list-disc pl-4 space-y-1.5 text-xs text-foreground font-medium">

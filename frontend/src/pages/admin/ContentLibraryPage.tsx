@@ -1452,19 +1452,20 @@ export function ContentLibraryPage() {
 
       {/* --- MODAL 1: ADD SINGLE ASSET MODAL --- */}
       {isUploadOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-[92vw] sm:w-full sm:max-w-lg my-auto bg-card rounded-xl border border-border p-5 sm:p-6 shadow-xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4 flex-shrink-0">
               <h3 className="text-base font-bold text-foreground">Add Resource to Library</h3>
               <button 
                 onClick={() => { setIsUploadOpen(false); setSelectedFile(null); }} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
+                className="rounded-full p-1 text-muted-foreground hover:bg-secondary z-10"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSingleUpload} className="space-y-4">
+            <form onSubmit={handleSingleUpload} className="flex flex-col flex-1 min-h-0">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-1">
               {/* File Input Select area */}
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select File</label>
@@ -1595,7 +1596,9 @@ export function ContentLibraryPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-4 flex-shrink-0">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -1622,19 +1625,19 @@ export function ContentLibraryPage() {
 
       {/* --- MODAL 2: BULK UPLOAD ASSETS MODAL --- */}
       {isBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className={`w-full transition-all duration-300 ${Object.keys(bulkFileMetadata).length > 0 ? "w-[90vw] md:w-[85vw] max-w-6xl" : "max-w-lg"} rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200`}>
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className={`relative w-[92vw] sm:w-full transition-all duration-300 ${Object.keys(bulkFileMetadata).length > 0 ? "sm:max-w-6xl" : "sm:max-w-lg"} my-auto bg-card rounded-xl border border-border p-5 sm:p-6 shadow-xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]`}>
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4 flex-shrink-0">
               <h3 className="text-base font-bold text-foreground">Bulk Upload Curations</h3>
               <button 
                 onClick={() => { setIsBulkOpen(false); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
+                className="rounded-full p-1 text-muted-foreground hover:bg-secondary z-10"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="flex border-b border-border mb-4">
+            <div className="flex border-b border-border mb-4 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => { setBulkUploadType("files"); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
@@ -1651,7 +1654,8 @@ export function ContentLibraryPage() {
               </button>
             </div>
 
-            <form onSubmit={handleBulkUpload} className="space-y-4">
+            <form onSubmit={handleBulkUpload} className="flex flex-col flex-1 min-h-0">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-1">
               {bulkUploadType === "files" ? (
                 <div>
                   <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select Files</label>
@@ -1863,7 +1867,9 @@ export function ContentLibraryPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-4 flex-shrink-0">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -1890,83 +1896,85 @@ export function ContentLibraryPage() {
 
       {/* --- MODAL 3: CATEGORY MANAGEMENT MODAL --- */}
       {isCategoryManageOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-[92vw] sm:w-full sm:max-w-lg my-auto bg-card rounded-xl border border-border p-5 sm:p-6 shadow-xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4 flex-shrink-0">
               <h3 className="text-base font-bold text-foreground">Manage Resource Categories</h3>
               <button 
                 onClick={() => { setIsCategoryManageOpen(false); setNewCategoryName(""); setEditingCategoryId(null); }} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
+                className="rounded-full p-1 text-muted-foreground hover:bg-secondary z-10"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Create Category form */}
-            <form onSubmit={handleCreateCategory} className="flex gap-2 mb-4">
-              <input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="New category name (e.g. Operations)"
-                className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
-                required
-              />
-              <Button type="submit" disabled={isCategorySubmitting}>
-                <Plus className="h-4 w-4" /> Add
-              </Button>
-            </form>
+            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
+              {/* Create Category form */}
+              <form onSubmit={handleCreateCategory} className="flex gap-2 mb-4">
+                <input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="New category name (e.g. Operations)"
+                  className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+                  required
+                />
+                <Button type="submit" disabled={isCategorySubmitting}>
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
+              </form>
 
-            <div className="max-h-60 overflow-y-auto border border-border rounded-lg divide-y divide-border bg-secondary/10">
-              {categories.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No categories defined. Add one above.</p>
-              ) : (
-                categories.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-3 bg-card hover:bg-secondary/20 transition-all">
-                    {editingCategoryId === c.id ? (
-                      <div className="flex items-center gap-2 flex-1 mr-2">
-                        <input
-                          value={editingCategoryName}
-                          onChange={(e) => setEditingCategoryName(e.target.value)}
-                          className="flex-1 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:border-primary"
-                        />
-                        <button 
-                          onClick={() => handleRenameCategory(c.id)} 
-                          className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); }} 
-                          className="p-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-semibold text-foreground">{c.name}</span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => { setEditingCategoryId(c.id); setEditingCategoryName(c.name); }}
-                            className="p-1.5 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+              <div className="border border-border rounded-lg divide-y divide-border bg-secondary/10 overflow-hidden">
+                {categories.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No categories defined. Add one above.</p>
+                ) : (
+                  categories.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between p-3 bg-card hover:bg-secondary/20 transition-all">
+                      {editingCategoryId === c.id ? (
+                        <div className="flex items-center gap-2 flex-1 mr-2">
+                          <input
+                            value={editingCategoryName}
+                            onChange={(e) => setEditingCategoryName(e.target.value)}
+                            className="flex-1 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:border-primary"
+                          />
+                          <button 
+                            onClick={() => handleRenameCategory(c.id)} 
+                            className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                           >
-                            <Edit className="h-3.5 w-3.5" />
+                            <Check className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            onClick={() => handleDeleteCategory(c.id, c.name)}
-                            className="p-1.5 rounded-full text-red-500 hover:bg-red-50"
+                          <button 
+                            onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); }} 
+                            className="p-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
-                      </>
-                    )}
-                  </div>
-                ))
-              )}
+                      ) : (
+                        <>
+                          <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => { setEditingCategoryId(c.id); setEditingCategoryName(c.name); }}
+                              className="p-1.5 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(c.id, c.name)}
+                              className="p-1.5 rounded-full text-red-500 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            <div className="flex justify-end border-t border-border pt-4 mt-4">
+            <div className="flex justify-end border-t border-border pt-4 mt-4 flex-shrink-0">
               <Button onClick={() => { setIsCategoryManageOpen(false); setNewCategoryName(""); setEditingCategoryId(null); }}>
                 Done
               </Button>
@@ -1977,19 +1985,20 @@ export function ContentLibraryPage() {
 
       {/* --- MODAL 4: EDIT METADATA MODAL --- */}
       {selectedItemForEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-[92vw] sm:w-full sm:max-w-lg my-auto bg-card rounded-xl border border-border p-5 sm:p-6 shadow-xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4 flex-shrink-0">
               <h3 className="text-base font-bold text-foreground">Edit Resource Metadata</h3>
               <button 
                 onClick={() => setSelectedItemForEdit(null)} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
+                className="rounded-full p-1 text-muted-foreground hover:bg-secondary z-10"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="space-y-4">
+            <form onSubmit={handleEditSubmit} className="flex flex-col flex-1 min-h-0">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-1">
               <div>
                 <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Title</label>
                 <input
@@ -2075,7 +2084,9 @@ export function ContentLibraryPage() {
                 </label>
               </div>
 
-              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-4 flex-shrink-0">
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -2098,19 +2109,21 @@ export function ContentLibraryPage() {
 
       {/* --- MODAL 5: DELETE CONFIRMATION MODAL --- */}
       {selectedItemForDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-red-600 mb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-[92vw] sm:w-full sm:max-w-md my-auto bg-card rounded-xl border border-border p-5 sm:p-6 shadow-xl animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
+            <div className="flex items-center gap-3 text-red-600 mb-3 flex-shrink-0">
               <Trash2 className="h-6 w-6" />
               <h3 className="text-base font-bold">Purge Resource</h3>
             </div>
             
-            <p className="text-sm text-muted-foreground mb-4">
-              Are you completely sure you want to delete <strong>'{selectedItemForDelete.title}'</strong>?
-              This action is permanent and will physically remove the file from your Supabase Storage bucket and Neon PostgreSQL.
-            </p>
+            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
+              <p className="text-sm text-muted-foreground mb-4">
+                Are you completely sure you want to delete <strong>'{selectedItemForDelete.title}'</strong>?
+                This action is permanent and will physically remove the file from your Supabase Storage bucket and Neon PostgreSQL.
+              </p>
+            </div>
 
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
+            <div className="flex justify-end gap-2 border-t border-border pt-4 flex-shrink-0">
               <Button 
                 variant="outline" 
                 onClick={() => setSelectedItemForDelete(null)}
@@ -2132,9 +2145,9 @@ export function ContentLibraryPage() {
 
       {/* --- MODAL 6: RESOURCE PREVIEWER MODAL --- */}
       {selectedItemForPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl h-[85vh] rounded-xl border border-border bg-card p-6 shadow-xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-[92vw] sm:w-full sm:max-w-4xl my-auto bg-card rounded-xl border border-border p-5 sm:p-6 shadow-xl flex flex-col max-h-[92vh] sm:max-h-[85vh] animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4 flex-shrink-0">
               <div>
                 <h3 className="text-base font-bold text-foreground truncate max-w-xl">{selectedItemForPreview.title}</h3>
                 <p className="text-xs text-muted-foreground">{selectedItemForPreview.file_type} • {selectedItemForPreview.file_size} • Shared by {selectedItemForPreview.uploaded_by}</p>
@@ -2148,7 +2161,7 @@ export function ContentLibraryPage() {
                 </button>
                 <button 
                   onClick={() => setSelectedItemForPreview(null)} 
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
+                  className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary z-10"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -2156,7 +2169,7 @@ export function ContentLibraryPage() {
             </div>
 
             {/* Preview Frame Area */}
-            <div className="flex-1 bg-secondary/20 rounded-lg overflow-hidden border border-border/60 flex items-center justify-center p-2 w-full">
+            <div className="flex-1 bg-secondary/20 rounded-lg overflow-hidden border border-border/60 flex items-center justify-center p-2 w-full min-h-0">
               {selectedItemForPreview.file_type.toUpperCase() === "PDF" ? (
                 <iframe
                   src={selectedItemForPreview.public_url}
@@ -2201,7 +2214,7 @@ export function ContentLibraryPage() {
             </div>
 
             {selectedItemForPreview.description && (
-              <div className="mt-4 border-t border-border/40 pt-3">
+              <div className="mt-4 border-t border-border/40 pt-3 flex-shrink-0">
                 <h5 className="text-xs font-bold text-foreground mb-1">Description</h5>
                 <p className="text-xs text-muted-foreground line-clamp-2">{selectedItemForPreview.description}</p>
               </div>

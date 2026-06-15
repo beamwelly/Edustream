@@ -566,8 +566,8 @@ export function UserMasterclassesPage() {
 
       {/* Cloud Video Streaming Modal */}
       {activeMasterclass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl bg-zinc-950 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
+          <div className="relative w-[92vw] sm:w-full sm:max-w-4xl my-auto bg-zinc-950 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
             {/* Modal Header */}
             <div className="absolute top-4 right-4 z-10">
               <button
@@ -579,7 +579,7 @@ export function UserMasterclassesPage() {
             </div>
 
             {/* Custom styled HTML5 Player */}
-            <div className="aspect-video w-full bg-black relative">
+            <div className="aspect-video w-full bg-black relative flex-shrink-0">
               <video
                 ref={videoRef}
                 src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream`}
@@ -596,7 +596,7 @@ export function UserMasterclassesPage() {
             </div>
 
             {/* Video Details Pane */}
-            <div className="p-6 bg-zinc-900 border-t border-zinc-850">
+            <div className="p-6 bg-zinc-900 border-t border-zinc-850 flex-1 overflow-y-auto">
               <div className="flex flex-wrap gap-2 mb-2">
                 <Badge tone="primary">{activeMasterclass.category || "General"}</Badge>
                 <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1">
@@ -608,7 +608,7 @@ export function UserMasterclassesPage() {
                 <p className="text-xs text-primary font-bold mt-1">Hosted by {activeMasterclass.speaker}</p>
               )}
               {activeMasterclass.description && (
-                <p className="mt-3 text-xs text-zinc-400 leading-relaxed max-h-24 overflow-y-auto pr-1">
+                <p className="mt-3 text-xs text-zinc-400 leading-relaxed pr-1">
                   {activeMasterclass.description}
                 </p>
               )}

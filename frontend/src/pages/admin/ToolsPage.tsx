@@ -533,181 +533,185 @@ export function ToolsPage() {
 
       {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-lg shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-[92vw] sm:w-full sm:max-w-lg my-auto shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh] sm:max-h-[85vh] p-5 sm:p-6">
             <button 
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50"
+              className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 z-10"
             >
               <X className="h-4.5 w-4.5" />
             </button>
 
-            <h3 className="text-lg font-bold text-foreground flex items-center gap-2 mb-4">
-              {editingTool ? <Edit3 className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
-              {editingTool ? "Edit Tool Configuration" : "Register New Financial Tool"}
-            </h3>
+            <div className="flex-shrink-0 mb-4">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                {editingTool ? <Edit3 className="h-5 w-5 text-primary" /> : <Plus className="h-5 w-5 text-primary" />}
+                {editingTool ? "Edit Tool Configuration" : "Register New Financial Tool"}
+              </h3>
+            </div>
 
             {formError && (
-              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3 rounded-lg flex items-center gap-2 text-xs font-semibold mb-4 animate-in fade-in">
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-3 rounded-lg flex items-center gap-2 text-xs font-semibold mb-4 animate-in fade-in flex-shrink-0">
                 <AlertCircle className="h-4.5 w-4.5 text-red-500 flex-shrink-0" />
                 <span>{formError}</span>
               </div>
             )}
 
-            <form onSubmit={handleSaveTool} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Tool Name</label>
-                <input 
-                  type="text" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Home Loan Payoff Booster"
-                  className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Description</label>
-                <textarea 
-                  value={description} 
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Explain what the calculator does, what inputs are required, and the target audience."
-                  rows={3}
-                  className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary resize-none"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSaveTool} className="flex flex-col flex-1 min-h-0">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-1">
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Tool Type</label>
-                  <select 
-                    value={type} 
-                    onChange={(e) => setType(e.target.value)}
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Tool Name</label>
+                  <input 
+                    type="text" 
+                    value={name} 
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Home Loan Payoff Booster"
                     className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary"
-                  >
-                    <option value="downloadable">Downloadable File (.xlsx, .csv)</option>
-                    <option value="interactive">Interactive Web Tool</option>
-                  </select>
+                    required
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Lucide Icon Name</label>
-                  <select 
-                    value={iconName} 
-                    onChange={(e) => setIconName(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary"
-                  >
-                    <option value="FileText">FileText (Standard File)</option>
-                    <option value="TrendingUp">TrendingUp (SIP/Invest)</option>
-                    <option value="PiggyBank">PiggyBank (Savings/Retire)</option>
-                    <option value="Landmark">Landmark (Loans/EMI)</option>
-                    <option value="Target">Target (Goals/Planning)</option>
-                    <option value="Lock">Lock (Security/Vault)</option>
-                    <option value="Coins">Coins (Financial Toolkit)</option>
-                  </select>
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Description</label>
+                  <textarea 
+                    value={description} 
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Explain what the calculator does, what inputs are required, and the target audience."
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary resize-none"
+                    required
+                  />
                 </div>
-              </div>
 
-              {type === "downloadable" && (
-                <div className="bg-zinc-50 dark:bg-zinc-900 border border-border rounded-xl p-4 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-                      Upload Excel/CSV Template
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <input 
-                        type="file" 
-                        accept=".xlsx,.xls,.csv"
-                        onChange={handleFileUpload}
-                        className="hidden" 
-                        id="excel-file-upload"
-                        disabled={uploading}
-                      />
-                      <label 
-                        htmlFor="excel-file-upload"
-                        className={`flex items-center justify-center gap-2 border border-dashed border-primary/30 hover:border-primary/80 hover:bg-primary/5 rounded-xl px-4 py-3 text-xs font-semibold text-primary cursor-pointer w-full transition-all ${
-                          uploading ? "opacity-50 pointer-events-none" : ""
-                        }`}
-                      >
-                        {uploading ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            Uploading Spreadsheet...
-                          </>
-                        ) : (
-                          <>
-                            <Icons.Upload className="h-4 w-4" />
-                            {originalFilename ? `Selected: ${originalFilename}` : "Choose Spreadsheet (.xlsx, .xls, .csv)"}
-                          </>
-                        )}
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Tool Type</label>
+                    <select 
+                      value={type} 
+                      onChange={(e) => setType(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary"
+                    >
+                      <option value="downloadable">Downloadable File (.xlsx, .csv)</option>
+                      <option value="interactive">Interactive Web Tool</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">Lucide Icon Name</label>
+                    <select 
+                      value={iconName} 
+                      onChange={(e) => setIconName(e.target.value)}
+                      className="w-full px-3 py-2 text-sm bg-zinc-50 dark:bg-zinc-900 border border-border rounded-lg focus:outline-none focus:border-primary"
+                    >
+                      <option value="FileText">FileText (Standard File)</option>
+                      <option value="TrendingUp">TrendingUp (SIP/Invest)</option>
+                      <option value="PiggyBank">PiggyBank (Savings/Retire)</option>
+                      <option value="Landmark">Landmark (Loans/EMI)</option>
+                      <option value="Target">Target (Goals/Planning)</option>
+                      <option value="Lock">Lock (Security/Vault)</option>
+                      <option value="Coins">Coins (Financial Toolkit)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {type === "downloadable" && (
+                  <div className="bg-zinc-50 dark:bg-zinc-900 border border-border rounded-xl p-4 space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-muted-foreground uppercase mb-1.5">
+                        Upload Excel/CSV Template
                       </label>
+                      <div className="flex items-center gap-3">
+                        <input 
+                          type="file" 
+                          accept=".xlsx,.xls,.csv"
+                          onChange={handleFileUpload}
+                          className="hidden" 
+                          id="excel-file-upload"
+                          disabled={uploading}
+                        />
+                        <label 
+                          htmlFor="excel-file-upload"
+                          className={`flex items-center justify-center gap-2 border border-dashed border-primary/30 hover:border-primary/80 hover:bg-primary/5 rounded-xl px-4 py-3 text-xs font-semibold text-primary cursor-pointer w-full transition-all ${
+                            uploading ? "opacity-50 pointer-events-none" : ""
+                          }`}
+                        >
+                          {uploading ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                              Uploading Spreadsheet...
+                            </>
+                          ) : (
+                            <>
+                              <Icons.Upload className="h-4 w-4" />
+                              {originalFilename ? `Selected: ${originalFilename}` : "Choose Spreadsheet (.xlsx, .xls, .csv)"}
+                            </>
+                          )}
+                        </label>
+                      </div>
+                      {uploadError && (
+                        <span className="text-[10px] text-red-500 font-semibold mt-1 block">
+                          {uploadError}
+                        </span>
+                      )}
                     </div>
-                    {uploadError && (
-                      <span className="text-[10px] text-red-500 font-semibold mt-1 block">
-                        {uploadError}
-                      </span>
-                    )}
-                  </div>
 
-                  <div>
-                    <label className="block text-[10px] font-semibold text-muted-foreground uppercase mb-1">
-                      File Path / Public URL
+                    <div>
+                      <label className="block text-[10px] font-semibold text-muted-foreground uppercase mb-1">
+                        File Path / Public URL
+                      </label>
+                      <input 
+                        type="text" 
+                        value={filePath} 
+                        onChange={(e) => setFilePath(e.target.value)}
+                        placeholder="Automatic after upload, or manually enter URL"
+                        className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-950 border border-border rounded-lg focus:outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1.5 py-1">
+                  <label className="block text-xs font-semibold text-muted-foreground uppercase">Visibility</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="tool-visibility"
+                        value="owner_only"
+                        checked={visibility === "owner_only"}
+                        onChange={() => setVisibility("owner_only")}
+                        className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Owners Only</span>
                     </label>
-                    <input 
-                      type="text" 
-                      value={filePath} 
-                      onChange={(e) => setFilePath(e.target.value)}
-                      placeholder="Automatic after upload, or manually enter URL"
-                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-950 border border-border rounded-lg focus:outline-none focus:border-primary"
-                    />
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="tool-visibility"
+                        value="owner_employee"
+                        checked={visibility === "owner_employee"}
+                        onChange={() => setVisibility("owner_employee")}
+                        className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Owners + Employees</span>
+                    </label>
                   </div>
                 </div>
-              )}
 
-              <div className="space-y-1.5 py-1">
-                <label className="block text-xs font-semibold text-muted-foreground uppercase">Visibility</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                    <input
-                      type="radio"
-                      name="tool-visibility"
-                      value="owner_only"
-                      checked={visibility === "owner_only"}
-                      onChange={() => setVisibility("owner_only")}
-                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <span>Owners Only</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                    <input
-                      type="radio"
-                      name="tool-visibility"
-                      value="owner_employee"
-                      checked={visibility === "owner_employee"}
-                      onChange={() => setVisibility("owner_employee")}
-                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <span>Owners + Employees</span>
+                <div className="flex items-center gap-2 py-2">
+                  <input 
+                    type="checkbox" 
+                    id="form-is-active"
+                    checked={isActive} 
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
+                  />
+                  <label htmlFor="form-is-active" className="text-xs font-semibold text-muted-foreground cursor-pointer">
+                    Activate Tool immediately (users will see it in their directory)
                   </label>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 py-2">
-                <input 
-                  type="checkbox" 
-                  id="form-is-active"
-                  checked={isActive} 
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="h-4 w-4 text-primary focus:ring-primary border-border rounded"
-                />
-                <label htmlFor="form-is-active" className="text-xs font-semibold text-muted-foreground cursor-pointer">
-                  Activate Tool immediately (users will see it in their directory)
-                </label>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t border-border">
+              <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4 flex-shrink-0">
                 <Button 
                   variant="outline" 
                   type="button" 
@@ -730,8 +734,8 @@ export function ToolsPage() {
 
       {/* Spreadsheet Sandbox Preview Modal */}
       {previewTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-3xl shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-[92vw] sm:w-full sm:max-w-3xl my-auto shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 p-0 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
             {/* Modal Header */}
             <div className="p-4 border-b border-border bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
               <div className="flex items-center gap-3">

@@ -709,20 +709,20 @@ export function MeetingsPage() {
 
       {/* Centered Schedule Meeting Approval Modal */}
       {showScheduleModal && selectedMeeting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg shadow-2xl border border-border bg-card animate-zoom-in relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-[92vw] sm:w-full sm:max-w-lg my-auto shadow-2xl border border-border bg-card animate-zoom-in relative flex flex-col max-h-[92vh] sm:max-h-[85vh] p-5 sm:p-6">
             <button 
               onClick={() => setShowScheduleModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold z-10"
             >
               ✕
             </button>
-            <div className="border-b border-border pb-3 mb-4">
+            <div className="border-b border-border pb-3 mb-4 flex-shrink-0">
               <h3 className="text-lg font-bold text-foreground">Approve & Schedule Meeting</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Integrates with Google Calendar API to dispatch Meet link & SMTP invitation.</p>
             </div>
             
-            <div className="space-y-4 text-sm">
+            <div className="space-y-4 text-sm flex-1 overflow-y-auto pr-1">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Meeting Title</span>
                 <input
@@ -857,7 +857,7 @@ export function MeetingsPage() {
               </label>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex justify-end gap-3 border-t border-border pt-4 flex-shrink-0">
               <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
               <Button onClick={handleCreateMeeting} disabled={scheduling}>
                 {scheduling ? "Creating Meet..." : "Create Meeting"}

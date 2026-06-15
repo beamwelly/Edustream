@@ -445,19 +445,19 @@ export function UserMeetingsPage() {
 
       {/* Centered post-meeting MOM notes read-only modal */}
       {showNotesModal && selectedNotes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg shadow-2xl border border-border bg-card animate-zoom-in relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-[92vw] sm:w-full sm:max-w-lg my-auto shadow-2xl border border-border bg-card animate-zoom-in relative flex flex-col max-h-[92vh] sm:max-h-[85vh] p-5 sm:p-6">
             <button 
               onClick={() => setShowNotesModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold z-10"
             >
               ✕
             </button>
-            <div className="border-b border-border pb-3 mb-4">
+            <div className="border-b border-border pb-3 mb-4 flex-shrink-0">
               <h3 className="text-lg font-bold text-foreground">Post-Meeting Summary</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Meeting: <strong className="text-foreground">{selectedNotes.title}</strong></p>
             </div>
-            <div className="space-y-4 text-sm max-h-[350px] overflow-y-auto pr-1">
+            <div className="space-y-4 text-sm flex-1 overflow-y-auto pr-1">
               <div>
                 <h4 className="font-semibold text-foreground mb-1">Minutes of Meeting (MOM) / Notes</h4>
                 <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
@@ -477,7 +477,7 @@ export function UserMeetingsPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-5 flex justify-end">
+            <div className="mt-5 flex justify-end border-t border-border pt-4 flex-shrink-0">
               <Button onClick={() => setShowNotesModal(false)}>Close Summary</Button>
             </div>
           </Card>
