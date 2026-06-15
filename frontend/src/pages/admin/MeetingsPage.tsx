@@ -35,6 +35,26 @@ interface MeetingResponse {
   created_at: string;
 }
 
+const slots = ["10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"];
+
+const getEndTimeForSlot = (startTime: string) => {
+  const slotMap: Record<string, string> = {
+    "10:00 AM": "10:30 AM",
+    "10:30 AM": "11:00 AM",
+    "11:00 AM": "11:30 AM",
+    "11:30 AM": "12:00 PM",
+    "02:00 PM": "02:30 PM",
+    "2:00 PM": "02:30 PM",
+    "02:30 PM": "03:00 PM",
+    "2:30 PM": "03:00 PM",
+    "03:00 PM": "03:30 PM",
+    "3:00 PM": "03:30 PM",
+    "03:30 PM": "04:00 PM",
+    "3:30 PM": "04:00 PM",
+  };
+  return slotMap[startTime] || startTime;
+};
+
 export function MeetingsPage() {
   const { user } = useAuth();
   console.log("MeetingsPage user:", user);
@@ -180,10 +200,10 @@ export function MeetingsPage() {
     setScheduleTitle(m.title);
     setScheduleAgenda(m.agenda || "");
     setScheduleDate(m.meeting_date);
-    setScheduleStartTime(m.start_time);
     
-    // Set a default end time (1 hour later, or append PM/AM)
-    setScheduleEndTime(m.start_time);
+    const initialStart = slots.includes(m.start_time) ? m.start_time : slots[0];
+    setScheduleStartTime(initialStart);
+    setScheduleEndTime(getEndTimeForSlot(initialStart));
     
     // Pre-populate attendees emails
     const emails = [];
@@ -631,54 +651,56 @@ export function MeetingsPage() {
                 No past meetings recorded.
               </Card>
             ) : (
-              <Card className="!p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border bg-secondary/10">
-                      <th className="px-6 py-3 font-medium">Topic</th>
-                      <th className="px-6 py-3 font-medium">Participants</th>
-                      <th className="px-6 py-3 font-medium">Date / Time</th>
-                      <th className="px-6 py-3 font-medium">Status</th>
-                      <th className="px-6 py-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {completedMeetings.map((h) => (
-                      <tr 
-                        key={h.id} 
-                        className={`cursor-pointer hover:bg-secondary/40 transition-colors ${
-                          activeNotesMeeting?.id === h.id ? "bg-secondary/20 font-semibold" : ""
-                        }`}
-                        onClick={() => handleSelectNotesMeeting(h)}
-                      >
-                        <td className="px-6 py-4 font-medium text-foreground">{h.title}</td>
-                        <td className="px-6 py-4 text-muted-foreground text-xs">
-                          <div>
-                            <strong className="text-foreground">{h.requested_by?.full_name}</strong> ({h.requested_by?.role || "user"}) [{h.requested_by?.organization_name || "Masterclass"}]
-                          </div>
-                          <div className="text-[10px] my-0.5 text-muted-foreground">and</div>
-                          <div>
-                            <strong className="text-foreground">{h.requested_to?.full_name}</strong> ({h.requested_to?.role || "admin"}) [{h.requested_to?.organization_name || "Masterclass"}]
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground text-xs">{h.meeting_date} @ {h.start_time}</td>
-                        <td className="px-6 py-4">
-                          <Badge tone={h.status === "completed" ? "success" : "neutral"}>
-                            {h.status}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button className="flex items-center gap-1.5 text-xs text-primary font-bold hover:underline" onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectNotesMeeting(h);
-                          }}>
-                            <FileText className="h-3.5 w-3.5" /> MOM Notes
-                          </button>
-                        </td>
+              <Card className="!p-0 overflow-hidden">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border bg-secondary/10">
+                        <th className="px-6 py-3 font-medium">Topic</th>
+                        <th className="px-6 py-3 font-medium">Participants</th>
+                        <th className="px-6 py-3 font-medium">Date / Time</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                        <th className="px-6 py-3 font-medium">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {completedMeetings.map((h) => (
+                        <tr 
+                          key={h.id} 
+                          className={`cursor-pointer hover:bg-secondary/40 transition-colors ${
+                            activeNotesMeeting?.id === h.id ? "bg-secondary/20 font-semibold" : ""
+                          }`}
+                          onClick={() => handleSelectNotesMeeting(h)}
+                        >
+                          <td className="px-6 py-4 font-medium text-foreground">{h.title}</td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">
+                            <div>
+                              <strong className="text-foreground">{h.requested_by?.full_name}</strong> ({h.requested_by?.role || "user"}) [{h.requested_by?.organization_name || "Masterclass"}]
+                            </div>
+                            <div className="text-[10px] my-0.5 text-muted-foreground">and</div>
+                            <div>
+                              <strong className="text-foreground">{h.requested_to?.full_name}</strong> ({h.requested_to?.role || "admin"}) [{h.requested_to?.organization_name || "Masterclass"}]
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">{h.meeting_date} @ {h.start_time}</td>
+                          <td className="px-6 py-4">
+                            <Badge tone={h.status === "completed" ? "success" : "neutral"}>
+                              {h.status}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button className="flex items-center gap-1.5 text-xs text-primary font-bold hover:underline" onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectNotesMeeting(h);
+                            }}>
+                              <FileText className="h-3.5 w-3.5" /> MOM Notes
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             )}
           </section>
@@ -721,7 +743,7 @@ export function MeetingsPage() {
                 />
               </label>
 
-              <div className="grid gap-3 grid-cols-3">
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Date</span>
                   <input
@@ -734,26 +756,35 @@ export function MeetingsPage() {
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Start Time</span>
-                  <input
-                    type="text"
-                    placeholder="e.g. 10:00 AM"
+                  <select
                     value={scheduleStartTime}
-                    onChange={(e) => setScheduleStartTime(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
-                  />
+                    onChange={(e) => {
+                      const start = e.target.value;
+                      setScheduleStartTime(start);
+                      setScheduleEndTime(getEndTimeForSlot(start));
+                    }}
+                    className="w-full rounded-lg border border-border bg-background px-2 py-2.5 text-xs outline-none focus:border-primary"
+                  >
+                    {slots.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">End Time</span>
                   <input
                     type="text"
-                    placeholder="e.g. 11:30 AM"
+                    readOnly
+                    disabled
                     value={scheduleEndTime}
-                    onChange={(e) => setScheduleEndTime(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
+                    className="w-full rounded-lg border border-border bg-muted px-2 py-2 text-xs outline-none focus:border-primary cursor-not-allowed text-muted-foreground"
                   />
                 </label>
               </div>
+              <p className="mt-1 text-xs text-muted-foreground italic">Each scheduled meeting is 30 minutes in duration.</p>
 
               {/* Task 10: Attendee Dropdown & Search Enhancements */}
               <div className="relative">

@@ -39,7 +39,7 @@ interface MeetingResponse {
   created_at: string;
 }
 
-const slots = ["10:00 AM", "11:30 AM", "02:00 PM", "04:30 PM"];
+const slots = ["10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"];
 
 export function UserMeetingsPage() {
   const { user } = useAuth();
@@ -258,6 +258,7 @@ export function UserMeetingsPage() {
                     </button>
                   ))}
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground italic">Each scheduled meeting is 30 minutes in duration.</p>
               </div>
 
               <div className="mt-6 flex justify-end">

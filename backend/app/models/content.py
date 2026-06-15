@@ -47,5 +47,7 @@ class ContentItem(Base):
     folder: Mapped[Optional[str]] = mapped_column(String(255), default="General", nullable=True)
     visibility: Mapped[str] = mapped_column(String(50), default="owner_employee", server_default="owner_employee", nullable=False)
     organization_id: Mapped[Optional[int]] = mapped_column(nullable=True)
+    content_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
 
 

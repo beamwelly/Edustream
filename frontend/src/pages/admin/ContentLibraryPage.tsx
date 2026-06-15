@@ -62,6 +62,7 @@ interface ContentItem {
   public_url: string;
   uploaded_by: string;
   uploaded_at: string;
+  content_date?: string;
   is_active: boolean;
   original_filename?: string;
   warning?: string;
@@ -147,6 +148,7 @@ export function ContentLibraryPage() {
   const [isSingleSubmitting, setIsSingleSubmitting] = useState(false);
   const [organizations, setOrganizations] = useState<any[]>([]);
   const [uploadVisibility, setUploadVisibility] = useState("owner_employee");
+  const [uploadContentDate, setUploadContentDate] = useState("");
   const [bulkVisibility, setBulkVisibility] = useState("owner_employee");
 
   // Bulk Upload Form States
@@ -154,7 +156,7 @@ export function ContentLibraryPage() {
   const [selectedBulkFiles, setSelectedBulkFiles] = useState<FileList | null>(null);
   const [selectedZipFile, setSelectedZipFile] = useState<File | null>(null);
   const [bulkUploadType, setBulkUploadType] = useState<"files" | "zip">("files");
-  const [bulkFileMetadata, setBulkFileMetadata] = useState<Record<string, { category: string; newCategoryName?: string }>>({});
+  const [bulkFileMetadata, setBulkFileMetadata] = useState<Record<string, { category: string; newCategoryName?: string; contentDate?: string }>>({});
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
   // Category Manager Form States
@@ -169,6 +171,7 @@ export function ContentLibraryPage() {
   const [editCategory, setEditCategory] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
   const [editVisibility, setEditVisibility] = useState("owner_employee");
+  const [editContentDate, setEditContentDate] = useState("");
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Delete Action State
@@ -185,7 +188,7 @@ export function ContentLibraryPage() {
   const yearsList = React.useMemo(() => {
     const years = new Set<string>();
     items.forEach(item => {
-      const yr = new Date(item.uploaded_at).getFullYear();
+      const yr = new Date(item.content_date || item.uploaded_at).getFullYear();
       if (!isNaN(yr)) years.add(String(yr));
     });
     return Array.from(years).sort().reverse();
@@ -241,13 +244,13 @@ export function ContentLibraryPage() {
     }
 
     if (monthFilter !== "All") {
-      const d = new Date(item.uploaded_at);
+      const d = new Date(item.content_date || item.uploaded_at);
       const mName = d.toLocaleString("default", { month: "long" });
       if (mName !== monthFilter) return false;
     }
 
     if (yearFilter !== "All") {
-      const d = new Date(item.uploaded_at);
+      const d = new Date(item.content_date || item.uploaded_at);
       if (String(d.getFullYear()) !== yearFilter) return false;
     }
 
@@ -261,11 +264,11 @@ export function ContentLibraryPage() {
   const sortedItems = React.useMemo(() => {
     const itemsCopy = [...filteredItems];
     if (dateSort === "newest") {
-      return itemsCopy.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(b.content_date || b.uploaded_at).getTime() - new Date(a.content_date || a.uploaded_at).getTime());
     } else if (dateSort === "oldest") {
-      return itemsCopy.sort((a, b) => new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(a.content_date || a.uploaded_at).getTime() - new Date(b.content_date || b.uploaded_at).getTime());
     } else if (dateSort === "month-wise") {
-      return itemsCopy.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(b.content_date || b.uploaded_at).getTime() - new Date(a.content_date || a.uploaded_at).getTime());
     } else if (dateSort === "file-type") {
       return itemsCopy.sort((a, b) => a.file_type.localeCompare(b.file_type));
     }
@@ -275,7 +278,7 @@ export function ContentLibraryPage() {
   const groupedByMonth = React.useMemo(() => {
     const groups: Record<string, typeof sortedItems> = {};
     sortedItems.forEach(item => {
-      const label = getMonthYearLabel(item.uploaded_at);
+      const label = getMonthYearLabel(item.content_date || item.uploaded_at);
       if (!groups[label]) {
         groups[label] = [];
       }
@@ -489,6 +492,9 @@ export function ContentLibraryPage() {
     const folderVal = uploadFolder === "Custom" ? uploadCustomFolder.trim() : uploadFolder;
     formData.append("folder", folderVal || "General");
     formData.append("visibility", uploadVisibility);
+    if (uploadContentDate) {
+      formData.append("content_date", new Date(uploadContentDate).toISOString());
+    }
 
     try {
       // Send dynamic multipart data to upload
@@ -512,7 +518,7 @@ export function ContentLibraryPage() {
       setUploadDesc("");
       setUploadFolder("General");
       setUploadCustomFolder("");
-      setSelectedOrgId("");
+      setUploadContentDate("");
       setIsUploadOpen(false);
       fetchContentItems();
     } catch (err: any) {
@@ -557,7 +563,7 @@ export function ContentLibraryPage() {
     setIsBulkSubmitting(true);
 
     try {
-      const payloadFiles: Array<{ file: string; filename: string; category: string }> = [];
+      const payloadFiles: Array<{ file: string; filename: string; category: string; content_date?: string }> = [];
       const defaultCategory = categories[0]?.name || "General";
 
       if (bulkUploadType === "files" && selectedBulkFiles) {
@@ -575,10 +581,12 @@ export function ContentLibraryPage() {
             }
             selectedCat = newCat;
           }
+          const contentDateVal = meta.contentDate ? new Date(meta.contentDate).toISOString() : undefined;
           payloadFiles.push({
             file: base64,
             filename: file.name,
-            category: selectedCat
+            category: selectedCat,
+            content_date: contentDateVal
           });
         }
       } else if (bulkUploadType === "zip" && selectedZipFile) {
@@ -601,10 +609,12 @@ export function ContentLibraryPage() {
             }
             selectedCat = newCat;
           }
+          const contentDateVal = meta.contentDate ? new Date(meta.contentDate).toISOString() : undefined;
           payloadFiles.push({
             file: base64,
             filename: baseName,
-            category: selectedCat
+            category: selectedCat,
+            content_date: contentDateVal
           });
         }
       }
@@ -693,6 +703,7 @@ export function ContentLibraryPage() {
     setEditCategory(item.category);
     setEditIsActive(item.is_active);
     setEditVisibility(item.visibility || "owner_employee");
+    setEditContentDate(item.content_date ? item.content_date.split("T")[0] : "");
     setActiveDropdownId(null);
   };
 
@@ -713,12 +724,14 @@ export function ContentLibraryPage() {
           description: editDesc.trim(),
           category: editCategory,
           is_active: editIsActive,
-          visibility: editVisibility
+          visibility: editVisibility,
+          content_date: editContentDate ? new Date(editContentDate).toISOString() : null
         })
       });
 
       toast.success("Resource metadata updated successfully!");
       setSelectedItemForEdit(null);
+      setEditContentDate("");
       fetchContentItems();
     } catch (err: any) {
       toast.error(err.message || "Failed to update resource");
@@ -916,11 +929,7 @@ export function ContentLibraryPage() {
 
             {/* Premium details */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mb-3 text-[10px] text-muted-foreground font-semibold">
-              <span>{getMonthYearLabel(item.uploaded_at)}</span>
-              <span>•</span>
-              <span>Downloads: {mockDownloads}</span>
-              <span>•</span>
-              <span>Views: {mockViews}</span>
+              <span>{getMonthYearLabel(item.content_date || item.uploaded_at)}</span>
             </div>
 
             <div className="flex items-center justify-between border-t border-border/20 pt-2">
@@ -1058,7 +1067,7 @@ export function ContentLibraryPage() {
           </div>
 
           {/* View Switcher and Sort */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
               <button
@@ -1341,19 +1350,15 @@ export function ContentLibraryPage() {
                 <th className="p-4">File</th>
                 <th className="p-4">Type</th>
                 <th className="p-4">Category</th>
-                <th className="p-4">Upload Date</th>
+                <th className="p-4">Content Date</th>
                 <th className="p-4">Month</th>
                 <th className="p-4">Uploaded By</th>
-                <th className="p-4">Downloads</th>
-                <th className="p-4">Views</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {sortedItems.map((item) => {
                 const { icon: Icon, badgeClass, colorClass } = getIconAndBadgeConfig(item.file_type);
-                const mockDownloads = (item.id * 13) % 47;
-                const mockViews = (item.id * 29) % 183;
                 return (
                   <tr 
                     key={item.id} 
@@ -1373,10 +1378,10 @@ export function ContentLibraryPage() {
                     </td>
                     <td className="p-4 text-muted-foreground text-xs">{item.category}</td>
                     <td className="p-4 text-muted-foreground text-xs">
-                      {new Date(item.uploaded_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}
+                      {new Date(item.content_date || item.uploaded_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}
                     </td>
                     <td className="p-4 text-muted-foreground text-xs font-medium">
-                      {getMonthYearLabel(item.uploaded_at)}
+                      {getMonthYearLabel(item.content_date || item.uploaded_at)}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
@@ -1386,8 +1391,6 @@ export function ContentLibraryPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="p-4 text-muted-foreground text-xs font-bold">{mockDownloads}</td>
-                    <td className="p-4 text-muted-foreground text-xs font-bold">{mockViews}</td>
                     <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="relative inline-block text-left">
                         <button 
@@ -1508,6 +1511,16 @@ export function ContentLibraryPage() {
                   placeholder="Summarize or add instructions for this asset..."
                   rows={3}
                   className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Content Date (Optional)</label>
+                <input
+                  type="date"
+                  value={uploadContentDate}
+                  onChange={(e) => setUploadContentDate(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary text-muted-foreground"
                 />
               </div>
 
@@ -1719,8 +1732,9 @@ export function ContentLibraryPage() {
                     <table className="w-full text-left text-xs border-collapse table-fixed">
                       <thead className="sticky top-0 bg-card border-b border-border z-10">
                         <tr className="bg-muted/30 font-semibold text-muted-foreground uppercase">
-                          <th className="p-3 w-[60%]">File Name</th>
-                          <th className="p-3 w-[40%] min-w-[250px]" style={{ minWidth: "250px" }}>Category</th>
+                          <th className="p-3 w-[45%]">File Name</th>
+                          <th className="p-3 w-[30%] min-w-[200px]" style={{ minWidth: "200px" }}>Category</th>
+                          <th className="p-3 w-[25%]">Content Date</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
@@ -1733,7 +1747,7 @@ export function ContentLibraryPage() {
                                   {filename}
                                 </div>
                               </td>
-                              <td className="p-3" style={{ minWidth: "250px" }}>
+                              <td className="p-3" style={{ minWidth: "200px" }}>
                                 <div className="flex flex-col gap-1.5">
                                   <select
                                     value={itemMeta.category}
@@ -1778,6 +1792,22 @@ export function ContentLibraryPage() {
                                     </div>
                                   )}
                                 </div>
+                              </td>
+                              <td className="p-3">
+                                <input
+                                  type="date"
+                                  value={itemMeta.contentDate || ""}
+                                  onChange={(e) => {
+                                    setBulkFileMetadata((prev) => ({
+                                      ...prev,
+                                      [filename]: {
+                                        ...prev[filename],
+                                        contentDate: e.target.value
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full rounded border border-border bg-card py-1 px-2 text-xs text-foreground focus:border-primary outline-none cursor-pointer"
+                                />
                               </td>
                             </tr>
                           );
@@ -1977,6 +2007,16 @@ export function ContentLibraryPage() {
                   onChange={(e) => setEditDesc(e.target.value)}
                   rows={3}
                   className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Content Date (Optional)</label>
+                <input
+                  type="date"
+                  value={editContentDate}
+                  onChange={(e) => setEditContentDate(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary text-muted-foreground"
                 />
               </div>
 

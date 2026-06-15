@@ -92,6 +92,8 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS folder VARCHAR(255) DEFAULT 'General';"))
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_employee';"))
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS organization_id INTEGER;"))
+            await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS content_date TIMESTAMP WITH TIME ZONE;"))
+
             
             # Tools registry table migrations
             await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500);"))
@@ -262,6 +264,9 @@ app.include_router(financial_discovery_router)
 
 from app.routes.needs_discovery import router as needs_discovery_router
 app.include_router(needs_discovery_router)
+
+from app.routes.search import router as search_router
+app.include_router(search_router)
 
 @app.get("/health")
 async def health_check():

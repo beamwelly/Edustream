@@ -264,6 +264,8 @@ class ContentUpdatePayload(BaseModel):
     category: str
     is_active: bool
     visibility: Optional[str] = "owner_employee"
+    content_date: Optional[str] = None
+
 
 # --- Content Endpoints ---
 
@@ -290,7 +292,7 @@ async def list_content_items(
     if current_user.role != "admin":
         from datetime import timedelta
         threshold = current_user.created_at - timedelta(days=30)
-        stmt = stmt.where(ContentItem.uploaded_at >= threshold)
+        stmt = stmt.where(func.coalesce(ContentItem.content_date, ContentItem.uploaded_at) >= threshold)
 
     # For standard users, only active files are served. Admins and Owners can see all.
     if current_user.role not in ("admin", "owner"):
@@ -313,9 +315,9 @@ async def list_content_items(
 
     # Sort
     if sort == "oldest":
-        stmt = stmt.order_by(ContentItem.uploaded_at.asc())
+        stmt = stmt.order_by(func.coalesce(ContentItem.content_date, ContentItem.uploaded_at).asc())
     else:
-        stmt = stmt.order_by(ContentItem.uploaded_at.desc())
+        stmt = stmt.order_by(func.coalesce(ContentItem.content_date, ContentItem.uploaded_at).desc())
 
     res = await db.execute(stmt)
     items = res.scalars().all()
@@ -362,6 +364,7 @@ async def list_content_items(
             "public_url": public_url,
             "uploaded_by": item.uploaded_by,
             "uploaded_at": item.uploaded_at.isoformat() if item.uploaded_at else None,
+            "content_date": item.content_date.isoformat() if item.content_date else None,
             "is_active": item.is_active,
             "storage_provider": item.storage_provider,
             "bucket_name": item.bucket_name,
@@ -388,6 +391,7 @@ async def upload_content(
     category: str = Form(...),
     folder: Optional[str] = Form("General"),
     visibility: Optional[str] = Form("owner_employee"),
+    content_date: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
@@ -444,6 +448,16 @@ async def upload_content(
     print(f"Storage Path: {storage_path}")
     print("---------------------")
 
+    parsed_content_date = None
+    if content_date:
+        try:
+            from datetime import timezone
+            parsed_content_date = datetime.fromisoformat(content_date.replace("Z", "+00:00"))
+            if parsed_content_date.tzinfo is None:
+                parsed_content_date = parsed_content_date.replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+
     # Create metadata item in Neon PostgreSQL
     new_item = ContentItem(
         title=title.strip(),
@@ -463,7 +477,8 @@ async def upload_content(
         storage_filename=unique_filename,
         warning=None,
         mime_type=content_type,
-        visibility=visibility or "owner_employee"
+        visibility=visibility or "owner_employee",
+        content_date=parsed_content_date
     )
     db.add(new_item)
     await db.commit()
@@ -692,6 +707,18 @@ async def update_content_metadata(
     item.category = payload.category
     item.is_active = payload.is_active
     item.visibility = payload.visibility or "owner_employee"
+    
+    if payload.content_date:
+        try:
+            from datetime import timezone
+            parsed = datetime.fromisoformat(payload.content_date.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            item.content_date = parsed
+        except Exception:
+            pass
+    else:
+        item.content_date = None
 
     await db.commit()
     await db.refresh(item)
@@ -871,6 +898,7 @@ class BulkUploadFile(BaseModel):
     file: str  # Base64 string
     filename: str
     category: str
+    content_date: Optional[str] = None
 
 class BulkUploadRequest(BaseModel):
     files: List[BulkUploadFile]
@@ -960,6 +988,16 @@ async def bulk_upload_content_multi(
                 failed_count += 1
                 continue
                 
+            parsed_content_date = None
+            if f.content_date:
+                try:
+                    from datetime import timezone
+                    parsed_content_date = datetime.fromisoformat(f.content_date.replace("Z", "+00:00"))
+                    if parsed_content_date.tzinfo is None:
+                        parsed_content_date = parsed_content_date.replace(tzinfo=timezone.utc)
+                except Exception:
+                    pass
+
             # DB entry
             new_item = ContentItem(
                 title=f.filename.rsplit(".", 1)[0] if "." in f.filename else f.filename,
@@ -977,7 +1015,8 @@ async def bulk_upload_content_multi(
                 original_filename=f.filename,
                 storage_filename=unique_filename,
                 mime_type=content_type,
-                visibility=payload.visibility or "owner_employee"
+                visibility=payload.visibility or "owner_employee",
+                content_date=parsed_content_date
             )
             db.add(new_item)
             success_count += 1

@@ -18,6 +18,7 @@ interface ContentItem {
   file_type: string;
   file_size: string;
   uploaded_at: string;
+  content_date?: string;
 }
 
 interface MeetingItem {
@@ -125,7 +126,7 @@ export function UserDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{doc.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Type: {doc.file_type} • Size: {doc.file_size} • Shared {new Date(doc.uploaded_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                      Type: {doc.file_type} • Size: {doc.file_size} • Shared {new Date(doc.content_date || doc.uploaded_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
                     </p>
                   </div>
                   <Link to="/user/content" className="text-xs font-semibold text-primary hover:underline">
