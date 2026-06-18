@@ -25,13 +25,16 @@ import {
   Phone,
   Eye,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from "lucide-react";
 import { PageHeader, Card, Button } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { useAuth } from "@/context/AuthContext";
 import { jsPDF } from "jspdf";
-import { 
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import {
+
   AreaChart, 
   Area, 
   BarChart,
@@ -1043,7 +1046,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
 
   return (
-    <div className="space-y-6">
+    <ResponsivePageWrapper>
       {/* Page Header with Back Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -1078,47 +1081,47 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         <TabButton 
           active={activeTab === "retirement"} 
           onClick={() => setActiveTab("retirement")} 
-          icon={<PiggyBank className="h-4 w-4" />}
-          label="Retirement Age Predictor" 
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Retirement Predictor" 
         />
         <TabButton 
           active={activeTab === "delay"} 
           onClick={() => setActiveTab("delay")} 
-          icon={<Activity className="h-4 w-4" />}
-          label="Cost Of Delay Calculator" 
+          icon={<Clock className="h-4 w-4" />}
+          label="Cost of Delay" 
         />
         <TabButton 
-          active={activeTab === "loan"} 
-          onClick={() => setActiveTab("loan")} 
-          icon={<Landmark className="h-4 w-4" />}
-          label="SIP + Home Loan Impact" 
+          active={activeTab === "sip-loan"} 
+          onClick={() => setActiveTab("sip-loan")} 
+          icon={<PiggyBank className="h-4 w-4" />}
+          label="SIP + Home Loan" 
         />
         <TabButton 
-          active={activeTab === "freedom"} 
-          onClick={() => setActiveTab("freedom")} 
+          active={activeTab === "freedom-date"} 
+          onClick={() => setActiveTab("freedom-date")} 
           icon={<Calendar className="h-4 w-4" />}
-          label="Financial Freedom Date" 
+          label="Freedom Date" 
         />
         <TabButton 
           active={activeTab === "goal"} 
           onClick={() => setActiveTab("goal")} 
           icon={<Target className="h-4 w-4" />}
-          label="Goal Visualization Dashboard" 
+          label="Goal Visualizer" 
         />
         <TabButton 
           active={activeTab === "vault"} 
           onClick={() => setActiveTab("vault")} 
           icon={<Lock className="h-4 w-4" />}
-          label="Family Financial Vault" 
+          label="Financial Vault" 
         />
       </div>
 
       {/* Tab Panels */}
-      <div className="mt-4">
+      <div className="mt-6">
         {activeTab === "dashboard" && (
           <DashboardTab 
-            inputs={inputs} 
-            results={results} 
+            inputs={inputs}
+            results={results}
             loading={loading}
             formatCurrency={formatCurrency}
             onNavigate={(tab) => setActiveTab(tab)}
@@ -1128,10 +1131,10 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         {activeTab === "retirement" && (
           <RetirementPredictorTab 
             inputs={inputs} 
-            results={results}
+            onChange={handleInputChange} 
+            results={results} 
             loading={loading}
             error={error}
-            onChange={handleInputChange}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             onExportPDF={() => handleExportPDF("Retirement Age Predictor", inputs, results)}
@@ -1148,7 +1151,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
           />
         )}
 
-        {activeTab === "loan" && (
+        {activeTab === "sip-loan" && (
           <SipHomeLoanTab 
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
@@ -1158,7 +1161,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
           />
         )}
 
-        {activeTab === "freedom" && (
+        {activeTab === "freedom-date" && (
           <FinancialFreedomDateTab 
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
@@ -1184,7 +1187,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
           />
         )}
       </div>
-    </div>
+    </ResponsivePageWrapper>
   );
 }
 

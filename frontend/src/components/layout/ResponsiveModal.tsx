@@ -54,7 +54,7 @@ export const ResponsiveModal: React.FC<ResponsiveModalProps> = ({
         className={`relative z-10 bg-card rounded-2xl border border-border shadow-large flex flex-col max-h-[90vh] overflow-hidden my-auto animate-in zoom-in-95 duration-200 ${sizeClasses[size]} ${className}`}
       >
         {/* Header */}
-        {(title || onClose) && (
+        {(title || typeof onClose === 'function') && (
           <div className="flex items-start justify-between p-4 sm:p-6 border-b border-border flex-shrink-0">
             <div>
               {title && <h3 className="text-base sm:text-lg font-bold text-foreground leading-tight">{title}</h3>}

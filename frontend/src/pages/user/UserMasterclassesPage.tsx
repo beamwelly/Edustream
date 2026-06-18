@@ -18,6 +18,9 @@ import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { APP_PLACEHOLDER } from "@/constants/branding";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface Masterclass {
   masterclass_id: number;
@@ -295,7 +298,7 @@ export function UserMasterclassesPage() {
   }
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader 
         title="Masterclasses" 
         subtitle="Join live interactive sessions and watch on-demand recordings of professional classes." 
@@ -564,22 +567,17 @@ export function UserMasterclassesPage() {
         </section>
       </div>
 
-      {/* Cloud Video Streaming Modal */}
-      {activeMasterclass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-[92vw] sm:w-full sm:max-w-4xl my-auto bg-zinc-950 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
-            {/* Modal Header */}
-            <div className="absolute top-4 right-4 z-10">
-              <button
-                onClick={handleVideoClose}
-                className="p-2 rounded-full bg-black/60 text-white hover:bg-black/80 hover:scale-105 transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
+      {/* Reusable Cloud Video Streaming Modal */}
+      <ResponsiveModal
+        isOpen={!!activeMasterclass}
+        onClose={handleVideoClose}
+        title={activeMasterclass?.title || "Masterclass Video"}
+        size="lg"
+      >
+        {activeMasterclass && (
+          <div className="space-y-4">
             {/* Custom styled HTML5 Player */}
-            <div className="aspect-video w-full bg-black relative flex-shrink-0">
+            <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
               <video
                 ref={videoRef}
                 src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream`}
@@ -596,26 +594,26 @@ export function UserMasterclassesPage() {
             </div>
 
             {/* Video Details Pane */}
-            <div className="p-6 bg-zinc-900 border-t border-zinc-850 flex-1 overflow-y-auto">
+            <div className="p-4 bg-secondary/20 rounded-2xl border border-border/40">
               <div className="flex flex-wrap gap-2 mb-2">
                 <Badge tone="primary">{activeMasterclass.category || "General"}</Badge>
-                <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1">
+                <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" /> {activeMasterclass.duration_minutes} Mins
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-white leading-snug">{activeMasterclass.title}</h3>
+              <h3 className="text-sm font-bold text-foreground leading-snug">{activeMasterclass.title}</h3>
               {activeMasterclass.speaker && (
                 <p className="text-xs text-primary font-bold mt-1">Hosted by {activeMasterclass.speaker}</p>
               )}
               {activeMasterclass.description && (
-                <p className="mt-3 text-xs text-zinc-400 leading-relaxed pr-1">
+                <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
                   {activeMasterclass.description}
                 </p>
               )}
             </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }
