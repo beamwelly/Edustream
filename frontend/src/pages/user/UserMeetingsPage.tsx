@@ -4,6 +4,9 @@ import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/comm
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface UserInfo {
   id: number;
@@ -179,7 +182,7 @@ export function UserMeetingsPage() {
   }
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader title="Meetings" subtitle="Schedule a meeting and review past conversations." />
 
       {loading ? (
@@ -443,46 +446,35 @@ export function UserMeetingsPage() {
         </>
       )}
 
-      {/* Centered post-meeting MOM notes read-only modal */}
-      {showNotesModal && selectedNotes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
-          <Card className="w-[92vw] sm:w-full sm:max-w-lg my-auto shadow-2xl border border-border bg-card animate-zoom-in relative flex flex-col max-h-[92vh] sm:max-h-[85vh] p-5 sm:p-6">
-            <button 
-              onClick={() => setShowNotesModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold z-10"
-            >
-              ✕
-            </button>
-            <div className="border-b border-border pb-3 mb-4 flex-shrink-0">
-              <h3 className="text-lg font-bold text-foreground">Post-Meeting Summary</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Meeting: <strong className="text-foreground">{selectedNotes.title}</strong></p>
+      {/* Reusable Post-Meeting Summary Modal */}
+      <ResponsiveModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        title="Post-Meeting Summary"
+        subtitle={`Meeting: ${selectedNotes?.title || ""}`}
+        footer={<Button onClick={() => setShowNotesModal(false)}>Close Summary</Button>}
+      >
+        <div className="space-y-4 text-sm">
+          <div>
+            <h4 className="font-semibold text-foreground mb-1">Minutes of Meeting (MOM) / Notes</h4>
+            <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
+              {selectedNotes?.notes || "No general notes recorded."}
             </div>
-            <div className="space-y-4 text-sm flex-1 overflow-y-auto pr-1">
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">Minutes of Meeting (MOM) / Notes</h4>
-                <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
-                  {selectedNotes.notes || "No general notes recorded."}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">Action Items</h4>
-                <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
-                  {selectedNotes.action_items || "No action items recorded."}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">Next Steps</h4>
-                <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
-                  {selectedNotes.next_steps || "No next steps recorded."}
-                </div>
-              </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-foreground mb-1">Action Items</h4>
+            <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
+              {selectedNotes?.action_items || "No action items recorded."}
             </div>
-            <div className="mt-5 flex justify-end border-t border-border pt-4 flex-shrink-0">
-              <Button onClick={() => setShowNotesModal(false)}>Close Summary</Button>
+          </div>
+          <div>
+            <h4 className="font-semibold text-foreground mb-1">Next Steps</h4>
+            <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
+              {selectedNotes?.next_steps || "No next steps recorded."}
             </div>
-          </Card>
+          </div>
         </div>
-      )}
-    </>
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

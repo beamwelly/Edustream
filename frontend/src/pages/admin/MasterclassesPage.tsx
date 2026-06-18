@@ -47,6 +47,9 @@ interface Masterclass {
 }
 
 import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface Registration {
   user_id: number;
@@ -467,7 +470,7 @@ export function MasterclassesPage() {
   const recordedSessions = filteredMasterclasses.filter((m) => m.status === "recorded");
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader
         title="Webinar Management"
         subtitle="Schedule live Zoom Business sessions, edit schedules, and view attendee sign-ups."
@@ -1137,136 +1140,112 @@ export function MasterclassesPage() {
         </div>
       </div>
 
-      {/* HTML5 Video Streaming Modal */}
-      {activeVideoUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-[92vw] sm:w-full sm:max-w-4xl my-auto bg-zinc-950 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
-            <div className="absolute top-4 right-4 z-10">
-              <button
-                onClick={() => setActiveVideoUrl(null)}
-                className="p-2 rounded-full bg-black/60 text-white hover:bg-black/85 hover:scale-105 transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+      {/* Reusable Video Streaming Modal */}
+      <ResponsiveModal
+        isOpen={!!activeVideoUrl}
+        onClose={() => setActiveVideoUrl(null)}
+        title="Webinar Recording"
+        size="lg"
+      >
+        <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+          <video
+            src={activeVideoUrl || ""}
+            controls
+            autoPlay
+            className="w-full h-full object-contain"
+          >
+            Your browser does not support the video tag.
+          </video>
+        </div>
+      </ResponsiveModal>
 
-            <div className="aspect-video w-full bg-black flex-shrink-0">
-              <video
-                src={activeVideoUrl}
-                controls
-                autoPlay
-                className="w-full h-full object-contain"
-              >
-                Your browser does not support the video tag.
-              </video>
+      {/* Reusable Registrations List Modal */}
+      <ResponsiveModal
+        isOpen={!!registrationsModalMc}
+        onClose={() => setRegistrationsModalMc(null)}
+        title="Webinar Registrations"
+        subtitle={registrationsModalMc?.title || ""}
+        footer={
+          <Button onClick={() => setRegistrationsModalMc(null)} className="bg-primary text-white font-bold text-xs rounded-xl px-5">
+            Close Dialog
+          </Button>
+        }
+      >
+        {regsLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : registrationsList.length === 0 ? (
+          <div className="flex flex-col justify-center items-center py-12">
+            <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">No sign-ups found for this session yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {registrationsList.map((user) => (
+              <div key={user.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50 border border-border/40">
+                <div>
+                  <h4 className="text-xs font-bold text-foreground">{user.full_name}</h4>
+                  <p className="text-[10px] text-muted-foreground">{user.email}</p>
+                </div>
+                <Badge tone="primary">Participant</Badge>
+              </div>
+            ))}
+          </div>
+        )}
+      </ResponsiveModal>
+
+      {/* Reusable Cancellation Reason Modal */}
+      <ResponsiveModal
+        isOpen={!!cancellingMc}
+        onClose={() => {
+          setCancellingMc(null);
+          setCancellationMessage("");
+        }}
+        title="Cancel Masterclass"
+        subtitle="Are you sure you want to cancel this scheduled session?"
+        footer={
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCancellingMc(null);
+                setCancellationMessage("");
+              }}
+              className="font-bold text-xs rounded-xl"
+            >
+              Go Back
+            </Button>
+            <Button 
+              onClick={confirmCancelMasterclass} 
+              className="bg-red-600 text-white hover:bg-red-700 font-bold text-xs rounded-xl px-5"
+            >
+              Confirm Cancellation
+            </Button>
+          </>
+        }
+      >
+        {cancellingMc && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground leading-normal bg-secondary/50 p-3 rounded-2xl border border-border/50">
+              Webinar: <span className="font-bold text-foreground">{cancellingMc.title}</span>
+            </p>
+
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-muted-foreground uppercase">
+                Cancellation Reason / Note (Sent to users)
+              </label>
+              <textarea
+                value={cancellationMessage}
+                onChange={(e) => setCancellationMessage(e.target.value)}
+                placeholder="Include details about rescheduling or cancellation details..."
+                rows={4}
+                className="w-full px-3.5 py-2.5 bg-card border border-border rounded-2xl focus:outline-none focus:border-primary text-xs shadow-sm"
+              />
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Registrations List Modal */}
-      {registrationsModalMc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-[92vw] sm:w-full sm:max-w-lg my-auto bg-card rounded-3xl overflow-hidden shadow-2xl border border-border p-5 sm:p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
-            <div className="flex justify-between items-center border-b border-border pb-3 mb-4 flex-shrink-0">
-              <div>
-                <h3 className="text-base font-bold text-foreground">Webinar Registrations</h3>
-                <p className="text-xs text-muted-foreground line-clamp-1">{registrationsModalMc.title}</p>
-              </div>
-              <button
-                onClick={() => setRegistrationsModalMc(null)}
-                className="p-1.5 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-all z-10"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {regsLoading ? (
-              <div className="flex-1 flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : registrationsList.length === 0 ? (
-              <div className="flex-1 flex flex-col justify-center items-center py-12">
-                <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">No sign-ups found for this session yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-2 flex-1 overflow-y-auto pr-1">
-                {registrationsList.map((user) => (
-                  <div key={user.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50 border border-border/40">
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">{user.full_name}</h4>
-                      <p className="text-[10px] text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Badge tone="primary">Participant</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 border-t border-border pt-4 flex justify-end flex-shrink-0">
-              <Button onClick={() => setRegistrationsModalMc(null)} className="bg-primary text-white font-bold text-xs rounded-xl px-5">
-                Close Dialog
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cancellation Reason Modal */}
-      {cancellingMc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-[92vw] sm:w-full sm:max-w-md my-auto bg-card rounded-3xl overflow-hidden shadow-2xl border border-border p-5 sm:p-6 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[85vh]">
-            <div className="flex items-center gap-3 border-b border-border pb-3.5 mb-4 flex-shrink-0">
-              <div className="p-2 bg-red-100 rounded-xl">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Cancel Masterclass</h3>
-                <p className="text-[11px] text-muted-foreground">Are you sure you want to cancel this scheduled session?</p>
-              </div>
-            </div>
-
-            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
-              <p className="text-xs text-muted-foreground leading-normal bg-secondary/50 p-3 rounded-2xl border border-border/50">
-                Webinar: <span className="font-bold text-foreground">{cancellingMc.title}</span>
-              </p>
-
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-muted-foreground uppercase">
-                  Cancellation Reason / Note (Sent to users)
-                </label>
-                <textarea
-                  value={cancellationMessage}
-                  onChange={(e) => setCancellationMessage(e.target.value)}
-                  placeholder="Include details about rescheduling or cancellation details..."
-                  rows={4}
-                  className="w-full px-3.5 py-2.5 bg-card border border-border rounded-2xl focus:outline-none focus:border-primary text-xs shadow-sm"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-border flex justify-end gap-2.5 flex-shrink-0">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setCancellingMc(null);
-                  setCancellationMessage("");
-                }}
-                className="font-bold text-xs rounded-xl"
-              >
-                Go Back
-              </Button>
-              <Button 
-                onClick={confirmCancelMasterclass} 
-                className="bg-red-600 text-white hover:bg-red-700 font-bold text-xs rounded-xl px-5"
-              >
-                Confirm Cancellation
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+        )}
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

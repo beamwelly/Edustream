@@ -4,6 +4,9 @@ import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface MeetingResponse {
   id: number;
@@ -325,7 +328,7 @@ export function MeetingsPage() {
   const completedMeetings = meetings.filter(m => m.status === "completed" || m.status === "cancelled");
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader title="Meetings" subtitle="Approve requests, schedule Meet links, and capture notes dynamically." />
 
       {/* Google Integration Block */}
@@ -707,165 +710,156 @@ export function MeetingsPage() {
         </>
       )}
 
-      {/* Centered Schedule Meeting Approval Modal */}
-      {showScheduleModal && selectedMeeting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-4 backdrop-blur-sm overflow-y-auto">
-          <Card className="w-[92vw] sm:w-full sm:max-w-lg my-auto shadow-2xl border border-border bg-card animate-zoom-in relative flex flex-col max-h-[92vh] sm:max-h-[85vh] p-5 sm:p-6">
-            <button 
-              onClick={() => setShowScheduleModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold z-10"
-            >
-              ✕
-            </button>
-            <div className="border-b border-border pb-3 mb-4 flex-shrink-0">
-              <h3 className="text-lg font-bold text-foreground">Approve & Schedule Meeting</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Integrates with Google Calendar API to dispatch Meet link & SMTP invitation.</p>
-            </div>
+      {/* Reusable Schedule Meeting Approval Modal */}
+      <ResponsiveModal
+        isOpen={showScheduleModal && !!selectedMeeting}
+        onClose={() => setShowScheduleModal(false)}
+        title="Approve & Schedule Meeting"
+        subtitle="Integrates with Google Calendar API to dispatch Meet link & SMTP invitation."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
+            <Button onClick={handleCreateMeeting} disabled={scheduling}>
+              {scheduling ? "Creating Meet..." : "Create Meeting"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-sm">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Meeting Title</span>
+            <input
+              type="text"
+              value={scheduleTitle}
+              onChange={(e) => setScheduleTitle(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Agenda / Purpose</span>
+            <textarea
+              rows={2}
+              value={scheduleAgenda}
+              onChange={(e) => setScheduleAgenda(e.target.value)}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Date</span>
+              <input
+                type="date"
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Start Time</span>
+              <select
+                value={scheduleStartTime}
+                onChange={(e) => {
+                  const start = e.target.value;
+                  setScheduleStartTime(start);
+                  setScheduleEndTime(getEndTimeForSlot(start));
+                }}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2.5 text-xs outline-none focus:border-primary"
+              >
+                {slots.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">End Time</span>
+              <input
+                type="text"
+                readOnly
+                disabled
+                value={scheduleEndTime}
+                className="w-full rounded-lg border border-border bg-muted px-2 py-2 text-xs outline-none focus:border-primary cursor-not-allowed text-muted-foreground"
+              />
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground italic">Each scheduled meeting is 30 minutes in duration.</p>
+
+          {/* Attendee Dropdown & Search Enhancements */}
+          <div className="relative">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Search & Select</span>
+            <input
+              type="text"
+              placeholder="Type name, role or company to filter..."
+              value={attendeeSearchQuery}
+              onChange={(e) => setAttendeeSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary mb-2"
+            />
             
-            <div className="space-y-4 text-sm flex-1 overflow-y-auto pr-1">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Meeting Title</span>
-                <input
-                  type="text"
-                  value={scheduleTitle}
-                  onChange={(e) => setScheduleTitle(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-              </label>
+            <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-1.5 bg-secondary/10 space-y-1">
+              {availableUsers
+                .filter(u => {
+                  const q = attendeeSearchQuery.toLowerCase();
+                  return u.full_name.toLowerCase().includes(q) || 
+                         u.email.toLowerCase().includes(q) || 
+                         (u.role && u.role.toLowerCase().includes(q)) ||
+                         (u.organization_name && u.organization_name.toLowerCase().includes(q));
+                })
+                .map(u => {
+                  const emails = scheduleAttendees.split(",").map(e => e.trim());
+                  const isSelected = emails.includes(u.email);
+                  
+                  const toggleSelect = () => {
+                    let newEmails = [...emails];
+                    if (isSelected) {
+                      newEmails = newEmails.filter(e => e !== u.email);
+                    } else {
+                      newEmails.push(u.email);
+                    }
+                    setScheduleAttendees(newEmails.filter(Boolean).join(", "));
+                  };
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Agenda / Purpose</span>
-                <textarea
-                  rows={2}
-                  value={scheduleAgenda}
-                  onChange={(e) => setScheduleAgenda(e.target.value)}
-                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-              </label>
-
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Date</span>
-                  <input
-                    type="date"
-                    value={scheduleDate}
-                    onChange={(e) => setScheduleDate(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Start Time</span>
-                  <select
-                    value={scheduleStartTime}
-                    onChange={(e) => {
-                      const start = e.target.value;
-                      setScheduleStartTime(start);
-                      setScheduleEndTime(getEndTimeForSlot(start));
-                    }}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2.5 text-xs outline-none focus:border-primary"
-                  >
-                    {slots.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">End Time</span>
-                  <input
-                    type="text"
-                    readOnly
-                    disabled
-                    value={scheduleEndTime}
-                    className="w-full rounded-lg border border-border bg-muted px-2 py-2 text-xs outline-none focus:border-primary cursor-not-allowed text-muted-foreground"
-                  />
-                </label>
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground italic">Each scheduled meeting is 30 minutes in duration.</p>
-
-              {/* Task 10: Attendee Dropdown & Search Enhancements */}
-              <div className="relative">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Search & Select</span>
-                <input
-                  type="text"
-                  placeholder="Type name, role or company to filter..."
-                  value={attendeeSearchQuery}
-                  onChange={(e) => setAttendeeSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary mb-2"
-                />
-                
-                <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-1.5 bg-secondary/10 space-y-1">
-                  {availableUsers
-                    .filter(u => {
-                      const q = attendeeSearchQuery.toLowerCase();
-                      return u.full_name.toLowerCase().includes(q) || 
-                             u.email.toLowerCase().includes(q) || 
-                             (u.role && u.role.toLowerCase().includes(q)) ||
-                             (u.organization_name && u.organization_name.toLowerCase().includes(q));
-                    })
-                    .map(u => {
-                      const emails = scheduleAttendees.split(",").map(e => e.trim());
-                      const isSelected = emails.includes(u.email);
-                      
-                      const toggleSelect = () => {
-                        let newEmails = [...emails];
-                        if (isSelected) {
-                          newEmails = newEmails.filter(e => e !== u.email);
-                        } else {
-                          newEmails.push(u.email);
-                        }
-                        setScheduleAttendees(newEmails.filter(Boolean).join(", "));
-                      };
-
-                      return (
-                        <div 
-                          key={u.id}
-                          onClick={toggleSelect}
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer text-xs transition-colors ${
-                            isSelected 
-                              ? "bg-primary/20 hover:bg-primary/30 border border-primary/20" 
-                              : "hover:bg-secondary/40 border border-transparent"
-                          }`}
-                        >
-                          <div className="text-left">
-                            <div className="font-semibold text-foreground capitalize">{u.full_name} ({u.role || "user"})</div>
-                            <div className="text-[10px] text-muted-foreground">{u.organization_name || "Masterclass"} · {u.email}</div>
-                          </div>
-                          <div className="font-bold text-primary text-xs">
-                            {isSelected ? "✓ Selected" : "+ Add"}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {availableUsers.length === 0 && (
-                    <div className="text-center text-xs text-muted-foreground py-2">No users available for invitation.</div>
-                  )}
-                </div>
-              </div>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Emails (comma-separated)</span>
-                <input
-                  type="text"
-                  value={scheduleAttendees}
-                  onChange={(e) => setScheduleAttendees(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
-                />
-              </label>
+                  return (
+                    <div 
+                      key={u.id}
+                      onClick={toggleSelect}
+                      className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer text-xs transition-colors ${
+                        isSelected 
+                          ? "bg-primary/20 hover:bg-primary/30 border border-primary/20" 
+                          : "hover:bg-secondary/40 border border-transparent"
+                      }`}
+                    >
+                      <div className="text-left">
+                        <div className="font-semibold text-foreground capitalize">{u.full_name} ({u.role || "user"})</div>
+                        <div className="text-[10px] text-muted-foreground">{u.organization_name || "Masterclass"} · {u.email}</div>
+                      </div>
+                      <div className="font-bold text-primary text-xs">
+                        {isSelected ? "✓ Selected" : "+ Add"}
+                      </div>
+                    </div>
+                  );
+                })}
+              {availableUsers.length === 0 && (
+                <div className="text-center text-xs text-muted-foreground py-2">No users available for invitation.</div>
+              )}
             </div>
+          </div>
 
-            <div className="mt-6 flex justify-end gap-3 border-t border-border pt-4 flex-shrink-0">
-              <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
-              <Button onClick={handleCreateMeeting} disabled={scheduling}>
-                {scheduling ? "Creating Meet..." : "Create Meeting"}
-              </Button>
-            </div>
-          </Card>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Emails (comma-separated)</span>
+            <input
+              type="text"
+              value={scheduleAttendees}
+              onChange={(e) => setScheduleAttendees(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+            />
+          </label>
         </div>
-      )}
-    </>
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

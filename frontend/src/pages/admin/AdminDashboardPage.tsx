@@ -10,6 +10,8 @@ import {
 import { Link } from "@tanstack/react-router";
 import { PageHeader, Card, StatCard, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+
 
 interface SuperKPIs {
   total_organizations: number;
@@ -48,7 +50,7 @@ export function AdminDashboardPage() {
   }, []);
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader
         title="System Overview"
         subtitle="A calm, real-time view of activity across all users."
@@ -119,6 +121,6 @@ export function AdminDashboardPage() {
           </section>
         </>
       )}
-    </>
+    </ResponsivePageWrapper>
   );
 }

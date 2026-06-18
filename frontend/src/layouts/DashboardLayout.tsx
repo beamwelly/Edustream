@@ -38,7 +38,7 @@ export function DashboardLayout({
             className="fixed inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" 
             onClick={() => setIsMobileMenuOpen(false)} 
           />
-          <div className="relative flex w-64 max-w-xs flex-1 flex-col bg-card border-r border-border p-5 animate-in slide-in-from-left duration-200">
+          <div className="relative flex w-full max-w-full flex-1 flex-col bg-card border-r border-border p-5 animate-in slide-in-from-left duration-200">
             <div className="absolute top-4 right-4">
               <button 
                 onClick={() => setIsMobileMenuOpen(false)} 
@@ -48,10 +48,10 @@ export function DashboardLayout({
               </button>
             </div>
             
-            <div className="mb-6 px-2 flex items-center gap-3">
-              <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-8 w-auto object-contain" />
+            <div className="mb-6 px-2 flex items-center gap-2">
+              <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-8 w-8 object-contain flex-shrink-0" />
               <div>
-                <h1 className="text-base font-bold text-foreground">{APP_NAME}</h1>
+                <h1 className="text-sm lg:text-base font-bold text-foreground truncate">{APP_NAME}</h1>
                 <p className="text-2xs text-muted-foreground capitalize">{roleLabel}</p>
               </div>
             </div>
@@ -76,7 +76,7 @@ export function DashboardLayout({
         </div>
       )}
 
-      <div className="relative z-10 flex-1 md:ml-64 min-w-0">
+      <div className="relative z-10 flex-1 md:ml-16 xl:ml-64 min-w-0">
         <div className="sticky top-0 z-20 flex items-center bg-background/80 backdrop-blur border-b border-border px-4 py-1.5 md:p-0 md:bg-transparent md:backdrop-filter-none md:border-none">
           <button
             onClick={() => setIsMobileMenuOpen(true)}

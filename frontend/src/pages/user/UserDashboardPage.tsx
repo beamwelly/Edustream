@@ -4,6 +4,8 @@ import { Link } from "@tanstack/react-router";
 import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+
 
 interface UserProfile {
   id: number;
@@ -75,7 +77,7 @@ export function UserDashboardPage() {
   }
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader
         title={isLoading ? "Welcome back" : `Welcome back, ${profile?.full_name || "Sara"}`}
         subtitle="Pick up where you left off — your library and sessions are waiting."
@@ -191,6 +193,6 @@ export function UserDashboardPage() {
           ))}
         </div>
       </section>
-    </>
+    </ResponsivePageWrapper>
   );
 }

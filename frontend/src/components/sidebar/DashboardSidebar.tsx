@@ -15,11 +15,11 @@ export function DashboardSidebar({ roleLabel, nav, footerNav }: DashboardSidebar
   const { user } = useAuth();
 
   return (
-    <aside className="app-surface-sidebar fixed left-0 top-0 z-30 hidden h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar px-4 py-6 md:flex">
-      <div className="mb-8 px-2 min-w-0 w-full" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-8 w-auto object-contain flex-shrink-0" style={{ maxHeight: "32px" }} />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-base font-semibold text-foreground truncate">{APP_NAME}</h1>
+    <aside className="app-surface-sidebar fixed left-0 top-0 z-30 hidden h-screen w-16 flex-col border-r border-sidebar-border bg-sidebar px-3 py-6 md:flex xl:w-64 xl:px-4">
+      <div className="mb-8 px-2 flex items-center gap-2 min-w-0 w-full">
+        <img src={APP_LOGO} alt={`${APP_NAME} Logo`} className="h-8 w-8 object-contain flex-shrink-0" />
+        <div className="min-w-0 flex-1 hidden xl:block">
+          <h1 className="text-sm lg:text-base font-semibold text-foreground truncate">{APP_NAME}</h1>
           <p className="text-xs text-muted-foreground capitalize truncate">
             {user?.role ? (user.role === "admin" ? "Admin Dashboard" : "User Dashboard") : roleLabel}
           </p>
@@ -37,14 +37,15 @@ export function DashboardSidebar({ roleLabel, nav, footerNav }: DashboardSidebar
               key={item.to}
               to={item.to}
               className={
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+                "flex items-center justify-center xl:justify-start gap-3 rounded-lg p-2.5 xl:px-3 xl:py-2.5 text-sm font-medium transition-colors " +
                 (active
                   ? "bg-primary-soft text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground")
               }
+              title={item.label}
             >
-              <Icon className="h-[18px] w-[18px]" />
-              <span>{item.label}</span>
+              <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+              <span className="hidden xl:inline truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -59,23 +60,25 @@ export function DashboardSidebar({ roleLabel, nav, footerNav }: DashboardSidebar
               key={item.to}
               to={item.to}
               className={
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+                "flex items-center justify-center xl:justify-start gap-3 rounded-lg p-2.5 xl:px-3 xl:py-2.5 text-sm font-medium transition-colors " +
                 (active
                   ? "bg-primary-soft text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground")
               }
+              title={item.label}
             >
-              <Icon className="h-[18px] w-[18px]" />
-              <span>{item.label}</span>
+              <Icon className="h-[18px] w-[18px] flex-shrink-0" />
+              <span className="hidden xl:inline truncate">{item.label}</span>
             </Link>
           );
         })}
         <Link
           to="/"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+          className="flex items-center justify-center xl:justify-start gap-3 rounded-lg p-2.5 xl:px-3 xl:py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+          title="Logout"
         >
-          <LogOut className="h-[18px] w-[18px]" />
-          <span>Logout</span>
+          <LogOut className="h-[18px] w-[18px] flex-shrink-0" />
+          <span className="hidden xl:inline truncate">Logout</span>
         </Link>
       </div>
     </aside>
