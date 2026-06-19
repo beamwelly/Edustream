@@ -583,7 +583,7 @@ export function UserMasterclassesPage() {
             <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
               <video
                 ref={videoRef}
-                src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream`}
+                src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`}
                 controls
                 autoPlay
                 onLoadedMetadata={handleLoadedMetadata}

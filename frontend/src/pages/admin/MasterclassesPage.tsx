@@ -1083,7 +1083,7 @@ export function MasterclassesPage() {
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
-                                    onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${s.masterclass_id}/stream`)}
+                                    onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${s.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`)}
                                     className="flex-1 font-bold rounded-xl text-[10px]"
                                   >
                                     Watch
@@ -1136,7 +1136,7 @@ export function MasterclassesPage() {
                             )}
                             
                             <button 
-                              onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${r.masterclass_id}/stream`)}
+                              onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${r.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`)}
                               className="absolute inset-0 flex items-center justify-center bg-black/45"
                             >
                               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg transform scale-95 hover:scale-105 transition duration-200">

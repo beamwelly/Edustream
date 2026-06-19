@@ -17,12 +17,15 @@ import {
   BarChart3, 
   PieChart as PieIcon, 
   ChevronLeft,
-  RotateCcw
+  RotateCcw,
+  AlertCircle
 } from "lucide-react";
 import { Card, Button } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
+import { API_URL } from "@/constants/env";
+import { GeneratedReportsTab } from "@/components/tools/GeneratedReportsTab";
 import {
   ResponsiveContainer,
   BarChart,
@@ -265,12 +268,13 @@ const adviceTypeOptions = ["Full Financial Plan", "Investment Advisory", "Tax Pl
 const nextStepOptions = ["Send Proposal", "Schedule Follow-Up", "Complete KYC", "Open Account", "Awaiting Documents", "Deal Closed", "No Action"];
 const rmRatingOptions = ["1 – Very Low", "2 – Low", "3 – Medium", "4 – High", "5 – Very High"];
 
-export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
+export function FinancialDiscoveryPage({ onBack, toolId }: { onBack: () => void; toolId: number }) {
   const [data, setData] = useState<DiscoveryData>(defaultState());
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Unsaved Changes">("Saved");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const isLoaded = useRef(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -497,8 +501,13 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
   };
 
   // Reset data handler
-  const handleResetData = async () => {
-    if (!confirm("Are you sure you want to reset all your Financial Discovery data? This cannot be undone.")) return;
+  const handleResetData = () => {
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = async () => {
+    setShowResetConfirm(false);
+    setSaveStatus("Saving...");
     try {
       await apiFetch("/api/financial-discovery/reset", {
         method: "POST"
@@ -1092,6 +1101,47 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
     doc.text(`Next Follow-up Date: ${safeText(data.followUpDate)}`, 85, advY);
     doc.text(`Advisor Conviction Rating: ${safeText(data.rmConvictionRating)}`, 145, advY);
 
+    // Auto-upload generated PDF to backend
+    try {
+      const pdfBlob = doc.output("blob");
+      const calcClean = "FinancialDiscovery";
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const clientName = data.fullName || "";
+      let filename = "";
+      if (clientName.trim()) {
+        filename = `${clientName.trim().replace(/\s+/g, "_")}_${calcClean}_${dateStr}.pdf`;
+      } else {
+        const timeStr = new Date().toTimeString().split(" ")[0].replace(/:/g, "");
+        filename = `${calcClean}_${dateStr}_${timeStr}.pdf`;
+      }
+
+      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("tool_id", String(toolId));
+      formData.append("calculator_name", "Financial Discovery");
+      if (clientName.trim()) {
+        formData.append("client_name", clientName.trim());
+      }
+
+      fetch(`${API_URL}/wow/reports/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        },
+        body: formData
+      })
+      .then(r => r.json())
+      .then(resData => {
+        console.log("PDF auto-saved to backend:", resData);
+      })
+      .catch(err => {
+        console.error("Failed to auto-save PDF to backend:", err);
+      });
+    } catch (uploadErr) {
+      console.error("Failed to process auto-upload:", uploadErr);
+    }
+
     doc.save("Financial_Discovery_Advisory_Report.pdf");
   };
 
@@ -1121,13 +1171,14 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
               Unsaved Changes
             </span>
           )}
-          <button
+          <Button
+            variant="outline"
             onClick={handleResetData}
             title="Reset Form Data"
-            className="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-xl transition-all border border-border"
+            className="text-xs border-red-500/20 hover:bg-red-500/5 text-red-600 gap-1.5 font-bold"
           >
-            <RotateCcw className="h-4 w-4" />
-          </button>
+            <RotateCcw className="h-3.5 w-3.5" /> Clear Information
+          </Button>
           <Button 
             onClick={handleSaveData}
             className="bg-primary hover:bg-primary/95 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5"
@@ -1139,7 +1190,7 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
 
       {/* Sheet Tabs */}
       <div className="flex flex-wrap border-b border-border bg-card p-1 rounded-xl gap-1 shadow-sm">
-        {["Dashboard", "Client Master", "Assets & Liabilities", "Insurance Review", "Goals & Investment Plan", "Summary Report"].map((tab) => (
+        {["Dashboard", "Client Master", "Assets & Liabilities", "Insurance Review", "Goals & Investment Plan", "Summary Report", "Generated PDFs"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -2330,6 +2381,48 @@ export function FinancialDiscoveryPage({ onBack }: { onBack: () => void }) {
             </Card>
           )}
 
+          {activeTab === "Generated PDFs" && (
+            <GeneratedReportsTab toolId={toolId} />
+          )}
+
+        </div>
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-foreground">Clear All Information?</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to clear all inputs? This action cannot be undone. All calculator fields will be reset to their default initial values.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowResetConfirm(false)}
+                className="text-xs border-border/80"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConfirmReset}
+                className="text-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold"
+              >
+                Confirm Reset
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>

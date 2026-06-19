@@ -78,6 +78,7 @@ async def lifespan(app: FastAPI):
 
         from app.models.financial_discovery import FinancialDiscoveryProfile
         from app.models.needs_discovery import NeedsDiscoveryProfile
+        from app.models.generated_report import GeneratedReport
         await conn.run_sync(Base.metadata.create_all)
         
         from sqlalchemy import text

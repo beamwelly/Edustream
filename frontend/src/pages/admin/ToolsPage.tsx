@@ -373,15 +373,18 @@ export function ToolsPage() {
   };
 
   if (activeTool === "wow") {
-    return <WowToolkitPage onBack={() => setActiveTool(null)} />;
+    const toolId = tools.find(t => t.name.toLowerCase().includes("wow") || t.name.toLowerCase().includes("freedom"))?.id || 1;
+    return <WowToolkitPage onBack={() => setActiveTool(null)} toolId={toolId} />;
   }
 
   if (activeTool === "needs-discovery") {
-    return <NeedsDiscoveryPage onBack={() => setActiveTool(null)} />;
+    const toolId = tools.find(t => t.name.toLowerCase().includes("needs discovery"))?.id || 3;
+    return <NeedsDiscoveryPage onBack={() => setActiveTool(null)} toolId={toolId} />;
   }
 
   if (activeTool === "discovery") {
-    return <FinancialDiscoveryPage onBack={() => setActiveTool(null)} />;
+    const toolId = tools.find(t => t.name.toLowerCase().includes("financial discovery") || (t.name.toLowerCase().includes("discovery") && !t.name.toLowerCase().includes("needs")))?.id || 2;
+    return <FinancialDiscoveryPage onBack={() => setActiveTool(null)} toolId={toolId} />;
   }
 
   return (

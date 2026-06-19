@@ -33,6 +33,8 @@ import { apiFetch } from "@/services/api";
 import { jsPDF } from "jspdf";
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Bar, Cell, PieChart, Pie, Legend } from "recharts";
 import { toast } from "sonner";
+import { API_URL } from "@/constants/env";
+import { GeneratedReportsTab } from "@/components/tools/GeneratedReportsTab";
 
 // Options from Excel _Lists sheet
 const REVIEW_TYPE_OPTIONS = ['New Client', 'Annual Review', 'Portfolio Rebalance', 'Goal Review', 'Other'];
@@ -288,13 +290,15 @@ const calculateSuitability = (dimension: string, product: string, inputs: {
 
 interface NeedsDiscoveryPageProps {
   onBack: () => void;
+  toolId: number;
 }
 
-export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
+export function NeedsDiscoveryPage({ onBack, toolId }: NeedsDiscoveryPageProps) {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"Saved" | "Saving..." | "Unsaved Changes">("Saved");
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   const isLoaded = useRef(false);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -634,9 +638,13 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
     };
   }, [clientDiscovery, riskCalculator, suitabilityCheck, dashboardNotes]);
 
-  // Reset form data
-  const handleResetData = async () => {
-    if (!confirm("Are you sure you want to clear all data? This cannot be undone.")) return;
+  const handleResetData = () => {
+    setShowResetConfirm(true);
+  };
+
+  const handleConfirmReset = async () => {
+    setShowResetConfirm(false);
+    setSaveStatus("Saving...");
     try {
       await apiFetch("/api/needs-discovery/reset", { method: "POST" });
       setClientDiscovery({
@@ -757,6 +765,50 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       "Unsuitable": unsuitableCount
     };
   });
+
+  const uploadGeneratedPDF = (doc: jsPDF, reportName: string) => {
+    try {
+      const pdfBlob = doc.output("blob");
+      const calcClean = "NeedsDiscovery";
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const clientName = clientDiscovery.clientName || "";
+      let filename = "";
+      
+      const cleanReportName = reportName.replace(/\s+/g, "_");
+      if (clientName.trim()) {
+        filename = `${clientName.trim().replace(/\s+/g, "_")}_${calcClean}_${cleanReportName}_${dateStr}.pdf`;
+      } else {
+        const timeStr = new Date().toTimeString().split(" ")[0].replace(/:/g, "");
+        filename = `${calcClean}_${cleanReportName}_${dateStr}_${timeStr}.pdf`;
+      }
+
+      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("tool_id", String(toolId));
+      formData.append("calculator_name", "Needs Discovery");
+      if (clientName.trim()) {
+        formData.append("client_name", clientName.trim());
+      }
+
+      fetch(`${API_URL}/wow/reports/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        },
+        body: formData
+      })
+      .then(r => r.json())
+      .then(resData => {
+        console.log("PDF auto-saved to backend:", resData);
+      })
+      .catch(err => {
+        console.error("Failed to auto-save PDF to backend:", err);
+      });
+    } catch (uploadErr) {
+      console.error("Failed to process auto-upload:", uploadErr);
+    }
+  };
 
   // PDF Export Engine (Strict replication of 10 sections over 5 pages)
   // TAB-SPECIFIC PDF GENERATORS
@@ -1011,6 +1063,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
       doc.text(notesLines, 15, y);
     }
 
+    uploadGeneratedPDF(doc, "Dashboard");
     doc.save(`Needs_Discovery_Dashboard_Report.pdf`);
   };
 
@@ -1186,6 +1239,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
     doc.text("Client Signature", 15, y + 4);
     doc.text("RM / Advisor Signature", 135, y + 4);
 
+    uploadGeneratedPDF(doc, "Client Discovery");
     doc.save(`Client_Discovery_Report.pdf`);
   };
 
@@ -1376,6 +1430,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
     const riskNotesLines = doc.splitTextToSize(riskNotesText, 180);
     doc.text(riskNotesLines, 15, y + 5);
 
+    uploadGeneratedPDF(doc, "Risk Assessment");
     doc.save(`Risk_Profile_Assessment_Report.pdf`);
   };
 
@@ -1531,6 +1586,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
     const reasonLines = doc.splitTextToSize(reasonText, 180);
     doc.text(reasonLines, 15, y + 5);
 
+    uploadGeneratedPDF(doc, "Suitability");
     doc.save(`Investment_Suitability_Report.pdf`);
   };
 
@@ -1872,6 +1928,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
     doc.setFontSize(7);
     doc.text("For authorized RM / advisor use only. Handle per SEBI / IRDAI data protection norms.", 15, y + 15);
 
+    uploadGeneratedPDF(doc, "Master Report");
     doc.save(`Needs_Discovery_Master_Report.pdf`);
   };
 
@@ -1915,13 +1972,14 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
               Unsaved Changes
             </span>
           )}
-          <button
+          <Button
+            variant="outline"
             onClick={handleResetData}
             title="Reset Discovery Data"
-            className="p-2 text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-xl transition-all border border-border"
+            className="text-xs border-red-500/20 hover:bg-red-500/5 text-red-600 gap-1.5 font-bold"
           >
-            <RotateCcw className="h-4 w-4" />
-          </button>
+            <RotateCcw className="h-3.5 w-3.5" /> Clear Information
+          </Button>
           <Button 
             onClick={() => handleSaveData(true)}
             className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5"
@@ -1940,7 +1998,7 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
 
       {/* Tabs Menu */}
       <div className="flex flex-wrap border-b border-border bg-card p-1 rounded-xl gap-1 shadow-sm">
-        {["Dashboard", "Client Discovery", "Risk Score Calculator", "Suitability Check", "Summary Report"].map((tab) => (
+        {["Dashboard", "Client Discovery", "Risk Score Calculator", "Suitability Check", "Summary Report", "Generated PDFs"].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -3141,6 +3199,48 @@ export function NeedsDiscoveryPage({ onBack }: NeedsDiscoveryPageProps) {
             </div>
           )}
 
+          {activeTab === "Generated PDFs" && (
+            <GeneratedReportsTab toolId={toolId} />
+          )}
+
+        </div>
+      )}
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-foreground">Clear All Information?</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to clear all inputs? This action cannot be undone. All calculator fields will be reset to their default initial values.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowResetConfirm(false)}
+                className="text-xs border-border/80"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConfirmReset}
+                className="text-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold"
+              >
+                Confirm Reset
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
     </div>

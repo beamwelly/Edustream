@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 
 from app.database.session import get_db
 from app.models.user import User
@@ -1324,4 +1324,199 @@ async def save_wow_inputs(
     await db.commit()
     await db.refresh(db_inputs)
     return {"status": "success"}
+
+# --- Generated Reports API Endpoints ---
+from app.models.generated_report import GeneratedReport
+from sqlalchemy import or_, and_, desc, asc
+
+@router.post("/reports/upload")
+async def upload_generated_report(
+    file: UploadFile = File(...),
+    tool_id: Optional[int] = Form(None),
+    calculator_name: str = Form(...),
+    client_name: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        # Read the file content
+        file_bytes = await file.read()
+        
+        # 1. Format report name based on rules
+        calc_clean = "".join(x for x in calculator_name if x.isalnum())
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")
+        time_str = now.strftime("%H%M%S")
+        
+        if client_name and client_name.strip():
+            filename = f"{client_name.strip()}_{calc_clean}_{date_str}.pdf"
+        else:
+            filename = f"{calc_clean}_{date_str}_{time_str}.pdf"
+            
+        # 2. Upload file to Supabase storage
+        storage_path = f"generated_reports/{current_user.id}/{filename}"
+        
+        # We reuse the content type of PDF
+        content_type = "application/pdf"
+        
+        # Upload
+        success, public_url, error_msg = await upload_file_to_supabase(
+            file_bytes=file_bytes,
+            file_path=storage_path,
+            content_type=content_type
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload report PDF to storage: {error_msg}"
+            )
+            
+        # 3. Save database metadata record
+        report_record = GeneratedReport(
+            user_id=current_user.id,
+            tool_id=tool_id,
+            calculator_name=calculator_name,
+            report_name=filename.replace(".pdf", ""),
+            pdf_url=public_url,
+            storage_path=storage_path
+        )
+        db.add(report_record)
+        await db.commit()
+        await db.refresh(report_record)
+        
+        return {
+            "success": True,
+            "id": report_record.id,
+            "report_name": report_record.report_name,
+            "pdf_url": report_record.pdf_url,
+            "storage_path": report_record.storage_path
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Report upload error: {str(e)}"
+        )
+
+@router.get("/reports")
+async def list_generated_reports(
+    search: Optional[str] = None,
+    calculator_name: Optional[str] = None,
+    date_start: Optional[str] = None, # YYYY-MM-DD
+    date_end: Optional[str] = None, # YYYY-MM-DD
+    sort_order: Optional[str] = "newest_first", # "newest_first", "oldest_first"
+    tool_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # Enforce access rules
+    stmt = select(GeneratedReport)
+    
+    # Non-admins can only see their own reports
+    if current_user.role != "admin":
+        stmt = stmt.where(GeneratedReport.user_id == current_user.id)
+        
+    # Apply filters
+    if tool_id is not None:
+        stmt = stmt.where(GeneratedReport.tool_id == tool_id)
+        
+    if calculator_name and calculator_name != "All":
+        stmt = stmt.where(GeneratedReport.calculator_name == calculator_name)
+        
+    if search:
+        search_clean = f"%{search.strip().lower()}%"
+        stmt = stmt.where(func.lower(GeneratedReport.report_name).like(search_clean))
+        
+    if date_start:
+        try:
+            from sqlalchemy.sql import func as sql_func
+            start_dt = datetime.strptime(date_start, "%Y-%m-%d")
+            stmt = stmt.where(GeneratedReport.created_at >= start_dt)
+        except ValueError:
+            pass
+            
+    if date_end:
+        try:
+            # Include the full end day by adding a day
+            end_dt = datetime.strptime(date_end, "%Y-%m-%d") + timedelta(days=1)
+            stmt = stmt.where(GeneratedReport.created_at < end_dt)
+        except ValueError:
+            pass
+            
+    # Apply Sort Order
+    if sort_order == "oldest_first":
+        stmt = stmt.order_by(asc(GeneratedReport.created_at))
+    else:
+        stmt = stmt.order_by(desc(GeneratedReport.created_at))
+        
+    res = await db.execute(stmt)
+    reports = res.scalars().all()
+    
+    # Process reports to generate dynamic signed URLs for preview/download
+    from app.utils.supabase_storage import create_signed_url
+    
+    processed_reports = []
+    for r in reports:
+        signed_url, err = await create_signed_url(r.storage_path)
+        final_pdf_url = signed_url if signed_url else r.pdf_url
+        
+        processed_reports.append({
+            "id": r.id,
+            "user_id": r.user_id,
+            "tool_id": r.tool_id,
+            "calculator_name": r.calculator_name,
+            "report_name": r.report_name,
+            "pdf_url": final_pdf_url,
+            "storage_path": r.storage_path,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+        
+    return processed_reports
+
+@router.delete("/reports/{report_id}")
+async def delete_generated_report(
+    report_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        stmt = select(GeneratedReport).where(GeneratedReport.id == report_id)
+        res = await db.execute(stmt)
+        report = res.scalar_one_or_none()
+        
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Report not found."
+            )
+            
+        # Non-admins can only delete their own reports
+        if current_user.role != "admin" and report.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. You do not have permission to delete this report."
+            )
+            
+        # 1. Delete from Supabase Storage
+        from app.utils.supabase_storage import delete_file_from_supabase
+        success, err_msg = await delete_file_from_supabase(report.storage_path)
+        if not success:
+            # We log it but proceed to delete DB record so they don't get stuck
+            print(f"[ERROR STORAGE DELETE] Failed to delete file {report.storage_path}: {err_msg}")
+            
+        # 2. Delete from Database
+        await db.delete(report)
+        await db.commit()
+        
+        return {"success": True, "message": "Report successfully deleted."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete report: {str(e)}"
+        )
+
 

@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, UploadFile, File, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Form, UploadFile, File, BackgroundTasks, Header
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, update, delete
@@ -18,6 +18,7 @@ from app.database.session import get_db
 from app.database.database import SessionLocal
 from app.models.user import User
 from app.routes.users import require_permission
+from app.utils.security import decode_access_token
 from app.models.masterclass import (
     Masterclass, 
     MasterclassRecording, 
@@ -834,12 +835,85 @@ async def delete_masterclass(
 @router.get("/{masterclass_id}/stream")
 async def stream_recording(
     masterclass_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_permission("masterclasses"))
+    token: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Directly streams recording by redirecting user to Zoom Cloud Recording URL.
     """
+    # 1. Extract token from Header or Query parameter
+    actual_token = None
+    if authorization and authorization.lower().startswith("bearer "):
+        actual_token = authorization[7:]
+    elif token:
+        actual_token = token
+
+    if not actual_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated. Missing token or authorization header.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    # 2. Decode the token
+    payload = decode_access_token(actual_token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has expired or token is invalid.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    user_id = payload.get("user_id")
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload credentials."
+        )
+
+    # 3. Retrieve user
+    stmt_user = select(User).where(User.id == int(user_id))
+    result_user = await db.execute(stmt_user)
+    current_user = result_user.scalar_one_or_none()
+
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User associated with this session no longer exists."
+        )
+
+    # 4. Check permissions (replicate require_permission("masterclasses"))
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive."
+        )
+
+    if current_user.role not in ("admin", "owner", "user"):
+        if current_user.role == "employee":
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            stmt_policy = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+            res_policy = await db.execute(stmt_policy)
+            policy = res_policy.scalar_one_or_none()
+            if policy:
+                settings = policy.settings_json or {}
+                if not settings.get("masterclasses", True):
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Access Denied. Global Employee Policy restricts access to masterclasses."
+                    )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access Denied. Global Employee Policy restricts access to masterclasses."
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access Denied. You do not have permission to access masterclasses."
+            )
+
     stmt = select(Masterclass).where(
         Masterclass.masterclass_id == masterclass_id,
         Masterclass.source == "edustream"

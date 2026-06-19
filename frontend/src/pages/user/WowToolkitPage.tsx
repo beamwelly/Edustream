@@ -26,15 +26,17 @@ import {
   Eye,
   CheckCircle,
   AlertTriangle,
-  Clock
+  Clock,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { PageHeader, Card, Button } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { useAuth } from "@/context/AuthContext";
 import { jsPDF } from "jspdf";
 import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
-import {
-
+import { GeneratedReportsTab } from "@/components/tools/GeneratedReportsTab";
+import { 
   AreaChart, 
   Area, 
   BarChart,
@@ -80,11 +82,15 @@ interface CalculationResult {
   sensitivity_table: SensitivityPoint[];
 }
 
-export function WowToolkitPage({ onBack }: { onBack: () => void }) {
+export function WowToolkitPage({ onBack, toolId }: { onBack: () => void; toolId: number }) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset/Remount tracking
+  const [resetKey, setResetKey] = useState<number>(0);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
 
   // Parent inputs state (Retirement Age Predictor)
   const [inputs, setInputs] = useState<WowInputs>({
@@ -100,6 +106,78 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
   });
 
   const [results, setResults] = useState<CalculationResult | null>(null);
+
+  const handleResetAll = async () => {
+    setShowResetConfirm(false);
+    setSaveStatus("Resetting...");
+    
+    const defaultPayload = {
+      retirement_inputs: {
+        current_age: 35,
+        expected_retirement_age: 58,
+        life_expectancy: 85,
+        current_monthly_expenses: 15000,
+        expected_inflation_rate: 0.06,
+        current_monthly_income: 80000,
+        savings_rate: 0.3,
+        expected_investment_return: 0.12,
+        post_retirement_return: 0.07,
+      },
+      cost_of_delay_inputs: {
+        monthly_sip_amount: 5000,
+        expected_annual_return: 0.12,
+        target_age: 60,
+        current_age: 35
+      },
+      sip_home_loan_inputs: {
+        monthly_sip: 10000,
+        sip_return: 0.12,
+        sip_duration: 20,
+        stepup_rate: 0.05,
+        loan_amount: 5000000,
+        loan_rate: 0.085,
+        loan_tenure: 20,
+        down_payment: 1000000,
+        appreciation_rate: 0.06,
+        tax_benefit: 50000
+      },
+      freedom_date_inputs: {
+        current_age: 35,
+        birth_year: 1991,
+        current_monthly_expenses: 50000,
+        expected_inflation: 0.06,
+        annual_investment_return: 0.12,
+        withdrawal_rate: 0.04,
+        current_net_worth: 1000000,
+        monthly_savings: 20000,
+        stepup_rate: 0.05
+      }
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/wow/inputs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        },
+        body: JSON.stringify(defaultPayload)
+      });
+      
+      if (res.ok) {
+        setInitialInputs(defaultPayload);
+        setInputs(defaultPayload.retirement_inputs);
+        setResetKey(prev => prev + 1);
+        setSaveStatus("Reset Successful");
+        setTimeout(() => setSaveStatus(""), 2000);
+      } else {
+        setSaveStatus("Reset failed");
+      }
+    } catch (err) {
+      console.error("Error resetting inputs:", err);
+      setSaveStatus("Reset failed");
+    }
+  };
 
   // Centralized loaded inputs state from database
   const [initialInputs, setInitialInputs] = useState<any>(null);
@@ -1041,6 +1119,39 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.text(`Page ${i} of ${totalPages}`, 180, 287);
     }
 
+    // Auto-upload generated PDF to backend
+    try {
+      const pdfBlob = doc.output("blob");
+      const calcClean = moduleName.replace(/\s+/g, "");
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const timeStr = new Date().toTimeString().split(" ")[0].replace(/:/g, "");
+      const filename = `${calcClean}_${dateStr}_${timeStr}.pdf`;
+
+      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("tool_id", String(toolId));
+      formData.append("calculator_name", moduleName);
+      formData.append("client_name", "");
+
+      fetch(`${API_URL}/wow/reports/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        },
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        console.log("PDF auto-saved to backend:", data);
+      })
+      .catch(err => {
+        console.error("Failed to auto-save PDF to backend:", err);
+      });
+    } catch (uploadErr) {
+      console.error("Failed to process auto-upload:", uploadErr);
+    }
+
     doc.save(`WOW_${moduleName.replace(/\s+/g, "_")}_Report.pdf`);
   };
 
@@ -1070,50 +1181,70 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         )}
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex flex-wrap gap-1 border-b border-border bg-muted/30 p-1 rounded-xl max-w-fit">
-        <TabButton 
-          active={activeTab === "dashboard"} 
-          onClick={() => setActiveTab("dashboard")} 
-          icon={<Coins className="h-4 w-4" />}
-          label="Dashboard" 
-        />
-        <TabButton 
-          active={activeTab === "retirement"} 
-          onClick={() => setActiveTab("retirement")} 
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Retirement Predictor" 
-        />
-        <TabButton 
-          active={activeTab === "delay"} 
-          onClick={() => setActiveTab("delay")} 
-          icon={<Clock className="h-4 w-4" />}
-          label="Cost of Delay" 
-        />
-        <TabButton 
-          active={activeTab === "sip-loan"} 
-          onClick={() => setActiveTab("sip-loan")} 
-          icon={<PiggyBank className="h-4 w-4" />}
-          label="SIP + Home Loan" 
-        />
-        <TabButton 
-          active={activeTab === "freedom-date"} 
-          onClick={() => setActiveTab("freedom-date")} 
-          icon={<Calendar className="h-4 w-4" />}
-          label="Freedom Date" 
-        />
-        <TabButton 
-          active={activeTab === "goal"} 
-          onClick={() => setActiveTab("goal")} 
-          icon={<Target className="h-4 w-4" />}
-          label="Goal Visualizer" 
-        />
-        <TabButton 
-          active={activeTab === "vault"} 
-          onClick={() => setActiveTab("vault")} 
-          icon={<Lock className="h-4 w-4" />}
-          label="Financial Vault" 
-        />
+      {/* Tabs Navigation & Reset Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4 pb-2">
+        <div className="flex flex-wrap gap-1 border-b border-border bg-muted/30 p-1 rounded-xl max-w-fit">
+          <TabButton 
+            active={activeTab === "dashboard"} 
+            onClick={() => setActiveTab("dashboard")} 
+            icon={<Coins className="h-4 w-4" />}
+            label="Dashboard" 
+          />
+          <TabButton 
+            active={activeTab === "retirement"} 
+            onClick={() => setActiveTab("retirement")} 
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Retirement Predictor" 
+          />
+          <TabButton 
+            active={activeTab === "delay"} 
+            onClick={() => setActiveTab("delay")} 
+            icon={<Clock className="h-4 w-4" />}
+            label="Cost of Delay" 
+          />
+          <TabButton 
+            active={activeTab === "sip-loan"} 
+            onClick={() => setActiveTab("sip-loan")} 
+            icon={<PiggyBank className="h-4 w-4" />}
+            label="SIP + Home Loan" 
+          />
+          <TabButton 
+            active={activeTab === "freedom-date"} 
+            onClick={() => setActiveTab("freedom-date")} 
+            icon={<Calendar className="h-4 w-4" />}
+            label="Freedom Date" 
+          />
+          <TabButton 
+            active={activeTab === "goal"} 
+            onClick={() => setActiveTab("goal")} 
+            icon={<Target className="h-4 w-4" />}
+            label="Goal Visualizer" 
+          />
+          <TabButton 
+            active={activeTab === "vault"} 
+            onClick={() => setActiveTab("vault")} 
+            icon={<Lock className="h-4 w-4" />}
+            label="Financial Vault" 
+          />
+          <TabButton 
+            active={activeTab === "reports"} 
+            onClick={() => setActiveTab("reports")} 
+            icon={<FileText className="h-4 w-4" />}
+            label="Generated PDFs" 
+          />
+        </div>
+
+        {/* Clear Information Button */}
+        {activeTab !== "dashboard" && activeTab !== "reports" && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowResetConfirm(true)}
+            className="text-xs border-red-500/20 hover:bg-red-500/5 text-red-600 gap-1.5 font-bold self-start md:self-auto"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Clear Information
+          </Button>
+        )}
       </div>
 
       {/* Tab Panels */}
@@ -1130,6 +1261,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
         {activeTab === "retirement" && (
           <RetirementPredictorTab 
+            key={`retirement-${resetKey}`}
             inputs={inputs} 
             onChange={handleInputChange} 
             results={results} 
@@ -1143,6 +1275,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
         {activeTab === "delay" && (
           <CostOfDelayTab 
+            key={`delay-${resetKey}`}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             initialInputs={initialInputs}
@@ -1153,6 +1286,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
         {activeTab === "sip-loan" && (
           <SipHomeLoanTab 
+            key={`sip-${resetKey}`}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             initialInputs={initialInputs}
@@ -1163,6 +1297,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
         {activeTab === "freedom-date" && (
           <FinancialFreedomDateTab 
+            key={`freedom-${resetKey}`}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             initialInputs={initialInputs}
@@ -1186,7 +1321,49 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
             onExportPDF={(vaultData) => handleExportPDF("Family Financial Vault", {}, {}, vaultData)}
           />
         )}
+
+        {activeTab === "reports" && (
+          <GeneratedReportsTab toolId={toolId} />
+        )}
       </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-foreground">Clear All Information?</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to clear all inputs? This action cannot be undone. All calculator fields will be reset to their default initial values.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowResetConfirm(false)}
+                className="text-xs border-border/80"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetAll}
+                className="text-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold"
+              >
+                Confirm Reset
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
     </ResponsivePageWrapper>
   );
 }
