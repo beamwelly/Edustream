@@ -39,6 +39,9 @@ interface Masterclass {
   tags?: string;
   learning_outcomes?: string;
   max_attendees?: number;
+  recording_type?: string;
+  recording_file_path?: string;
+  recording_public_url?: string;
   visibility: string;
   created_at: string;
 }
@@ -353,7 +356,7 @@ export function UserMasterclassesPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {upcomingSessions.map((s) => (
                 <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all duration-200 group relative overflow-hidden">
-                  <div className="relative w-full h-44 -mx-6 -mt-6 mb-4 overflow-hidden bg-zinc-950">
+                  <div className="relative w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-4 overflow-hidden bg-zinc-950">
                     <img 
                       src={s.thumbnail_url || APP_PLACEHOLDER} 
                       alt={s.title} 

@@ -42,6 +42,9 @@ interface Masterclass {
   tags?: string;
   learning_outcomes?: string;
   max_attendees?: number;
+  recording_type?: string;
+  recording_file_path?: string;
+  recording_public_url?: string;
   visibility: string;
   created_at: string;
 }
@@ -80,6 +83,8 @@ export function MasterclassesPage() {
   const [sendNotification, setSendNotification] = useState(true);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [recordingType, setRecordingType] = useState("zoom");
+  const [recordingFile, setRecordingFile] = useState<File | null>(null);
 
   // Modal states
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
@@ -160,6 +165,8 @@ export function MasterclassesPage() {
     setSendNotification(false); // Default to false when editing
     setThumbnailFile(null);
     setThumbnailPreview(mc.thumbnail_url || null);
+    setRecordingType(mc.recording_type || "zoom");
+    setRecordingFile(null);
   };
 
   const handleCancelEdit = () => {
@@ -177,6 +184,8 @@ export function MasterclassesPage() {
     setSendNotification(true);
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setRecordingType("zoom");
+    setRecordingFile(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,6 +206,10 @@ export function MasterclassesPage() {
       toast.warning("Please fill in all required fields.");
       return;
     }
+    if (recordingType === "uploaded" && !recordingFile && !(editingMasterclass && editingMasterclass.recording_type === "uploaded")) {
+      toast.warning("Please select a video file for the manual recording.");
+      return;
+    }
 
     setFormLoading(true);
 
@@ -213,6 +226,11 @@ export function MasterclassesPage() {
       formData.append("max_attendees", maxAttendees);
       formData.append("visibility", visibility);
       formData.append("send_notification", String(sendNotification));
+      formData.append("recording_type", recordingType);
+      
+      if (recordingFile) {
+        formData.append("recording_file", recordingFile);
+      }
       
       if (thumbnailFile) {
         formData.append("thumbnail", thumbnailFile);
@@ -652,6 +670,59 @@ export function MasterclassesPage() {
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
+                  Recording Source
+                </label>
+                <div className="flex gap-4 mt-1 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="mc-recording-type"
+                      value="zoom"
+                      checked={recordingType === "zoom"}
+                      onChange={() => setRecordingType("zoom")}
+                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Zoom Recording</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="mc-recording-type"
+                      value="uploaded"
+                      checked={recordingType === "uploaded"}
+                      onChange={() => setRecordingType("uploaded")}
+                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Upload Recording</span>
+                  </label>
+                </div>
+              </div>
+
+              {recordingType === "uploaded" && (
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
+                    Upload Recording File (MP4) *
+                  </label>
+                  <div className="flex items-center gap-4 mb-2">
+                    <label className="flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-xl border border-dashed border-border bg-secondary/50 hover:bg-secondary/70 text-xs font-bold transition w-full justify-center">
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <span>{recordingFile ? recordingFile.name : "Select Video File"}</span>
+                      <input 
+                        type="file" 
+                        accept="video/mp4,video/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setRecordingFile(file);
+                        }} 
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
                   Webinar Cover Photo (Thumbnail)
                 </label>
                 <div className="flex items-center gap-4">
@@ -763,7 +834,7 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {upcomingSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                          <div className="w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
                             <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                           </div>
@@ -871,7 +942,7 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {liveSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                          <div className="w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
                             <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                           </div>
@@ -940,7 +1011,7 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {completedSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                          <div className="w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
                             <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                           </div>

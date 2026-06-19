@@ -21,6 +21,9 @@ class Masterclass(Base):
     status: Mapped[str] = mapped_column(String(50), default="upcoming", nullable=False) # upcoming, live, completed, recorded
     recording_filename: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     recording_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    recording_type: Mapped[str] = mapped_column(String(50), default="zoom", server_default="zoom", nullable=False)
+    recording_file_path: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    recording_public_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     category: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     tags: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True) # comma-separated tags

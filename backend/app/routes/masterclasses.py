@@ -34,7 +34,7 @@ from app.services.zoom import (
     delete_zoom_webinar,
     get_zoom_webinar_recordings
 )
-from app.utils.supabase_storage import upload_file_to_supabase, create_signed_url, SUPABASE_URL, BUCKET_NAME
+from app.utils.supabase_storage import upload_file_to_supabase, delete_file_from_supabase, create_signed_url, SUPABASE_URL, BUCKET_NAME
 from app.services.email_service import send_email_async
 
 router = APIRouter(prefix="/api/masterclasses", tags=["Masterclasses"])
@@ -55,6 +55,9 @@ class MasterclassResponse(BaseModel):
     status: str
     recording_filename: Optional[str] = None
     recording_url: Optional[str] = None
+    recording_type: Optional[str] = "zoom"
+    recording_file_path: Optional[str] = None
+    recording_public_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     category: Optional[str] = None
     tags: Optional[str] = None
@@ -404,6 +407,8 @@ async def send_cancellation_and_delete(webinar_id: int, message: Optional[str]):
         await db.commit()
         
         # Safe cascading delete now that logs & notifications are dispatched
+        if webinar.recording_file_path:
+            await delete_file_from_supabase(webinar.recording_file_path)
         await db.delete(webinar)
         await db.commit()
 
@@ -486,11 +491,13 @@ async def schedule_masterclass(
     visibility: str = Form("public"),
     send_notification: bool = Form(True),
     thumbnail: Optional[UploadFile] = File(None),
+    recording_type: str = Form("zoom"),
+    recording_file: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin)
 ):
     """
-    Creates webinar via Zoom Webinar API, stores it locally, and queues emails.
+    Creates webinar via Zoom Webinar API or handles manual recording uploads, stores it locally, and queues emails.
     """
     try:
         dt_scheduled = datetime.fromisoformat(scheduled_at.replace("Z", ""))
@@ -517,19 +524,61 @@ async def schedule_masterclass(
         else:
             print("Thumbnail upload to Supabase failed:", err_msg)
 
+    # Handle manual recording upload
+    recording_file_path = None
+    recording_url = None
+    recording_public_url = None
+    masterclass_status = "upcoming"
+
+    if recording_type == "uploaded":
+        if recording_file and recording_file.filename:
+            file_content = await recording_file.read()
+            file_ext = recording_file.filename.split(".")[-1] if "." in recording_file.filename else "mp4"
+            unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+            storage_path = f"masterclasses/{unique_filename}"
+            
+            success, url, err_msg = await upload_file_to_supabase(
+                file_bytes=file_content,
+                file_path=storage_path,
+                content_type=recording_file.content_type or "video/mp4"
+            )
+            if success:
+                recording_file_path = storage_path
+                recording_url = url
+                recording_public_url = url
+                masterclass_status = "recorded"
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to upload manual recording to Supabase: {err_msg}"
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Recording file is required when Recording Source is set to Upload Recording."
+            )
+
     # Zoom Business API Creation
-    try:
-        webinar_details = create_zoom_webinar(
-            title=title,
-            description=description,
-            start_time=dt_scheduled,
-            duration_minutes=duration_minutes
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Failed to create Zoom Webinar: {str(e)}"
-        )
+    zoom_webinar_id = None
+    zoom_join_url = None
+    zoom_start_url = None
+
+    if recording_type != "uploaded":
+        try:
+            webinar_details = create_zoom_webinar(
+                title=title,
+                description=description,
+                start_time=dt_scheduled,
+                duration_minutes=duration_minutes
+            )
+            zoom_webinar_id = webinar_details["webinar_id"]
+            zoom_join_url = webinar_details["join_url"]
+            zoom_start_url = webinar_details["start_url"]
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Failed to create Zoom Webinar: {str(e)}"
+            )
 
     # Database Store
     db_masterclass = Masterclass(
@@ -538,24 +587,28 @@ async def schedule_masterclass(
         speaker=speaker,
         scheduled_at=dt_scheduled,
         duration_minutes=duration_minutes,
-        zoom_webinar_id=webinar_details["webinar_id"],
-        zoom_join_url=webinar_details["join_url"],
-        zoom_start_url=webinar_details["start_url"],
-        status="upcoming",
+        zoom_webinar_id=zoom_webinar_id,
+        zoom_join_url=zoom_join_url,
+        zoom_start_url=zoom_start_url,
+        status=masterclass_status,
         thumbnail_url=thumbnail_url,
         category=category,
         tags=tags,
         learning_outcomes=learning_outcomes,
         max_attendees=max_attendees,
         visibility=visibility,
-        source="edustream"
+        source="edustream",
+        recording_type=recording_type,
+        recording_file_path=recording_file_path,
+        recording_url=recording_url,
+        recording_public_url=recording_public_url
     )
     db.add(db_masterclass)
     await db.commit()
     await db.refresh(db_masterclass)
 
     # Schedule notifications background task
-    if send_notification:
+    if send_notification and masterclass_status != "recorded":
         background_tasks.add_task(notify_webinar_scheduled, db_masterclass.masterclass_id)
 
     await sign_masterclass_thumbnail(db_masterclass)
@@ -602,6 +655,8 @@ async def update_masterclass(
     visibility: str = Form("public"),
     send_notification: bool = Form(True),
     thumbnail: Optional[UploadFile] = File(None),
+    recording_type: str = Form("zoom"),
+    recording_file: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin)
 ):
@@ -659,6 +714,60 @@ async def update_masterclass(
         if success:
             thumbnail_url = url
 
+    # Handle manual recording upload updates
+    if recording_type == "uploaded":
+        if recording_file and recording_file.filename:
+            # Delete old file if present to prevent orphans
+            if mc.recording_file_path:
+                await delete_file_from_supabase(mc.recording_file_path)
+
+            file_content = await recording_file.read()
+            file_ext = recording_file.filename.split(".")[-1] if "." in recording_file.filename else "mp4"
+            unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+            storage_path = f"masterclasses/{unique_filename}"
+
+            success, url, err_msg = await upload_file_to_supabase(
+                file_bytes=file_content,
+                file_path=storage_path,
+                content_type=recording_file.content_type or "video/mp4"
+            )
+            if success:
+                mc.recording_file_path = storage_path
+                mc.recording_url = url
+                mc.recording_public_url = url
+                mc.status = "recorded"
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to upload manual recording to Supabase: {err_msg}"
+                )
+        else:
+            # Switching to uploaded but no file supplied
+            if mc.recording_type != "uploaded" and not mc.recording_file_path:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Recording file is required when switching Recording Source to Upload Recording."
+                )
+        
+        mc.recording_type = "uploaded"
+        mc.status = "recorded"
+    else:
+        # Switched from uploaded to zoom
+        if mc.recording_type == "uploaded":
+            if mc.recording_file_path:
+                await delete_file_from_supabase(mc.recording_file_path)
+            mc.recording_file_path = None
+            mc.recording_public_url = None
+            mc.recording_url = None
+            
+            # Re-determine status
+            if datetime.now(timezone.utc) > dt_scheduled:
+                mc.status = "completed"
+            else:
+                mc.status = "upcoming"
+        
+        mc.recording_type = "zoom"
+
     # Update database model
     mc.title = title
     mc.description = description
@@ -700,6 +809,8 @@ async def delete_masterclass(
         raise HTTPException(status_code=404, detail="Masterclass not found.")
 
     if mc.status in ["completed", "recorded"]:
+        if mc.recording_file_path:
+            await delete_file_from_supabase(mc.recording_file_path)
         await db.delete(mc)
         await db.commit()
         return {"detail": "Masterclass platform record deleted successfully."}
@@ -746,6 +857,13 @@ async def stream_recording(
     if current_user.role == "employee" and mc.visibility == "owner_only":
         raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
         
+    if mc.recording_type == "uploaded" and mc.recording_file_path:
+        signed_url, err = await create_signed_url(mc.recording_file_path)
+        if signed_url:
+            return RedirectResponse(signed_url)
+        else:
+            raise HTTPException(status_code=500, detail=f"Failed to sign streaming URL: {err}")
+
     return RedirectResponse(mc.recording_url)
 
 @router.post("/{masterclass_id}/register")
