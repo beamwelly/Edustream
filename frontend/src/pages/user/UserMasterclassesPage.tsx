@@ -214,6 +214,15 @@ export function UserMasterclassesPage() {
   };
 
   const handleOpenVideo = async (mc: Masterclass) => {
+    if (mc.recording_type === "zoom") {
+      if (mc.recording_url) {
+        window.open(mc.recording_url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Zoom recording URL not available.");
+      }
+      return;
+    }
+
     setInitialSeekTime(0);
     maxPositionRef.current = 0;
     lastSavedTimeRef.current = 0;
@@ -540,7 +549,18 @@ export function UserMasterclassesPage() {
                   
                   <div className="p-4 flex flex-col justify-between flex-grow">
                     <div>
-                      <span className="text-[9px] font-bold text-primary uppercase tracking-wide">{r.category || "General"}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-bold text-primary uppercase tracking-wide">{r.category || "General"}</span>
+                        {r.recording_type === "zoom" ? (
+                          <span className="text-[8px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Zoom Cloud Recording
+                          </span>
+                        ) : r.recording_type === "uploaded" ? (
+                          <span className="text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Uploaded Recording
+                          </span>
+                        ) : null}
+                      </div>
                       <h4 className="line-clamp-2 text-sm font-bold text-foreground mt-0.5 leading-snug group-hover:text-primary transition-colors">{r.title}</h4>
                       
                       {r.speaker && (

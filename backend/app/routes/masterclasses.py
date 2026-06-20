@@ -982,14 +982,7 @@ async def stream_recording(
             raise HTTPException(status_code=500, detail=f"Failed to sign streaming URL: {err}")
 
     if mc.recording_type == "zoom" and mc.recording_url:
-        from app.services.zoom import get_token
-        try:
-            zoom_token = get_token()
-            url = mc.recording_url
-            sep = "&" if "?" in url else "?"
-            return RedirectResponse(f"{url}{sep}access_token={zoom_token}")
-        except Exception as e:
-            print("Error appending Zoom token to stream URL:", e)
+        return RedirectResponse(mc.recording_url)
 
     return RedirectResponse(mc.recording_url)
 

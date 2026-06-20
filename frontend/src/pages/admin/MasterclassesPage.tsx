@@ -92,6 +92,19 @@ export function MasterclassesPage() {
 
   // Modal states
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  
+  const handleWatchRecording = (mc: Masterclass) => {
+    if (mc.recording_type === "zoom") {
+      if (mc.recording_url) {
+        window.open(mc.recording_url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Zoom recording URL not available.");
+      }
+    } else {
+      setActiveVideoUrl(`${API_URL}/api/masterclasses/${mc.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`);
+    }
+  };
+
   const [registrationsModalMc, setRegistrationsModalMc] = useState<Masterclass | null>(null);
   const [registrationsList, setRegistrationsList] = useState<Registration[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
@@ -1139,7 +1152,7 @@ export function MasterclassesPage() {
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
-                                    onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${s.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`)}
+                                    onClick={() => handleWatchRecording(s)}
                                     className="flex-1 font-bold rounded-xl text-[10px]"
                                   >
                                     Watch
@@ -1192,7 +1205,7 @@ export function MasterclassesPage() {
                             )}
                             
                             <button 
-                              onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${r.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`)}
+                              onClick={() => handleWatchRecording(r)}
                               className="absolute inset-0 flex items-center justify-center bg-black/45"
                             >
                               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg transform scale-95 hover:scale-105 transition duration-200">
@@ -1204,9 +1217,18 @@ export function MasterclassesPage() {
                           <div className="p-4 flex-grow flex flex-col justify-between">
                             <div>
                               <div className="flex justify-between items-center mb-1">
-                                <div className="flex gap-1">
+                                <div className="flex flex-wrap gap-1">
                                   <Badge tone="neutral">{r.category || "General"}</Badge>
                                   {r.visibility === "hidden" && <Badge tone="warning">Hidden</Badge>}
+                                  {r.recording_type === "zoom" ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 uppercase tracking-wider">
+                                      Zoom Cloud Recording
+                                    </span>
+                                  ) : r.recording_type === "uploaded" ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300 uppercase tracking-wider">
+                                      Uploaded Recording
+                                    </span>
+                                  ) : null}
                                 </div>
                                 <span className="text-[10px] text-muted-foreground font-bold">{r.duration_minutes} Mins</span>
                               </div>
