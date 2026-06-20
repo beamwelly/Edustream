@@ -65,6 +65,8 @@ class MasterclassResponse(BaseModel):
     learning_outcomes: Optional[str] = None
     max_attendees: Optional[int] = None
     visibility: str
+    is_hidden: bool
+    email_sent: bool
     source: str
     created_at: datetime
 
@@ -137,9 +139,18 @@ def generate_email_template(title: str, content_html: str) -> str:
     </html>
     """
 
+def to_ist_str(dt: datetime) -> str:
+    if dt is None:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    from zoneinfo import ZoneInfo
+    dt_ist = dt.astimezone(ZoneInfo("Asia/Kolkata"))
+    return dt_ist.strftime('%d %b %Y %I:%M %p IST')
+
 def generate_scheduled_email_body(webinar: Masterclass, user: User) -> str:
     thumbnail_img = f'<img src="{webinar.thumbnail_url}" class="thumbnail" alt="Thumbnail" />' if webinar.thumbnail_url else ""
-    formatted_date = webinar.scheduled_at.strftime('%b %d, %Y at %I:%M %p UTC')
+    formatted_date = to_ist_str(webinar.scheduled_at)
     
     html = f"""
       {thumbnail_img}
@@ -186,9 +197,9 @@ def generate_updated_email_body(webinar: Masterclass, prev_data: dict) -> str:
         
         if field == "scheduled_at":
             if isinstance(prev_val, datetime):
-                prev_val = prev_val.strftime("%b %d, %Y %I:%M %p UTC")
+                prev_val = to_ist_str(prev_val)
             if isinstance(curr_val, datetime):
-                curr_val = curr_val.strftime("%b %d, %Y %I:%M %p UTC")
+                curr_val = to_ist_str(curr_val)
                 
         if str(prev_val) != str(curr_val):
             changes_html += f"""
@@ -223,7 +234,7 @@ def generate_updated_email_body(webinar: Masterclass, prev_data: dict) -> str:
     return generate_email_template("Masterclass Updated", html)
 
 def generate_cancelled_email_body(webinar: Masterclass, message: Optional[str]) -> str:
-    formatted_date = webinar.scheduled_at.strftime('%b %d, %Y at %I:%M %p UTC')
+    formatted_date = to_ist_str(webinar.scheduled_at)
     html = f"""
       <div class="title" style="color: #dc2626;">Webinar Cancelled</div>
       <p>Please note that the following masterclass has been cancelled:</p>
@@ -238,7 +249,7 @@ def generate_cancelled_email_body(webinar: Masterclass, message: Optional[str]) 
     return generate_email_template("Webinar Cancelled", html)
 
 def generate_reminder_email_body(webinar: Masterclass, user: User, time_str: str) -> str:
-    formatted_date = webinar.scheduled_at.strftime('%b %d, %Y at %I:%M %p UTC')
+    formatted_date = to_ist_str(webinar.scheduled_at)
     html = f"""
       <div class="title">Starting in {time_str}!</div>
       <h3>{webinar.title}</h3>
@@ -461,7 +472,8 @@ async def list_masterclasses(
         stmt = select(Masterclass).where(
             Masterclass.source == "edustream",
             Masterclass.visibility != "draft",
-            Masterclass.visibility != "hidden"
+            Masterclass.visibility != "hidden",
+            Masterclass.is_hidden == False
         )
         from datetime import timedelta
         threshold = current_user.created_at - timedelta(days=30)
@@ -473,6 +485,33 @@ async def list_masterclasses(
         
     res = await db.execute(stmt)
     items = res.scalars().all()
+
+    # Dynamic status auto-update
+    from datetime import timedelta
+    updated_statuses = False
+    now = datetime.now(timezone.utc)
+    for mc in items:
+        sch_at = mc.scheduled_at
+        if sch_at.tzinfo is None:
+            sch_at = sch_at.replace(tzinfo=timezone.utc)
+        webinar_end = sch_at + timedelta(minutes=mc.duration_minutes)
+        
+        if mc.recording_url and mc.status == "recorded":
+            target_status = "recorded"
+        elif now < sch_at:
+            target_status = "upcoming"
+        elif sch_at <= now < webinar_end:
+            target_status = "live"
+        else:
+            target_status = "completed"
+            
+        if mc.status != target_status:
+            mc.status = target_status
+            updated_statuses = True
+            
+    if updated_statuses:
+        await db.commit()
+
     for mc in items:
         await sign_masterclass_thumbnail(mc)
     return items
@@ -494,11 +533,13 @@ async def schedule_masterclass(
     thumbnail: Optional[UploadFile] = File(None),
     recording_type: str = Form("zoom"),
     recording_file: Optional[UploadFile] = File(None),
+    zoom_join_url: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin)
 ):
     """
-    Creates webinar via Zoom Webinar API or handles manual recording uploads, stores it locally, and queues emails.
+    Creates webinar with manually supplied Zoom URL or handles manual recording uploads, stores it locally.
+    Auto email notifications on creation are disabled.
     """
     try:
         dt_scheduled = datetime.fromisoformat(scheduled_at.replace("Z", ""))
@@ -559,27 +600,8 @@ async def schedule_masterclass(
                 detail="Recording file is required when Recording Source is set to Upload Recording."
             )
 
-    # Zoom Business API Creation
-    zoom_webinar_id = None
-    zoom_join_url = None
-    zoom_start_url = None
-
-    if recording_type != "uploaded":
-        try:
-            webinar_details = create_zoom_webinar(
-                title=title,
-                description=description,
-                start_time=dt_scheduled,
-                duration_minutes=duration_minutes
-            )
-            zoom_webinar_id = webinar_details["webinar_id"]
-            zoom_join_url = webinar_details["join_url"]
-            zoom_start_url = webinar_details["start_url"]
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Failed to create Zoom Webinar: {str(e)}"
-            )
+    # Use the manually supplied Zoom Meeting URL
+    zoom_start_url = zoom_join_url
 
     # Database Store
     db_masterclass = Masterclass(
@@ -588,7 +610,7 @@ async def schedule_masterclass(
         speaker=speaker,
         scheduled_at=dt_scheduled,
         duration_minutes=duration_minutes,
-        zoom_webinar_id=zoom_webinar_id,
+        zoom_webinar_id=None,
         zoom_join_url=zoom_join_url,
         zoom_start_url=zoom_start_url,
         status=masterclass_status,
@@ -608,9 +630,7 @@ async def schedule_masterclass(
     await db.commit()
     await db.refresh(db_masterclass)
 
-    # Schedule notifications background task
-    if send_notification and masterclass_status != "recorded":
-        background_tasks.add_task(notify_webinar_scheduled, db_masterclass.masterclass_id)
+    # Auto email notifications disabled on creation as per client requirement (Issue 4)
 
     await sign_masterclass_thumbnail(db_masterclass)
     return db_masterclass
@@ -635,8 +655,34 @@ async def get_masterclass_detail(
         if mc.created_at < current_user.created_at - timedelta(days=30):
             raise HTTPException(status_code=403, detail="Access denied. Masterclass is outside of your account registration 30-day visibility window.")
 
+    if current_user.role != "admin" and mc.is_hidden:
+        raise HTTPException(status_code=403, detail="Access denied. This webinar is hidden.")
+
     if current_user.role == "employee" and mc.visibility == "owner_only":
         raise HTTPException(status_code=403, detail="Access denied. This masterclass is restricted to owners only.")
+
+    # Dynamic status auto-update
+    from datetime import timedelta
+    sch_at = mc.scheduled_at
+    if sch_at.tzinfo is None:
+        sch_at = sch_at.replace(tzinfo=timezone.utc)
+    webinar_end = sch_at + timedelta(minutes=mc.duration_minutes)
+    
+    now = datetime.now(timezone.utc)
+    if mc.recording_url and mc.status == "recorded":
+        target_status = "recorded"
+    elif now < sch_at:
+        target_status = "upcoming"
+    elif sch_at <= now < webinar_end:
+        target_status = "live"
+    else:
+        target_status = "completed"
+        
+    if mc.status != target_status:
+        mc.status = target_status
+        await db.commit()
+        await db.refresh(mc)
+
     await sign_masterclass_thumbnail(mc)
     return mc
 
@@ -658,6 +704,7 @@ async def update_masterclass(
     thumbnail: Optional[UploadFile] = File(None),
     recording_type: str = Form("zoom"),
     recording_file: Optional[UploadFile] = File(None),
+    zoom_join_url: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     admin: User = Depends(get_current_admin)
 ):
@@ -685,19 +732,6 @@ async def update_masterclass(
         "duration_minutes": mc.duration_minutes,
         "speaker": mc.speaker
     }
-
-    # Update on Zoom
-    if mc.status not in ["completed", "recorded"] and mc.zoom_webinar_id:
-        try:
-            update_zoom_webinar(
-                webinar_id=mc.zoom_webinar_id,
-                title=title,
-                description=description,
-                start_time=dt_scheduled,
-                duration_minutes=duration_minutes
-            )
-        except Exception as e:
-            print("Zoom Webinar Update Error:", e)
 
     # Optional Thumbnail update
     thumbnail_url = mc.thumbnail_url
@@ -781,6 +815,8 @@ async def update_masterclass(
     mc.max_attendees = max_attendees
     mc.visibility = visibility
     mc.thumbnail_url = thumbnail_url
+    mc.zoom_join_url = zoom_join_url
+    mc.zoom_start_url = zoom_join_url
 
     await db.commit()
     await db.refresh(mc)
@@ -836,6 +872,7 @@ async def delete_masterclass(
 async def stream_recording(
     masterclass_id: int,
     token: Optional[str] = None,
+    download: bool = False,
     authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
@@ -881,6 +918,12 @@ async def stream_recording(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User associated with this session no longer exists."
+        )
+
+    if download and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Downloads are restricted to administrators only."
         )
 
     # 4. Check permissions (replicate require_permission("masterclasses"))
@@ -937,6 +980,16 @@ async def stream_recording(
             return RedirectResponse(signed_url)
         else:
             raise HTTPException(status_code=500, detail=f"Failed to sign streaming URL: {err}")
+
+    if mc.recording_type == "zoom" and mc.recording_url:
+        from app.services.zoom import get_token
+        try:
+            zoom_token = get_token()
+            url = mc.recording_url
+            sep = "&" if "?" in url else "?"
+            return RedirectResponse(f"{url}{sep}access_token={zoom_token}")
+        except Exception as e:
+            print("Error appending Zoom token to stream URL:", e)
 
     return RedirectResponse(mc.recording_url)
 
@@ -1263,7 +1316,7 @@ async def hide_recording(
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
         
-    mc.visibility = "hidden"
+    mc.is_hidden = True
     await db.commit()
     await db.refresh(mc)
     await sign_masterclass_thumbnail(mc)
@@ -1284,11 +1337,86 @@ async def unhide_recording(
     if not mc:
         raise HTTPException(status_code=404, detail="Masterclass not found.")
         
-    mc.visibility = "public"
+    mc.is_hidden = False
     await db.commit()
     await db.refresh(mc)
     await sign_masterclass_thumbnail(mc)
     return mc
+
+@router.post("/{masterclass_id}/send-email")
+async def send_webinar_email(
+    masterclass_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    stmt = select(Masterclass).where(
+        Masterclass.masterclass_id == masterclass_id,
+        Masterclass.source == "edustream"
+    )
+    res = await db.execute(stmt)
+    webinar = res.scalar_one_or_none()
+    if not webinar:
+        raise HTTPException(status_code=404, detail="Masterclass not found.")
+        
+    if webinar.is_hidden:
+        raise HTTPException(status_code=400, detail="Cannot send invitation emails for a hidden masterclass.")
+        
+    user_stmt = select(User).where(User.is_active == True)
+    user_res = await db.execute(user_stmt)
+    users = user_res.scalars().all()
+    
+    sent_count = 0
+    for u in users:
+        # Check permissions/roles: if webinar visibility is owner_only, employees shouldn't receive the email
+        if webinar.visibility == "owner_only" and u.role == "employee":
+            continue
+            
+        if u.pref_email_notifications and u.pref_masterclass_notifications:
+            subject = f"New Masterclass Scheduled: {webinar.title}"
+            body = generate_scheduled_email_body(webinar, u)
+            
+            # Avoid sending duplicate invitations to the same user
+            stmt_log = select(MasterclassEmailLog).where(
+                MasterclassEmailLog.user_id == u.id,
+                MasterclassEmailLog.webinar_id == webinar.masterclass_id,
+                MasterclassEmailLog.email_type == "scheduled"
+            )
+            res_log = await db.execute(stmt_log)
+            if not res_log.scalar_one_or_none():
+                success = await send_email_async(u.email, subject, body, is_html=True)
+                if success:
+                    log_entry = MasterclassEmailLog(
+                        user_id=u.id,
+                        webinar_id=webinar.masterclass_id,
+                        email_type="scheduled",
+                        status="success"
+                    )
+                    db.add(log_entry)
+                    sent_count += 1
+                    
+        # In-app notification
+        if u.pref_masterclass_notifications:
+            notif_stmt = select(Notification).where(
+                Notification.user_id == u.id,
+                Notification.reference_id == str(webinar.masterclass_id),
+                Notification.type == "masterclass_scheduled"
+            )
+            notif_res = await db.execute(notif_stmt)
+            if not notif_res.scalar_one_or_none():
+                notif = Notification(
+                    user_id=u.id,
+                    title="New Masterclass Scheduled",
+                    message=f"'{webinar.title}' by {webinar.speaker} is scheduled.",
+                    type="masterclass_scheduled",
+                    reference_id=str(webinar.masterclass_id)
+                )
+                db.add(notif)
+                
+    webinar.email_sent = True
+    await db.commit()
+    await db.refresh(webinar)
+    
+    return {"message": "Emails sent successfully", "count": sent_count}
 
 @router.post("/{masterclass_id}/unpublish")
 async def unpublish_recording(

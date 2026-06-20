@@ -30,6 +30,8 @@ class Masterclass(Base):
     learning_outcomes: Mapped[Optional[str]] = mapped_column(String(2000), nullable=True)
     max_attendees: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     visibility: Mapped[str] = mapped_column(String(50), default="public", nullable=False) # public, private, draft
+    is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    email_sent: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     source: Mapped[str] = mapped_column(String(50), default="edustream", nullable=False) # MUST only be edustream
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), 

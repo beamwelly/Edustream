@@ -17,7 +17,8 @@ import {
   Eye,
   Settings,
   AlertTriangle,
-  BookOpen
+  BookOpen,
+  Mail
 } from "lucide-react";
 import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { API_URL } from "@/constants/env";
@@ -46,6 +47,8 @@ interface Masterclass {
   recording_file_path?: string;
   recording_public_url?: string;
   visibility: string;
+  is_hidden: boolean;
+  email_sent: boolean;
   created_at: string;
 }
 
@@ -85,6 +88,7 @@ export function MasterclassesPage() {
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [recordingType, setRecordingType] = useState("zoom");
   const [recordingFile, setRecordingFile] = useState<File | null>(null);
+  const [zoomJoinUrl, setZoomJoinUrl] = useState("");
 
   // Modal states
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
@@ -167,6 +171,7 @@ export function MasterclassesPage() {
     setThumbnailPreview(mc.thumbnail_url || null);
     setRecordingType(mc.recording_type || "zoom");
     setRecordingFile(null);
+    setZoomJoinUrl(mc.zoom_join_url || "");
   };
 
   const handleCancelEdit = () => {
@@ -186,6 +191,7 @@ export function MasterclassesPage() {
     setThumbnailPreview(null);
     setRecordingType("zoom");
     setRecordingFile(null);
+    setZoomJoinUrl("");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -204,6 +210,10 @@ export function MasterclassesPage() {
     e.preventDefault();
     if (!title || !scheduledAt || !duration) {
       toast.warning("Please fill in all required fields.");
+      return;
+    }
+    if (recordingType === "zoom" && !zoomJoinUrl) {
+      toast.warning("Please enter a Zoom Meeting URL.");
       return;
     }
     if (recordingType === "uploaded" && !recordingFile && !(editingMasterclass && editingMasterclass.recording_type === "uploaded")) {
@@ -227,6 +237,7 @@ export function MasterclassesPage() {
       formData.append("visibility", visibility);
       formData.append("send_notification", String(sendNotification));
       formData.append("recording_type", recordingType);
+      formData.append("zoom_join_url", zoomJoinUrl);
       
       if (recordingFile) {
         formData.append("recording_file", recordingFile);
@@ -396,7 +407,7 @@ export function MasterclassesPage() {
   };
 
   const handleToggleHideRecording = async (mc: Masterclass) => {
-    const action = mc.visibility === "hidden" ? "unhide" : "hide";
+    const action = mc.is_hidden ? "unhide" : "hide";
     try {
       const token = localStorage.getItem("token") || "";
       const res = await fetch(`${API_URL}/api/masterclasses/${mc.masterclass_id}/${action}`, {
@@ -412,6 +423,25 @@ export function MasterclassesPage() {
       }
     } catch (e) {
       toast.error("Error updating visibility.");
+    }
+  };
+
+  const handleSendEmail = async (masterclassId: number) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`${API_URL}/api/masterclasses/${masterclassId}/send-email`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success("Invitation emails dispatched successfully!");
+        fetchMasterclasses();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || "Failed to dispatch invitation emails.");
+      }
+    } catch (e) {
+      toast.error("Error sending emails.");
     }
   };
 
@@ -721,6 +751,21 @@ export function MasterclassesPage() {
                 </div>
               )}
 
+              {recordingType === "zoom" && (
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
+                    Zoom Meeting URL *
+                  </label>
+                  <input
+                    type="url"
+                    value={zoomJoinUrl}
+                    onChange={(e) => setZoomJoinUrl(e.target.value)}
+                    placeholder="https://zoom.us/j/..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-xs outline-none transition"
+                  />
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
                   Webinar Cover Photo (Thumbnail)
@@ -886,6 +931,17 @@ export function MasterclassesPage() {
                             </span>
                             
                             <div className="flex gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleSendEmail(s.masterclass_id)}
+                                className={`font-bold text-[10px] px-2.5 flex items-center gap-1 ${s.email_sent ? "text-green-600 border-green-600/30 hover:bg-green-50" : "text-primary border-primary/30 hover:bg-primary/5"}`}
+                                title={s.email_sent ? "Resend Invitation Email" : "Send Invitation Email"}
+                              >
+                                <Mail className="h-3 w-3" />
+                                {s.email_sent ? "Invited" : "Send Invite"}
+                              </Button>
+
                               <Button 
                                 size="sm" 
                                 variant="outline" 
@@ -1176,7 +1232,7 @@ export function MasterclassesPage() {
                                   onClick={() => handleToggleHideRecording(r)}
                                   className="flex-1 font-bold rounded-xl text-[10px]"
                                 >
-                                  {r.visibility === "hidden" ? "Unhide" : "Hide"}
+                                  {r.is_hidden ? "Unhide" : "Hide"}
                                 </Button>
                               </div>
                               
@@ -1222,6 +1278,7 @@ export function MasterclassesPage() {
           <video
             src={activeVideoUrl || ""}
             controls
+            controlsList="nodownload"
             autoPlay
             className="w-full h-full object-contain"
           >

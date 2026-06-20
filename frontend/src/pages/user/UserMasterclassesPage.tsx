@@ -585,6 +585,8 @@ export function UserMasterclassesPage() {
                 ref={videoRef}
                 src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`}
                 controls
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
                 autoPlay
                 onLoadedMetadata={handleLoadedMetadata}
                 onTimeUpdate={handleTimeUpdate}
