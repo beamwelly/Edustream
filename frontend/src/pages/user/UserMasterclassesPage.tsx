@@ -13,9 +13,14 @@ import {
   Award,
   BookOpen
 } from "lucide-react";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { APP_PLACEHOLDER } from "@/constants/branding";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface Masterclass {
   masterclass_id: number;
@@ -34,6 +39,9 @@ interface Masterclass {
   tags?: string;
   learning_outcomes?: string;
   max_attendees?: number;
+  recording_type?: string;
+  recording_file_path?: string;
+  recording_public_url?: string;
   visibility: string;
   created_at: string;
 }
@@ -45,12 +53,17 @@ interface WatchProgress {
 }
 
 export function UserMasterclassesPage() {
+  const { user, searchQuery, setSearchQuery } = useAuth();
   const [masterclasses, setMasterclasses] = useState<Masterclass[]>([]);
   const [registrations, setRegistrations] = useState<Record<number, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [nowTime, setNowTime] = useState<Date>(new Date());
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_masterclasses) {
+      setLoading(false);
+      return;
+    }
     const timer = setInterval(() => {
       setNowTime(new Date());
     }, 1000);
@@ -58,7 +71,6 @@ export function UserMasterclassesPage() {
   }, []);
 
   // Search and Filters
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
   // Video Player Modal State
@@ -118,8 +130,11 @@ export function UserMasterclassesPage() {
   };
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_masterclasses) {
+      return;
+    }
     fetchMasterclasses();
-  }, []);
+  }, [user]);
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -199,6 +214,15 @@ export function UserMasterclassesPage() {
   };
 
   const handleOpenVideo = async (mc: Masterclass) => {
+    if (mc.recording_type === "zoom") {
+      if (mc.recording_url) {
+        window.open(mc.recording_url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Zoom recording URL not available.");
+      }
+      return;
+    }
+
     setInitialSeekTime(0);
     maxPositionRef.current = 0;
     lastSavedTimeRef.current = 0;
@@ -281,8 +305,12 @@ export function UserMasterclassesPage() {
     (m) => (m.status === "recorded" || m.status === "completed") && m.recording_url
   );
 
+  if (user && user.role === "employee" && !user.permissions?.access_masterclasses) {
+    return <AccessDenied message="You do not have permission to access Masterclasses." />;
+  }
+
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader 
         title="Masterclasses" 
         subtitle="Join live interactive sessions and watch on-demand recordings of professional classes." 
@@ -337,16 +365,14 @@ export function UserMasterclassesPage() {
             <div className="grid gap-6 md:grid-cols-2">
               {upcomingSessions.map((s) => (
                 <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all duration-200 group relative overflow-hidden">
-                  {s.thumbnail_url && (
-                    <div className="relative w-full h-44 -mx-6 -mt-6 mb-4 overflow-hidden">
-                      <img 
-                        src={s.thumbnail_url} 
-                        alt={s.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                    </div>
-                  )}
+                  <div className="relative w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-4 overflow-hidden bg-zinc-950">
+                    <img 
+                      src={s.thumbnail_url || APP_PLACEHOLDER} 
+                      alt={s.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                  </div>
                   
                   <div>
                     <div className="mb-3 flex items-center justify-between">
@@ -505,15 +531,11 @@ export function UserMasterclassesPage() {
               {recordedSessions.map((r) => (
                 <Card key={r.masterclass_id} className="!p-0 overflow-hidden flex flex-col justify-between hover:border-primary/20 transition-all duration-200 group relative">
                   <div className="relative flex aspect-video items-center justify-center bg-zinc-950 overflow-hidden">
-                    {r.thumbnail_url ? (
-                      <img 
-                        src={r.thumbnail_url} 
-                        alt={r.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <Video className="h-10 w-10 text-zinc-700" />
-                    )}
+                    <img 
+                      src={r.thumbnail_url || APP_PLACEHOLDER} 
+                      alt={r.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                     
                     <button 
                       onClick={() => handleOpenVideo(r)}
@@ -527,7 +549,18 @@ export function UserMasterclassesPage() {
                   
                   <div className="p-4 flex flex-col justify-between flex-grow">
                     <div>
-                      <span className="text-[9px] font-bold text-primary uppercase tracking-wide">{r.category || "General"}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[9px] font-bold text-primary uppercase tracking-wide">{r.category || "General"}</span>
+                        {r.recording_type === "zoom" ? (
+                          <span className="text-[8px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Zoom Cloud Recording
+                          </span>
+                        ) : r.recording_type === "uploaded" ? (
+                          <span className="text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Uploaded Recording
+                          </span>
+                        ) : null}
+                      </div>
                       <h4 className="line-clamp-2 text-sm font-bold text-foreground mt-0.5 leading-snug group-hover:text-primary transition-colors">{r.title}</h4>
                       
                       {r.speaker && (
@@ -557,26 +590,23 @@ export function UserMasterclassesPage() {
         </section>
       </div>
 
-      {/* Cloud Video Streaming Modal */}
-      {activeMasterclass && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl bg-zinc-950 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="absolute top-4 right-4 z-10">
-              <button
-                onClick={handleVideoClose}
-                className="p-2 rounded-full bg-black/60 text-white hover:bg-black/80 hover:scale-105 transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
+      {/* Reusable Cloud Video Streaming Modal */}
+      <ResponsiveModal
+        isOpen={!!activeMasterclass}
+        onClose={handleVideoClose}
+        title={activeMasterclass?.title || "Masterclass Video"}
+        size="lg"
+      >
+        {activeMasterclass && (
+          <div className="space-y-4">
             {/* Custom styled HTML5 Player */}
-            <div className="aspect-video w-full bg-black relative">
+            <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
               <video
                 ref={videoRef}
-                src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream`}
+                src={`${API_URL}/api/masterclasses/${activeMasterclass.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`}
                 controls
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
                 autoPlay
                 onLoadedMetadata={handleLoadedMetadata}
                 onTimeUpdate={handleTimeUpdate}
@@ -589,26 +619,26 @@ export function UserMasterclassesPage() {
             </div>
 
             {/* Video Details Pane */}
-            <div className="p-6 bg-zinc-900 border-t border-zinc-850">
+            <div className="p-4 bg-secondary/20 rounded-2xl border border-border/40">
               <div className="flex flex-wrap gap-2 mb-2">
                 <Badge tone="primary">{activeMasterclass.category || "General"}</Badge>
-                <span className="text-xs text-zinc-400 font-semibold flex items-center gap-1">
+                <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
                   <Clock className="h-3.5 w-3.5" /> {activeMasterclass.duration_minutes} Mins
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-white leading-snug">{activeMasterclass.title}</h3>
+              <h3 className="text-sm font-bold text-foreground leading-snug">{activeMasterclass.title}</h3>
               {activeMasterclass.speaker && (
                 <p className="text-xs text-primary font-bold mt-1">Hosted by {activeMasterclass.speaker}</p>
               )}
               {activeMasterclass.description && (
-                <p className="mt-3 text-xs text-zinc-400 leading-relaxed max-h-24 overflow-y-auto pr-1">
+                <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
                   {activeMasterclass.description}
                 </p>
               )}
             </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

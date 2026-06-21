@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Shield, Key, Loader2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { AppBackground } from "@/components/background";
-import { APP_NAME, APP_TAGLINE } from "@/constants/branding";
+import { APP_NAME, APP_TAGLINE, APP_LOGO } from "@/constants/branding";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/common";
 import { Input } from "@/components/ui/input";
@@ -96,7 +96,7 @@ function LoginPageComponent() {
       <div className="relative z-10 flex w-full max-w-md flex-col">
         {/* Brand Logo Header */}
         <div className="mb-8 flex items-center justify-center gap-3">
-          <img src="/logo.png" alt="EduStream Logo" className="h-10 w-auto object-contain" />
+          <img src={APP_LOGO} alt="Masterclass Logo" className="h-10 w-auto object-contain" />
           <div className="text-left">
             <h1 className="text-xl font-bold tracking-tight leading-none text-[#1F2937]">{APP_NAME}</h1>
             <p className="text-xs text-muted-foreground mt-0.5">{APP_TAGLINE}</p>

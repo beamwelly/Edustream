@@ -42,6 +42,100 @@ async def get_current_user(
         
     return user
 
+def require_permission(category: str):
+    async def dependency(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> User:
+        if not current_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive."
+            )
+        if current_user.role in ("admin", "owner", "user"):
+            return current_user
+        if current_user.role == "employee":
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+            res = await db.execute(stmt)
+            policy = res.scalar_one_or_none()
+            if policy:
+                settings = policy.settings_json or {}
+                # Map standard category name to settings key if they differ slightly
+                key = category
+                if category == "content":
+                    key = "content_library"
+                
+                if settings.get(key, False):
+                    return current_user
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied. Global Employee Policy restricts access to {category}."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access Denied. You do not have permission to access {category}."
+        )
+    return dependency
+
+def require_tool_permission(tool_id: str):
+    async def dependency(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> User:
+        if not current_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive."
+            )
+        if current_user.role in ("admin", "owner", "user"):
+            return current_user
+        if current_user.role == "employee":
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+            res = await db.execute(stmt)
+            policy = res.scalar_one_or_none()
+            if policy:
+                settings = policy.settings_json or {}
+                # Map backend tool_id to policy settings
+                # If tool_id is one of the calculators of WOW, gate it by wow_toolkit
+                WOW_CALCULATORS = {"retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan", "wow_toolkit"}
+                if tool_id in WOW_CALCULATORS:
+                    if not settings.get("wow_toolkit", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to WOW Toolkit."
+                        )
+                elif tool_id == "financial_discovery":
+                    if not settings.get("financial_discovery", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Financial Discovery."
+                        )
+                elif tool_id == "needs_discovery":
+                    if not settings.get("needs_discovery", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Needs Discovery."
+                        )
+                elif tool_id == "resource_downloads":
+                    if not settings.get("resource_downloads", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Resource Downloads."
+                        )
+                elif tool_id == "future_tools":
+                    if not settings.get("future_tools", False):
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Access Denied. Global Employee Policy restricts access to Future Tools."
+                        )
+                return current_user
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access Denied. You do not have permission to access the tool: {tool_id}."
+            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access Denied. You do not have permission to access the tool: {tool_id}."
+        )
+    return dependency
+
+
 # Pydantic Schemas for Profile
 class UserProfileResponseSchema(BaseModel):
     id: int
@@ -64,6 +158,7 @@ class UserProfileResponseSchema(BaseModel):
     pref_masterclass_notifications: bool
     pref_email_notifications: bool
     pref_recording_notifications: bool
+    permissions: Optional[dict] = None
 
 class UserProfileUpdate(BaseModel):
     full_name: str
@@ -87,6 +182,40 @@ async def get_current_user_profile(
     """
     Get current logged-in user profile, with company_name mapped to organization_name.
     """
+    user_perms = None
+    if current_user.role == "employee":
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        stmt_policy = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        res_policy = await db.execute(stmt_policy)
+        policy = res_policy.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        user_perms = {
+            "access_dashboard": settings.get("dashboard", True),
+            "access_content": settings.get("content_library", True),
+            "access_masterclasses": settings.get("masterclasses", True),
+            "access_meetings": settings.get("meetings", False),
+            "access_feedback": settings.get("feedback", True),
+            "allowed_tools": [
+                k for k in ("wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools", "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan")
+                if settings.get(k, False)
+            ],
+            "allowed_categories": []
+        }
+    else:
+        user_perms = {
+            "access_dashboard": True,
+            "access_content": True,
+            "access_masterclasses": True,
+            "access_meetings": True,
+            "access_feedback": True,
+            "allowed_tools": [
+                "wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools",
+                "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
+                "cost_of_delay", "sip_home_loan"
+            ],
+            "allowed_categories": []
+        }
+
     return {
         "id": current_user.id,
         "full_name": current_user.full_name,
@@ -107,7 +236,8 @@ async def get_current_user_profile(
         "is_active": current_user.is_active,
         "pref_masterclass_notifications": current_user.pref_masterclass_notifications,
         "pref_email_notifications": current_user.pref_email_notifications,
-        "pref_recording_notifications": current_user.pref_recording_notifications
+        "pref_recording_notifications": current_user.pref_recording_notifications,
+        "permissions": user_perms
     }
 
 @router.put("/me", response_model=UserProfileResponseSchema)
@@ -201,7 +331,7 @@ async def get_super_dashboard_kpis(
     from app.models.meeting import Meeting
     
     # 1. Total standard users
-    user_count_stmt = select(func.count(User.id)).where(User.role == "user")
+    user_count_stmt = select(func.count(User.id)).where(User.role.in_(["admin", "owner", "employee", "user"]))
     user_count_res = await db.execute(user_count_stmt)
     total_users = user_count_res.scalar_one()
     
@@ -219,7 +349,7 @@ async def get_super_dashboard_kpis(
     recent_uploads = total_documents
     
     # 5. Formulate dynamic activity list
-    users_stmt = select(User).where(User.role == "user").order_by(User.id.desc()).limit(2)
+    users_stmt = select(User).where(User.role.in_(["admin", "owner", "employee", "user"])).order_by(User.id.desc()).limit(2)
     users_res = await db.execute(users_stmt)
     recent_users = users_res.scalars().all()
     
@@ -248,7 +378,7 @@ async def get_super_dashboard_kpis(
         
     if not recent_activities:
         recent_activities = [
-            { "title": "EduStream Workspace fully operational", "time": "Just now", "tone": "primary", "tag": "System" }
+            { "title": "Masterclass Workspace fully operational", "time": "Just now", "tone": "primary", "tag": "System" }
         ]
         
     recent_uploads_list = []

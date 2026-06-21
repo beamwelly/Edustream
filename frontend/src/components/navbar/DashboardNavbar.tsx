@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Bell, Search, LogOut, User, ShieldAlert, Key, X, Loader2, Eye, EyeOff } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Bell, Search, LogOut, User, ShieldAlert, Key, X, Loader2, Eye, EyeOff, Library, GraduationCap, Wrench } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useAuth } from "@/context/AuthContext";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
@@ -13,11 +13,42 @@ interface DashboardNavbarProps {
 }
 
 export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
-  const { user, logout } = useAuth();
+  const { user, logout, searchQuery, setSearchQuery } = useAuth();
+  const navigate = useNavigate();
   console.log("DashboardNavbar user:", user);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Search state
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSearchResults([]);
+      setIsSearchOpen(false);
+      return;
+    }
+
+    const delayDebounce = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const data = await apiFetch<any[]>(`/api/search?q=${encodeURIComponent(query)}`);
+        setSearchResults(data);
+        setIsSearchOpen(true);
+      } catch (err) {
+        console.error("Search error:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchQuery]);
 
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -59,6 +90,9 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
       }
       if (notifDropdownRef.current && !notifDropdownRef.current.contains(event.target as Node)) {
         setIsNotifDropdownOpen(false);
+      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setIsSearchOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -290,13 +324,79 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
 
   return (
     <header className="app-surface-nav sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/80 px-6 py-3 backdrop-blur">
-      <div className="relative w-full max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          placeholder="Search..."
-          className="w-full rounded-full border border-border bg-card py-2 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
-        />
+      <div className="relative w-full max-w-md" ref={searchContainerRef}>
+        <form onSubmit={(e) => e.preventDefault()} className="relative w-full">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            placeholder="Search users, content, classes, tools..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full rounded-full border border-border bg-card py-2 pl-10 pr-4 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+          )}
+        </form>
+
+        {isSearchOpen && (
+          <div className="absolute left-0 right-0 mt-2 max-h-96 overflow-y-auto rounded-xl border border-border bg-card shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-top-1 duration-100 z-50">
+            {searchResults.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                No matching results found.
+              </div>
+            ) : (
+              <div className="p-1.5 space-y-0.5">
+                {searchResults.map((result) => {
+                  let IconComponent = Search;
+                  let badgeColor = "bg-primary-soft text-primary";
+                  if (result.type === "user") {
+                    IconComponent = User;
+                    badgeColor = "bg-blue-50 text-blue-600 border border-blue-100";
+                  } else if (result.type === "content") {
+                    IconComponent = Library;
+                    badgeColor = "bg-emerald-50 text-emerald-600 border border-emerald-100";
+                  } else if (result.type === "masterclass") {
+                    IconComponent = GraduationCap;
+                    badgeColor = "bg-indigo-50 text-indigo-600 border border-indigo-100";
+                  } else if (result.type === "tool") {
+                    IconComponent = Wrench;
+                    badgeColor = "bg-amber-50 text-amber-600 border border-amber-100";
+                  }
+
+                  return (
+                    <button
+                      key={`${result.type}-${result.id}`}
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        setSearchQuery("");
+                        navigate({ to: result.route });
+                      }}
+                      className="flex items-start gap-3 w-full text-left px-3 py-2.5 rounded-lg hover:bg-secondary transition"
+                    >
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/80 text-muted-foreground flex-shrink-0">
+                        <IconComponent className="h-4.5 w-4.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-foreground truncate">
+                            {result.title}
+                          </span>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase flex-shrink-0 ${badgeColor}`}>
+                            {result.type}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate leading-normal mt-0.5">
+                          {result.description}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="ml-4 flex items-center gap-2">
@@ -385,7 +485,7 @@ export function DashboardNavbar({ roleLabel, userName }: DashboardNavbarProps) {
             <div className="hidden lg:block text-right">
               <p className="text-sm font-bold text-foreground group-hover:text-primary transition leading-tight mb-0.5">{userName}</p>
               <p className="text-[10px] text-muted-foreground font-semibold leading-none">
-                Organization: <span className="text-primary font-bold">{user?.organization_name || "EduStream"}</span>
+                Organization: <span className="text-primary font-bold">{user?.organization_name || "Masterclass"}</span>
               </p>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary transition shadow-sm border border-primary/15 uppercase font-bold">

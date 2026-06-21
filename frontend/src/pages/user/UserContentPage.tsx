@@ -18,9 +18,10 @@ import {
   LayoutGrid,
   List
 } from "lucide-react";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import { 
   PDFThumbnail, 
   DocxThumbnail, 
@@ -48,6 +49,7 @@ interface ContentItem {
   public_url: string;
   uploaded_by: string;
   uploaded_at: string;
+  content_date?: string;
   is_active: boolean;
   original_filename?: string;
   warning?: string;
@@ -90,6 +92,7 @@ const triggerDownload = (item: ContentItem) => {
 };
 
 export function UserContentPage() {
+  const { user, searchQuery, setSearchQuery } = useAuth();
   // DB States
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -98,7 +101,6 @@ export function UserContentPage() {
 
   // Filter States
   const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateSort, setDateSort] = useState<"newest" | "oldest" | "month-wise" | "file-type">("newest");
 
@@ -118,7 +120,7 @@ export function UserContentPage() {
   const yearsList = React.useMemo(() => {
     const years = new Set<string>();
     items.forEach(item => {
-      const yr = new Date(item.uploaded_at).getFullYear();
+      const yr = new Date(item.content_date || item.uploaded_at).getFullYear();
       if (!isNaN(yr)) years.add(String(yr));
     });
     return Array.from(years).sort().reverse();
@@ -152,13 +154,13 @@ export function UserContentPage() {
     }
 
     if (monthFilter !== "All") {
-      const d = new Date(item.uploaded_at);
+      const d = new Date(item.content_date || item.uploaded_at);
       const mName = d.toLocaleString("default", { month: "long" });
       if (mName !== monthFilter) return false;
     }
 
     if (yearFilter !== "All") {
-      const d = new Date(item.uploaded_at);
+      const d = new Date(item.content_date || item.uploaded_at);
       if (String(d.getFullYear()) !== yearFilter) return false;
     }
 
@@ -168,11 +170,11 @@ export function UserContentPage() {
   const sortedItems = React.useMemo(() => {
     const itemsCopy = [...filteredItems];
     if (dateSort === "newest") {
-      return itemsCopy.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(b.content_date || b.uploaded_at).getTime() - new Date(a.content_date || a.uploaded_at).getTime());
     } else if (dateSort === "oldest") {
-      return itemsCopy.sort((a, b) => new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(a.content_date || a.uploaded_at).getTime() - new Date(b.content_date || b.uploaded_at).getTime());
     } else if (dateSort === "month-wise") {
-      return itemsCopy.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(b.content_date || b.uploaded_at).getTime() - new Date(a.content_date || a.uploaded_at).getTime());
     } else if (dateSort === "file-type") {
       return itemsCopy.sort((a, b) => a.file_type.localeCompare(b.file_type));
     }
@@ -182,7 +184,7 @@ export function UserContentPage() {
   const groupedByMonth = React.useMemo(() => {
     const groups: Record<string, typeof sortedItems> = {};
     sortedItems.forEach(item => {
-      const label = getMonthYearLabel(item.uploaded_at);
+      const label = getMonthYearLabel(item.content_date || item.uploaded_at);
       if (!groups[label]) {
         groups[label] = [];
       }
@@ -206,9 +208,13 @@ export function UserContentPage() {
   }, [groupedByMonth, dateSort]);
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_content) {
+      setIsLoading(false);
+      return;
+    }
     fetchCategories();
     fetchContentItems();
-  }, [searchQuery, activeCategory, typeFilter, dateSort]);
+  }, [user, searchQuery, activeCategory, typeFilter, dateSort]);
 
   const fetchCategories = async () => {
     try {
@@ -379,16 +385,12 @@ export function UserContentPage() {
             {/* Organization / Company Uploader Info Display */}
             <div className="flex flex-col text-left mb-2.5 border-t border-border/40 pt-2.5">
               <span className="text-xs font-bold text-foreground truncate">Uploaded by: {item.uploaded_by}</span>
-              <span className="text-[10px] text-muted-foreground truncate">{item.organization_name || "EduStream"}</span>
+              <span className="text-[10px] text-muted-foreground truncate">{item.organization_name || "Masterclass"}</span>
             </div>
 
             {/* Premium details */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mb-3 text-[10px] text-muted-foreground font-semibold">
-              <span>{getMonthYearLabel(item.uploaded_at)}</span>
-              <span>•</span>
-              <span>Downloads: {mockDownloads}</span>
-              <span>•</span>
-              <span>Views: {mockViews}</span>
+              <span>{getMonthYearLabel(item.content_date || item.uploaded_at)}</span>
             </div>
 
             <div className="flex items-center justify-between border-t border-border/20 pt-2">
@@ -426,6 +428,10 @@ export function UserContentPage() {
   };
 
   const uniqueFileTypes = ["PDF", "DOCX", "XLSX", "PPTX", "Video", "Image", "Archive"];
+
+  if (user && user.role === "employee" && !user.permissions?.access_content) {
+    return <AccessDenied message="You do not have permission to access the Content Library." />;
+  }
 
   return (
     <>
@@ -467,7 +473,7 @@ export function UserContentPage() {
           </div>
 
           {/* View Switcher and Sort */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
               <button
@@ -635,19 +641,15 @@ export function UserContentPage() {
                 <th className="p-4">File</th>
                 <th className="p-4">Type</th>
                 <th className="p-4">Category</th>
-                <th className="p-4">Upload Date</th>
+                <th className="p-4">Content Date</th>
                 <th className="p-4">Month</th>
                 <th className="p-4">Uploaded By</th>
-                <th className="p-4">Downloads</th>
-                <th className="p-4">Views</th>
                 <th className="p-4 text-right">Download</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {sortedItems.map((item) => {
                 const { icon: Icon, badgeClass, colorClass } = getIconAndBadgeConfig(item.file_type);
-                const mockDownloads = (item.id * 13) % 47;
-                const mockViews = (item.id * 29) % 183;
                 return (
                   <tr 
                     key={item.id} 
@@ -667,19 +669,17 @@ export function UserContentPage() {
                     </td>
                     <td className="p-4 text-muted-foreground text-xs">{item.category}</td>
                     <td className="p-4 text-muted-foreground text-xs">
-                      {new Date(item.uploaded_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}
+                      {new Date(item.content_date || item.uploaded_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}
                     </td>
                     <td className="p-4 text-muted-foreground text-xs font-medium">
-                      {getMonthYearLabel(item.uploaded_at)}
+                      {getMonthYearLabel(item.content_date || item.uploaded_at)}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-foreground">{item.uploaded_by}</span>
-                        <span className="text-[10px] text-muted-foreground">{item.organization_name || "EduStream"}</span>
+                        <span className="text-[10px] text-muted-foreground">{item.organization_name || "Masterclass"}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-muted-foreground text-xs font-bold">{mockDownloads}</td>
-                    <td className="p-4 text-muted-foreground text-xs font-bold">{mockViews}</td>
                     <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <button 
                         onClick={() => triggerDownload(item)}

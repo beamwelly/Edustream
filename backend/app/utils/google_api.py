@@ -169,7 +169,7 @@ async def create_google_calendar_meet(
     
     payload = {
         "summary": title,
-        "description": agenda or "EduStream scheduled meeting.",
+        "description": agenda or "Masterclass scheduled meeting.",
         "start": {
             "dateTime": start_iso,
             "timeZone": "Asia/Kolkata"

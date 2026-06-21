@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { FileText, CalendarClock, Wrench, Play, Loader2, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+
 
 interface UserProfile {
   id: number;
@@ -17,6 +20,7 @@ interface ContentItem {
   file_type: string;
   file_size: string;
   uploaded_at: string;
+  content_date?: string;
 }
 
 interface MeetingItem {
@@ -28,14 +32,19 @@ interface MeetingItem {
 }
 
 export function UserDashboardPage() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recentDocs, setRecentDocs] = useState<ContentItem[]>([]);
   const [meetings, setMeetings] = useState<MeetingItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_dashboard) {
+      setIsLoading(false);
+      return;
+    }
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   const fetchDashboardData = async () => {
     setIsLoading(true);
@@ -63,8 +72,12 @@ export function UserDashboardPage() {
     }
   };
 
+  if (user && user.role === "employee" && !user.permissions?.access_dashboard) {
+    return <AccessDenied message="You do not have permission to access the Dashboard." />;
+  }
+
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader
         title={isLoading ? "Welcome back" : `Welcome back, ${profile?.full_name || "Sara"}`}
         subtitle="Pick up where you left off — your library and sessions are waiting."
@@ -115,7 +128,7 @@ export function UserDashboardPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{doc.title}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Type: {doc.file_type} • Size: {doc.file_size} • Shared {new Date(doc.uploaded_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                      Type: {doc.file_type} • Size: {doc.file_size} • Shared {new Date(doc.content_date || doc.uploaded_at).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
                     </p>
                   </div>
                   <Link to="/user/content" className="text-xs font-semibold text-primary hover:underline">
@@ -180,6 +193,6 @@ export function UserDashboardPage() {
           ))}
         </div>
       </section>
-    </>
+    </ResponsivePageWrapper>
   );
 }

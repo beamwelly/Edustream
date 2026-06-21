@@ -1,4 +1,4 @@
-# EduStream Frontend
+# Masterclass Frontend
 
 React application (Vite + TanStack Router/Start) for Super Admin, Organization Admin, and User workspaces.
 

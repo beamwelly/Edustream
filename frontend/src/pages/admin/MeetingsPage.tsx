@@ -4,6 +4,9 @@ import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface MeetingResponse {
   id: number;
@@ -34,6 +37,26 @@ interface MeetingResponse {
   next_steps?: string;
   created_at: string;
 }
+
+const slots = ["10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"];
+
+const getEndTimeForSlot = (startTime: string) => {
+  const slotMap: Record<string, string> = {
+    "10:00 AM": "10:30 AM",
+    "10:30 AM": "11:00 AM",
+    "11:00 AM": "11:30 AM",
+    "11:30 AM": "12:00 PM",
+    "02:00 PM": "02:30 PM",
+    "2:00 PM": "02:30 PM",
+    "02:30 PM": "03:00 PM",
+    "2:30 PM": "03:00 PM",
+    "03:00 PM": "03:30 PM",
+    "3:00 PM": "03:30 PM",
+    "03:30 PM": "04:00 PM",
+    "3:30 PM": "04:00 PM",
+  };
+  return slotMap[startTime] || startTime;
+};
 
 export function MeetingsPage() {
   const { user } = useAuth();
@@ -180,10 +203,10 @@ export function MeetingsPage() {
     setScheduleTitle(m.title);
     setScheduleAgenda(m.agenda || "");
     setScheduleDate(m.meeting_date);
-    setScheduleStartTime(m.start_time);
     
-    // Set a default end time (1 hour later, or append PM/AM)
-    setScheduleEndTime(m.start_time);
+    const initialStart = slots.includes(m.start_time) ? m.start_time : slots[0];
+    setScheduleStartTime(initialStart);
+    setScheduleEndTime(getEndTimeForSlot(initialStart));
     
     // Pre-populate attendees emails
     const emails = [];
@@ -305,7 +328,7 @@ export function MeetingsPage() {
   const completedMeetings = meetings.filter(m => m.status === "completed" || m.status === "cancelled");
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader title="Meetings" subtitle="Approve requests, schedule Meet links, and capture notes dynamically." />
 
       {/* Google Integration Block */}
@@ -377,7 +400,7 @@ export function MeetingsPage() {
                     <div>
                       <h4 className="text-base font-semibold">{r.title}</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Requested by: <strong className="text-foreground">{r.requested_by?.full_name} ({r.requested_by?.role || "user"}) [{r.requested_by?.organization_name || "EduStream"}]</strong> ({r.requested_by?.email}) • Preferred: <strong>{r.meeting_date} at {r.start_time}</strong>
+                        Requested by: <strong className="text-foreground">{r.requested_by?.full_name} ({r.requested_by?.role || "user"}) [{r.requested_by?.organization_name || "Masterclass"}]</strong> ({r.requested_by?.email}) • Preferred: <strong>{r.meeting_date} at {r.start_time}</strong>
                       </p>
                       {r.agenda && <p className="mt-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/40 inline-block">{r.agenda}</p>}
                     </div>
@@ -411,7 +434,7 @@ export function MeetingsPage() {
                     <div>
                       <h4 className="text-base font-semibold">{r.title}</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Accepted by: <strong className="text-foreground">{r.requested_to?.full_name} ({r.requested_to?.role || "admin"}) [{r.requested_to?.organization_name || "EduStream"}]</strong> ({r.requested_to?.email}) • Date: <strong>{r.meeting_date} at {r.start_time}</strong>
+                        Accepted by: <strong className="text-foreground">{r.requested_to?.full_name} ({r.requested_to?.role || "admin"}) [{r.requested_to?.organization_name || "Masterclass"}]</strong> ({r.requested_to?.email}) • Date: <strong>{r.meeting_date} at {r.start_time}</strong>
                       </p>
                       {r.agenda && <p className="mt-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/40 inline-block">{r.agenda}</p>}
                     </div>
@@ -445,7 +468,7 @@ export function MeetingsPage() {
                     <div>
                       <h4 className="text-base font-semibold">{r.title}</h4>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Sent to: <strong className="text-foreground">{r.requested_to?.full_name || "Unknown"} ({r.requested_to?.role || "user"}) [{r.requested_to?.organization_name || "EduStream"}]</strong> ({r.requested_to?.email}) • Proposed: <strong>{r.meeting_date} at {r.start_time}</strong>
+                        Sent to: <strong className="text-foreground">{r.requested_to?.full_name || "Unknown"} ({r.requested_to?.role || "user"}) [{r.requested_to?.organization_name || "Masterclass"}]</strong> ({r.requested_to?.email}) • Proposed: <strong>{r.meeting_date} at {r.start_time}</strong>
                       </p>
                       {r.agenda && <p className="mt-2 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-lg border border-border/40 inline-block">{r.agenda}</p>}
                     </div>
@@ -484,7 +507,7 @@ export function MeetingsPage() {
                           <strong className="text-foreground">{activeNotesMeeting.requested_by?.full_name}</strong>
                           <span className="text-[10px] text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded capitalize">{activeNotesMeeting.requested_by?.role}</span>
                         </span>
-                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_by?.organization_name || "EduStream"}</Badge>
+                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_by?.organization_name || "Masterclass"}</Badge>
                       </div>
                       <div className="flex items-center justify-between pt-0.5">
                         <span className="flex items-center gap-1.5">
@@ -492,7 +515,7 @@ export function MeetingsPage() {
                           <strong className="text-foreground">{activeNotesMeeting.requested_to?.full_name}</strong>
                           <span className="text-[10px] text-muted-foreground bg-secondary/80 px-1 py-0.5 rounded capitalize">{activeNotesMeeting.requested_to?.role}</span>
                         </span>
-                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_to?.organization_name || "EduStream"}</Badge>
+                        <Badge tone="neutral" className="text-[10px] px-1.5 py-0">{activeNotesMeeting.requested_to?.organization_name || "Masterclass"}</Badge>
                       </div>
                     </div>
                     
@@ -605,8 +628,8 @@ export function MeetingsPage() {
                     </div>
                     <h4 className="text-sm font-semibold text-foreground truncate">{u.title}</h4>
                     <p className="text-xs text-muted-foreground mt-1">Date: {u.meeting_date}</p>
-                    <p className="text-xs text-muted-foreground truncate" title={`${u.requested_by?.full_name} (${u.requested_by?.role || "user"}) [${u.requested_by?.organization_name || "EduStream"}] & ${u.requested_to?.full_name} (${u.requested_to?.role || "admin"}) [${u.requested_to?.organization_name || "EduStream"}]`}>
-                      Between: {u.requested_by?.full_name} ({u.requested_by?.organization_name || "EduStream"}) & {u.requested_to?.full_name} ({u.requested_to?.organization_name || "EduStream"})
+                    <p className="text-xs text-muted-foreground truncate" title={`${u.requested_by?.full_name} (${u.requested_by?.role || "user"}) [${u.requested_by?.organization_name || "Masterclass"}] & ${u.requested_to?.full_name} (${u.requested_to?.role || "admin"}) [${u.requested_to?.organization_name || "Masterclass"}]`}>
+                      Between: {u.requested_by?.full_name} ({u.requested_by?.organization_name || "Masterclass"}) & {u.requested_to?.full_name} ({u.requested_to?.organization_name || "Masterclass"})
                     </p>
                     {u.google_meet_link && (
                       <a href={u.google_meet_link} target="_blank" rel="noreferrer" className="mt-3 block" onClick={e => e.stopPropagation()}>
@@ -631,210 +654,212 @@ export function MeetingsPage() {
                 No past meetings recorded.
               </Card>
             ) : (
-              <Card className="!p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border bg-secondary/10">
-                      <th className="px-6 py-3 font-medium">Topic</th>
-                      <th className="px-6 py-3 font-medium">Participants</th>
-                      <th className="px-6 py-3 font-medium">Date / Time</th>
-                      <th className="px-6 py-3 font-medium">Status</th>
-                      <th className="px-6 py-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {completedMeetings.map((h) => (
-                      <tr 
-                        key={h.id} 
-                        className={`cursor-pointer hover:bg-secondary/40 transition-colors ${
-                          activeNotesMeeting?.id === h.id ? "bg-secondary/20 font-semibold" : ""
-                        }`}
-                        onClick={() => handleSelectNotesMeeting(h)}
-                      >
-                        <td className="px-6 py-4 font-medium text-foreground">{h.title}</td>
-                        <td className="px-6 py-4 text-muted-foreground text-xs">
-                          <div>
-                            <strong className="text-foreground">{h.requested_by?.full_name}</strong> ({h.requested_by?.role || "user"}) [{h.requested_by?.organization_name || "EduStream"}]
-                          </div>
-                          <div className="text-[10px] my-0.5 text-muted-foreground">and</div>
-                          <div>
-                            <strong className="text-foreground">{h.requested_to?.full_name}</strong> ({h.requested_to?.role || "admin"}) [{h.requested_to?.organization_name || "EduStream"}]
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground text-xs">{h.meeting_date} @ {h.start_time}</td>
-                        <td className="px-6 py-4">
-                          <Badge tone={h.status === "completed" ? "success" : "neutral"}>
-                            {h.status}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button className="flex items-center gap-1.5 text-xs text-primary font-bold hover:underline" onClick={(e) => {
-                            e.stopPropagation();
-                            handleSelectNotesMeeting(h);
-                          }}>
-                            <FileText className="h-3.5 w-3.5" /> MOM Notes
-                          </button>
-                        </td>
+              <Card className="!p-0 overflow-hidden">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border bg-secondary/10">
+                        <th className="px-6 py-3 font-medium">Topic</th>
+                        <th className="px-6 py-3 font-medium">Participants</th>
+                        <th className="px-6 py-3 font-medium">Date / Time</th>
+                        <th className="px-6 py-3 font-medium">Status</th>
+                        <th className="px-6 py-3 font-medium">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {completedMeetings.map((h) => (
+                        <tr 
+                          key={h.id} 
+                          className={`cursor-pointer hover:bg-secondary/40 transition-colors ${
+                            activeNotesMeeting?.id === h.id ? "bg-secondary/20 font-semibold" : ""
+                          }`}
+                          onClick={() => handleSelectNotesMeeting(h)}
+                        >
+                          <td className="px-6 py-4 font-medium text-foreground">{h.title}</td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">
+                            <div>
+                              <strong className="text-foreground">{h.requested_by?.full_name}</strong> ({h.requested_by?.role || "user"}) [{h.requested_by?.organization_name || "Masterclass"}]
+                            </div>
+                            <div className="text-[10px] my-0.5 text-muted-foreground">and</div>
+                            <div>
+                              <strong className="text-foreground">{h.requested_to?.full_name}</strong> ({h.requested_to?.role || "admin"}) [{h.requested_to?.organization_name || "Masterclass"}]
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-muted-foreground text-xs">{h.meeting_date} @ {h.start_time}</td>
+                          <td className="px-6 py-4">
+                            <Badge tone={h.status === "completed" ? "success" : "neutral"}>
+                              {h.status}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button className="flex items-center gap-1.5 text-xs text-primary font-bold hover:underline" onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelectNotesMeeting(h);
+                            }}>
+                              <FileText className="h-3.5 w-3.5" /> MOM Notes
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </Card>
             )}
           </section>
         </>
       )}
 
-      {/* Centered Schedule Meeting Approval Modal */}
-      {showScheduleModal && selectedMeeting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg shadow-2xl border border-border bg-card animate-zoom-in relative">
-            <button 
-              onClick={() => setShowScheduleModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold"
-            >
-              ✕
-            </button>
-            <div className="border-b border-border pb-3 mb-4">
-              <h3 className="text-lg font-bold text-foreground">Approve & Schedule Meeting</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Integrates with Google Calendar API to dispatch Meet link & SMTP invitation.</p>
-            </div>
+      {/* Reusable Schedule Meeting Approval Modal */}
+      <ResponsiveModal
+        isOpen={showScheduleModal && !!selectedMeeting}
+        onClose={() => setShowScheduleModal(false)}
+        title="Approve & Schedule Meeting"
+        subtitle="Integrates with Google Calendar API to dispatch Meet link & SMTP invitation."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
+            <Button onClick={handleCreateMeeting} disabled={scheduling}>
+              {scheduling ? "Creating Meet..." : "Create Meeting"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4 text-sm">
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Meeting Title</span>
+            <input
+              type="text"
+              value={scheduleTitle}
+              onChange={(e) => setScheduleTitle(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Agenda / Purpose</span>
+            <textarea
+              rows={2}
+              value={scheduleAgenda}
+              onChange={(e) => setScheduleAgenda(e.target.value)}
+              className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </label>
+
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Date</span>
+              <input
+                type="date"
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Start Time</span>
+              <select
+                value={scheduleStartTime}
+                onChange={(e) => {
+                  const start = e.target.value;
+                  setScheduleStartTime(start);
+                  setScheduleEndTime(getEndTimeForSlot(start));
+                }}
+                className="w-full rounded-lg border border-border bg-background px-2 py-2.5 text-xs outline-none focus:border-primary"
+              >
+                {slots.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">End Time</span>
+              <input
+                type="text"
+                readOnly
+                disabled
+                value={scheduleEndTime}
+                className="w-full rounded-lg border border-border bg-muted px-2 py-2 text-xs outline-none focus:border-primary cursor-not-allowed text-muted-foreground"
+              />
+            </label>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground italic">Each scheduled meeting is 30 minutes in duration.</p>
+
+          {/* Attendee Dropdown & Search Enhancements */}
+          <div className="relative">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Search & Select</span>
+            <input
+              type="text"
+              placeholder="Type name, role or company to filter..."
+              value={attendeeSearchQuery}
+              onChange={(e) => setAttendeeSearchQuery(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary mb-2"
+            />
             
-            <div className="space-y-4 text-sm">
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Meeting Title</span>
-                <input
-                  type="text"
-                  value={scheduleTitle}
-                  onChange={(e) => setScheduleTitle(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-              </label>
+            <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-1.5 bg-secondary/10 space-y-1">
+              {availableUsers
+                .filter(u => {
+                  const q = attendeeSearchQuery.toLowerCase();
+                  return u.full_name.toLowerCase().includes(q) || 
+                         u.email.toLowerCase().includes(q) || 
+                         (u.role && u.role.toLowerCase().includes(q)) ||
+                         (u.organization_name && u.organization_name.toLowerCase().includes(q));
+                })
+                .map(u => {
+                  const emails = scheduleAttendees.split(",").map(e => e.trim());
+                  const isSelected = emails.includes(u.email);
+                  
+                  const toggleSelect = () => {
+                    let newEmails = [...emails];
+                    if (isSelected) {
+                      newEmails = newEmails.filter(e => e !== u.email);
+                    } else {
+                      newEmails.push(u.email);
+                    }
+                    setScheduleAttendees(newEmails.filter(Boolean).join(", "));
+                  };
 
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Agenda / Purpose</span>
-                <textarea
-                  rows={2}
-                  value={scheduleAgenda}
-                  onChange={(e) => setScheduleAgenda(e.target.value)}
-                  className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
-                />
-              </label>
-
-              <div className="grid gap-3 grid-cols-3">
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Date</span>
-                  <input
-                    type="date"
-                    value={scheduleDate}
-                    onChange={(e) => setScheduleDate(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Start Time</span>
-                  <input
-                    type="text"
-                    placeholder="e.g. 10:00 AM"
-                    value={scheduleStartTime}
-                    onChange={(e) => setScheduleStartTime(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
-                  />
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">End Time</span>
-                  <input
-                    type="text"
-                    placeholder="e.g. 11:30 AM"
-                    value={scheduleEndTime}
-                    onChange={(e) => setScheduleEndTime(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-2 py-2 text-xs outline-none focus:border-primary"
-                  />
-                </label>
-              </div>
-
-              {/* Task 10: Attendee Dropdown & Search Enhancements */}
-              <div className="relative">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Search & Select</span>
-                <input
-                  type="text"
-                  placeholder="Type name, role or company to filter..."
-                  value={attendeeSearchQuery}
-                  onChange={(e) => setAttendeeSearchQuery(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary mb-2"
-                />
-                
-                <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-1.5 bg-secondary/10 space-y-1">
-                  {availableUsers
-                    .filter(u => {
-                      const q = attendeeSearchQuery.toLowerCase();
-                      return u.full_name.toLowerCase().includes(q) || 
-                             u.email.toLowerCase().includes(q) || 
-                             (u.role && u.role.toLowerCase().includes(q)) ||
-                             (u.organization_name && u.organization_name.toLowerCase().includes(q));
-                    })
-                    .map(u => {
-                      const emails = scheduleAttendees.split(",").map(e => e.trim());
-                      const isSelected = emails.includes(u.email);
-                      
-                      const toggleSelect = () => {
-                        let newEmails = [...emails];
-                        if (isSelected) {
-                          newEmails = newEmails.filter(e => e !== u.email);
-                        } else {
-                          newEmails.push(u.email);
-                        }
-                        setScheduleAttendees(newEmails.filter(Boolean).join(", "));
-                      };
-
-                      return (
-                        <div 
-                          key={u.id}
-                          onClick={toggleSelect}
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer text-xs transition-colors ${
-                            isSelected 
-                              ? "bg-primary/20 hover:bg-primary/30 border border-primary/20" 
-                              : "hover:bg-secondary/40 border border-transparent"
-                          }`}
-                        >
-                          <div className="text-left">
-                            <div className="font-semibold text-foreground capitalize">{u.full_name} ({u.role || "user"})</div>
-                            <div className="text-[10px] text-muted-foreground">{u.organization_name || "EduStream"} · {u.email}</div>
-                          </div>
-                          <div className="font-bold text-primary text-xs">
-                            {isSelected ? "✓ Selected" : "+ Add"}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  {availableUsers.length === 0 && (
-                    <div className="text-center text-xs text-muted-foreground py-2">No users available for invitation.</div>
-                  )}
-                </div>
-              </div>
-
-              <label className="block">
-                <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Emails (comma-separated)</span>
-                <input
-                  type="text"
-                  value={scheduleAttendees}
-                  onChange={(e) => setScheduleAttendees(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
-                />
-              </label>
+                  return (
+                    <div 
+                      key={u.id}
+                      onClick={toggleSelect}
+                      className={`flex items-center justify-between px-2.5 py-1.5 rounded cursor-pointer text-xs transition-colors ${
+                        isSelected 
+                          ? "bg-primary/20 hover:bg-primary/30 border border-primary/20" 
+                          : "hover:bg-secondary/40 border border-transparent"
+                      }`}
+                    >
+                      <div className="text-left">
+                        <div className="font-semibold text-foreground capitalize">{u.full_name} ({u.role || "user"})</div>
+                        <div className="text-[10px] text-muted-foreground">{u.organization_name || "Masterclass"} · {u.email}</div>
+                      </div>
+                      <div className="font-bold text-primary text-xs">
+                        {isSelected ? "✓ Selected" : "+ Add"}
+                      </div>
+                    </div>
+                  );
+                })}
+              {availableUsers.length === 0 && (
+                <div className="text-center text-xs text-muted-foreground py-2">No users available for invitation.</div>
+              )}
             </div>
+          </div>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setShowScheduleModal(false)}>Cancel</Button>
-              <Button onClick={handleCreateMeeting} disabled={scheduling}>
-                {scheduling ? "Creating Meet..." : "Create Meeting"}
-              </Button>
-            </div>
-          </Card>
+          <label className="block">
+            <span className="mb-1.5 block text-xs font-semibold text-muted-foreground">Attendee Emails (comma-separated)</span>
+            <input
+              type="text"
+              value={scheduleAttendees}
+              onChange={(e) => setScheduleAttendees(e.target.value)}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs outline-none focus:border-primary"
+            />
+          </label>
         </div>
-      )}
-    </>
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

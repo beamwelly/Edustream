@@ -13,7 +13,7 @@ import {
   Check
 } from "lucide-react";
 import { Button } from "@/components/common";
-import { APP_NAME, APP_TAGLINE } from "@/constants/branding";
+import { APP_NAME, APP_TAGLINE, APP_LOGO } from "@/constants/branding";
 
 export function LandingPage() {
   const scrollToSection = (id: string) => {
@@ -28,17 +28,24 @@ export function LandingPage() {
       
       {/* Premium Light Header */}
       <header className="sticky top-0 z-50 w-full border-b border-[#E5E7EB] bg-white/90 backdrop-blur-md shadow-sm">
-        <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <img src="/logo.png" alt="EduStream Logo" className="h-10 w-auto object-contain" />
-            <div className="text-left">
-              <h1 className="text-xl font-bold tracking-tight text-[#1F2937]">{APP_NAME}</h1>
-              <p className="text-[10px] text-muted-foreground tracking-wider uppercase font-semibold">{APP_TAGLINE}</p>
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12 py-4 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
+          <div 
+            className="flex flex-col md:flex-row items-center gap-3 cursor-pointer text-center md:text-left" 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <img 
+              src={APP_LOGO} 
+              alt="Masterclass Logo" 
+              className="w-24 sm:w-28 md:w-32 lg:w-40 h-auto object-contain mx-auto md:mx-0" 
+            />
+            <div className="text-center md:text-left">
+              <h1 className="text-lg md:text-xl font-bold tracking-tight text-[#1F2937]">{APP_NAME}</h1>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground tracking-wider uppercase font-semibold">{APP_TAGLINE}</p>
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-[#4B5563]">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-8 text-sm font-semibold text-[#4B5563]">
             <button onClick={() => scrollToSection("features")} className="hover:text-[#E53935] transition-colors">Features</button>
             <button onClick={() => scrollToSection("benefits")} className="hover:text-[#E53935] transition-colors">Benefits</button>
             <button onClick={() => scrollToSection("testimonials")} className="hover:text-[#E53935] transition-colors">Testimonials</button>
@@ -46,16 +53,16 @@ export function LandingPage() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
             <Link 
               to="/login"
-              className="text-sm font-bold text-[#4B5563] hover:text-[#E53935] transition-colors px-4 py-2"
+              className="w-full md:w-auto text-center text-sm font-bold text-[#4B5563] hover:text-[#E53935] transition-colors px-4 py-2.5 border border-gray-200 md:border-none rounded-xl md:rounded-none"
             >
               Login
             </Link>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center rounded-xl bg-[#E53935] hover:bg-[#FF5A5F] px-5 py-2.5 text-sm font-bold text-white shadow-md transition-colors"
+              className="w-full md:w-auto text-center inline-flex items-center justify-center rounded-xl bg-[#E53935] hover:bg-[#FF5A5F] px-5 py-2.5 text-sm font-bold text-white shadow-md transition-colors"
             >
               Get Started
             </Link>
@@ -64,8 +71,8 @@ export function LandingPage() {
       </header>
 
       {/* Enterprise Hero Section */}
-      <section className="relative z-10 w-full bg-gradient-to-b from-white to-[#FFF7F7] py-20 lg:py-28 border-b border-[#E5E7EB]">
-        <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12">
+      <section className="relative z-10 w-full bg-gradient-to-b from-white to-[#FFF7F7] py-16 md:py-20 lg:py-28 border-b border-[#E5E7EB]">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 lg:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
             {/* Left Hero Content */}
             <div className="lg:col-span-7 flex flex-col space-y-6 text-left">
@@ -79,21 +86,21 @@ export function LandingPage() {
                 <span className="text-[#E53935]">Business Performance</span>
               </h2>
               
-              <p className="text-lg sm:text-xl text-[#4B5563] leading-relaxed max-w-2xl font-normal">
+              <p className="text-base sm:text-lg lg:text-xl text-[#4B5563] leading-relaxed max-w-2xl font-normal">
                 Empower employees with curated learning, masterclasses, knowledge sharing, and collaborative growth. Simple to configure, built for fast delivery.
               </p>
 
-              <div className="flex flex-wrap gap-4 pt-4">
+              <div className="flex flex-col sm:flex-row gap-4 pt-4 w-full sm:w-auto">
                 <Link
                   to="/login"
-                  className="inline-flex items-center justify-center rounded-xl bg-[#E53935] hover:bg-[#FF5A5F] px-8 py-4 text-base font-bold text-white shadow-lg shadow-[#E53935]/20 transition-all hover:-translate-y-0.5"
+                  className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-[#E53935] hover:bg-[#FF5A5F] px-8 py-4 text-base font-bold text-white shadow-lg shadow-[#E53935]/20 transition-all hover:-translate-y-0.5"
                 >
                   Login to Workspace
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
                 <button
                   onClick={() => scrollToSection("features")}
-                  className="inline-flex items-center justify-center gap-2 border border-[#E5E7EB] bg-white hover:bg-[#F5F5F5] rounded-xl px-8 py-4 text-base font-bold text-[#4B5563] transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 border border-[#E5E7EB] bg-white hover:bg-[#F5F5F5] rounded-xl px-8 py-4 text-base font-bold text-[#4B5563] transition-all"
                 >
                   Explore Features
                 </button>
@@ -116,10 +123,10 @@ export function LandingPage() {
                   <div className="bg-[#FFF7F7] border border-[#E53935]/10 rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-lg bg-[#E53935] text-white flex items-center justify-center font-bold">
-                        E
+                        M
                       </div>
                       <div>
-                        <h4 className="text-sm font-bold text-[#1F2937]">EduStream Live</h4>
+                        <h4 className="text-sm font-bold text-[#1F2937]">Masterclass Live</h4>
                         <p className="text-xs text-[#4B5563]">Masterclasses & Meetings</p>
                       </div>
                     </div>
@@ -193,7 +200,7 @@ export function LandingPage() {
               Engineered for Enterprise Training
             </h3>
             <p className="text-[#4B5563] text-base leading-relaxed">
-              EduStream provides administrative coordinators and learners with an intuitive system to host materials, schedule classes, track milestones, and secure documentation.
+              Masterclass provides administrative coordinators and learners with an intuitive system to host materials, schedule classes, track milestones, and secure documentation.
             </p>
           </div>
 
@@ -275,7 +282,7 @@ export function LandingPage() {
               Empowering Every Member of Your Organization
             </h3>
             <p className="text-[#4B5563] text-base">
-              EduStream streamlines delivery systems for operational coordinators while presenting an interactive learning portal for employees.
+              Masterclass streamlines delivery systems for operational coordinators while presenting an interactive learning portal for employees.
             </p>
           </div>
 
@@ -346,7 +353,7 @@ export function LandingPage() {
           <div className="grid gap-8 md:grid-cols-2 max-w-5xl mx-auto">
             <div className="border border-[#E5E7EB] bg-[#FFF7F7]/20 rounded-2xl p-8 space-y-4 flex flex-col justify-between shadow-sm">
               <p className="text-[#4B5563] text-sm italic leading-relaxed">
-                "EduStream simplified how our regional branches exchange documentation and sync training schedules. Being able to review complex spreadsheets and PPTX slides directly on the web has cut down resource bottlenecks by 75%."
+                "Masterclass simplified how our regional branches exchange documentation and sync training schedules. Being able to review complex spreadsheets and PPTX slides directly on the web has cut down resource bottlenecks by 75%."
               </p>
               <div>
                 <h5 className="text-sm font-bold text-[#1F2937]">Rebecca Thompson</h5>
@@ -356,7 +363,7 @@ export function LandingPage() {
 
             <div className="border border-[#E5E7EB] bg-[#FFF7F7]/20 rounded-2xl p-8 space-y-4 flex flex-col justify-between shadow-sm">
               <p className="text-[#4B5563] text-sm italic leading-relaxed">
-                "Our team needed a central repository for training guidelines. With EduStream's single credentials flow and automated email onboarding, new user registration is handled seamlessly without security overhead."
+                "Our team needed a central repository for training guidelines. With Masterclass's single credentials flow and automated email onboarding, new user registration is handled seamlessly without security overhead."
               </p>
               <div>
                 <h5 className="text-sm font-bold text-[#1F2937]">David Kim</h5>
@@ -376,16 +383,16 @@ export function LandingPage() {
           <p className="text-[#4B5563] text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
             Register your company workspace today. Upload materials, schedule collaborations, and streamline corporate skill training instantly.
           </p>
-          <div className="flex justify-center gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4 w-full sm:w-auto max-w-xs sm:max-w-none mx-auto">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center rounded-xl bg-[#E53935] hover:bg-[#FF5A5F] px-8 py-3.5 text-base font-bold text-white shadow-md transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-[#E53935] hover:bg-[#FF5A5F] px-8 py-3.5 text-base font-bold text-white shadow-md transition-colors"
             >
               Get Started
             </Link>
             <Link
               to="/login"
-              className="inline-flex items-center justify-center rounded-xl border border-[#E5E7EB] bg-white hover:bg-[#F5F5F5] px-8 py-3.5 text-base font-bold text-[#4B5563] transition-colors"
+              className="w-full sm:w-auto inline-flex items-center justify-center rounded-xl border border-[#E5E7EB] bg-white hover:bg-[#F5F5F5] px-8 py-3.5 text-base font-bold text-[#4B5563] transition-colors"
             >
               Request Demo
             </Link>
@@ -398,7 +405,7 @@ export function LandingPage() {
         <div className="max-w-[1400px] mx-auto px-6 sm:px-8 lg:px-12 grid grid-cols-2 md:grid-cols-4 gap-8 mb-12 text-left">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="EduStream Logo" className="h-8 w-auto object-contain" />
+              <img src={APP_LOGO} alt="Masterclass Logo" className="h-8 w-auto object-contain" />
               <span className="font-extrabold text-[#1F2937] text-base">{APP_NAME}</span>
             </div>
             <p className="text-[#4B5563] leading-relaxed">
@@ -424,7 +431,7 @@ export function LandingPage() {
             <h5 className="font-bold text-[#1F2937] mb-4 uppercase tracking-wider text-[10px]">Support</h5>
             <ul className="space-y-2">
               <li><a href="#" className="hover:text-[#E53935] transition-colors">Support Desk</a></li>
-              <li><span className="text-[#4B5563]">Email: contact@edustream.com</span></li>
+              <li><span className="text-[#4B5563]">Email: contact@masterclass.com</span></li>
             </ul>
           </div>
         </div>

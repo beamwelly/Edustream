@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, func
 
 from app.database.session import get_db
 from app.models.user import User
@@ -59,6 +59,19 @@ async def get_current_active_user(
         )
     return user
 
+async def check_calculator_policy(db: AsyncSession, user: User, setting_key: str):
+    if user.role == "employee":
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        policy_res = await db.execute(policy_stmt)
+        policy = policy_res.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        if not settings.get("wow_toolkit", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access Denied. Global Employee Policy restricts access to the WOW Toolkit."
+            )
+
 async def get_current_admin(
     current_user: User = Depends(get_current_active_user)
 ) -> User:
@@ -82,6 +95,7 @@ class ToolResponse(BaseModel):
     storage_filename: Optional[str] = None
     icon_name: str
     is_active: bool
+    visibility: str
     created_at: datetime
     updated_at: datetime
 
@@ -97,6 +111,7 @@ class ToolCreate(BaseModel):
     storage_filename: Optional[str] = None
     icon_name: str
     is_active: bool = True
+    visibility: Optional[str] = "owner_only"
 
 class ToolUpdate(BaseModel):
     name: Optional[str] = None
@@ -107,6 +122,7 @@ class ToolUpdate(BaseModel):
     storage_filename: Optional[str] = None
     icon_name: Optional[str] = None
     is_active: Optional[bool] = None
+    visibility: Optional[str] = None
 
 
 # --- Tool Registry API Endpoints ---
@@ -152,7 +168,39 @@ async def list_tools(
     # Filter visible tools for standard users
     if current_user.role == "admin":
         return tools
-    return [t for t in tools if t.is_active]
+
+    policy_settings = {}
+    if current_user.role == "employee":
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        policy_res = await db.execute(policy_stmt)
+        policy = policy_res.scalar_one_or_none()
+        policy_settings = policy.settings_json if policy else {}
+
+    filtered = []
+    for t in tools:
+        if not t.is_active:
+            continue
+        if current_user.role == "employee":
+            if getattr(t, "visibility", "owner_only") == "owner_only":
+                continue
+            tool_name = t.name.lower() if t.name else ""
+            if t.type == "downloadable":
+                if not policy_settings.get("resource_downloads", False):
+                    continue
+            else: # interactive
+                if ("wow" in tool_name or "retirement" in tool_name) and not policy_settings.get("wow_toolkit", False):
+                    continue
+                elif "needs discovery" in tool_name and not policy_settings.get("needs_discovery", False):
+                    continue
+                elif "discovery" in tool_name and "needs discovery" not in tool_name and not policy_settings.get("financial_discovery", False):
+                    continue
+                else: # future tools
+                    if not ("wow" in tool_name or "retirement" in tool_name or "needs discovery" in tool_name or "discovery" in tool_name):
+                        if not policy_settings.get("future_tools", False):
+                            continue
+        filtered.append(t)
+    return filtered
 
 @router.post("/tools")
 async def create_tool(
@@ -347,10 +395,27 @@ async def download_tool_file(
     # Log [TOOL_DOWNLOAD]
     print(f"[TOOL_DOWNLOAD] Download proxy triggered for tool ID: {tool_id}")
 
+    user = None
     if token:
         payload = decode_access_token(token)
         if not payload:
             raise HTTPException(status_code=401, detail="Session expired or invalid token.")
+        user_id = payload.get("user_id")
+        if user_id:
+            stmt_user = select(User).where(User.id == int(user_id))
+            res_user = await db.execute(stmt_user)
+            user = res_user.scalar_one_or_none()
+            if user:
+                if not user.is_active:
+                    raise HTTPException(status_code=403, detail="User account is deactivated.")
+                if user.role == "employee":
+                    from app.models.employee_access_policy import EmployeeAccessPolicy
+                    policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+                    policy_res = await db.execute(policy_stmt)
+                    policy = policy_res.scalar_one_or_none()
+                    settings = policy.settings_json if policy else {}
+                    if not settings.get("resource_downloads", False):
+                        raise HTTPException(status_code=403, detail="Access Denied. Global Employee Policy restricts access to Resource Downloads.")
 
     try:
         stmt = select(ToolRegistry).where(ToolRegistry.id == tool_id)
@@ -359,6 +424,9 @@ async def download_tool_file(
         
         if not tool or tool.type != "downloadable":
             raise HTTPException(status_code=404, detail="Tool not found or is not downloadable.")
+            
+        if user and user.role == "employee" and getattr(tool, "visibility", "owner_only") == "owner_only":
+            raise HTTPException(status_code=403, detail="Access denied. This tool is restricted to owners only.")
             
         if not tool.file_path:
             raise HTTPException(status_code=404, detail="Requested tool does not contain a file path.")
@@ -438,6 +506,17 @@ async def preview_tool_file(
         
         if not tool or tool.type != "downloadable":
             raise HTTPException(status_code=404, detail="Tool not found or is not downloadable.")
+
+        if current_user.role == "employee":
+            from app.models.employee_access_policy import EmployeeAccessPolicy
+            policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+            policy_res = await db.execute(policy_stmt)
+            policy = policy_res.scalar_one_or_none()
+            settings = policy.settings_json if policy else {}
+            if not settings.get("resource_downloads", False):
+                raise HTTPException(status_code=403, detail="Access Denied. Global Employee Policy restricts access to Resource Downloads.")
+            if getattr(tool, "visibility", "owner_only") == "owner_only":
+                raise HTTPException(status_code=403, detail="Access denied. This tool is restricted to owners only.")
             
         if not tool.file_path:
             raise HTTPException(status_code=404, detail="Tool has no associated spreadsheet file.")
@@ -568,7 +647,12 @@ class RetirementResult(BaseModel):
     sensitivity_table: List[SensitivityPoint]
 
 @router.post("/retirement/calculate", response_model=RetirementResult)
-def calculate_retirement(inputs: RetirementInput):
+async def calculate_retirement(
+    inputs: RetirementInput,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    await check_calculator_policy(db, current_user, "retirement_predictor")
     if inputs.current_age >= inputs.expected_retirement_age:
         raise HTTPException(status_code=400, detail="Current age must be less than expected retirement age.")
     if inputs.expected_retirement_age >= inputs.life_expectancy:
@@ -620,7 +704,12 @@ class DelayResult(BaseModel):
     delay_table: List[DelayPoint]
 
 @router.post("/cost-delay/calculate", response_model=DelayResult)
-def calculate_delay(inputs: DelayInput):
+async def calculate_delay(
+    inputs: DelayInput,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    await check_calculator_policy(db, current_user, "cost_of_delay")
     if inputs.monthly_sip_amount <= 0:
         raise HTTPException(status_code=400, detail="Monthly SIP Amount must be greater than zero.")
     if inputs.expected_annual_return < 0 or inputs.expected_annual_return > 1:
@@ -689,11 +778,21 @@ class SipLoanResult(BaseModel):
     combined_wealth: float
     effective_emi: float
     recommendation_msg: str
+    future_sip_value: float
+    opportunity_cost_downpayment: float
+    total_payments_property: float
+    future_property_value: float
+    net_financial_benefit: float
     sip_series: List[SipSeriesPoint]
     loan_series: List[LoanSeriesPoint]
 
 @router.post("/sip-home-loan/calculate", response_model=SipLoanResult)
-def calculate_sip_loan(inputs: SipLoanInput):
+async def calculate_sip_loan(
+    inputs: SipLoanInput,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    await check_calculator_policy(db, current_user, "sip_home_loan")
     if inputs.monthly_sip < 0 or inputs.loan_amount < 0 or inputs.down_payment < 0:
         raise HTTPException(status_code=400, detail="Financial amounts cannot be negative.")
     if inputs.sip_duration <= 0 or inputs.loan_tenure <= 0:
@@ -759,19 +858,27 @@ class FreedomDateResult(BaseModel):
     timeline_series: List[TimelinePoint]
 
 @router.post("/freedom-date/calculate", response_model=FreedomDateResult)
-def calculate_freedom(inputs: FreedomDateInput):
-    results = calculate_freedom_date(
-        current_age=inputs.current_age,
-        birth_year=inputs.birth_year,
-        current_monthly_expenses=inputs.current_monthly_expenses,
-        expected_inflation=inputs.expected_inflation,
-        annual_investment_return=inputs.annual_investment_return,
-        withdrawal_rate=inputs.withdrawal_rate,
-        current_net_worth=inputs.current_net_worth,
-        monthly_savings=inputs.monthly_savings,
-        stepup_rate=inputs.stepup_rate
-    )
-    return FreedomDateResult(**results)
+async def calculate_freedom(
+    inputs: FreedomDateInput,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    await check_calculator_policy(db, current_user, "financial_freedom")
+    try:
+        results = calculate_freedom_date(
+            current_age=inputs.current_age,
+            birth_year=inputs.birth_year,
+            current_monthly_expenses=inputs.current_monthly_expenses,
+            expected_inflation=inputs.expected_inflation,
+            annual_investment_return=inputs.annual_investment_return,
+            withdrawal_rate=inputs.withdrawal_rate,
+            current_net_worth=inputs.current_net_worth,
+            monthly_savings=inputs.monthly_savings,
+            stepup_rate=inputs.stepup_rate
+        )
+        return FreedomDateResult(**results)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # --- Calculator 5: Goal Visualization Dashboard ---
@@ -801,7 +908,12 @@ class GoalDashboardResult(BaseModel):
     overall_percent_achieved: float
 
 @router.post("/goal-dashboard/calculate", response_model=GoalDashboardResult)
-def calculate_goals(inputs: List[GoalItem]):
+async def calculate_goals(
+    inputs: List[GoalItem],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     goals_list = [g.model_dump() for g in inputs]
     results = calculate_goal_dashboard(goals_list)
     return GoalDashboardResult(
@@ -937,6 +1049,7 @@ async def get_goals(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     stmt = select(FinancialGoal).where(FinancialGoal.user_id == current_user.id)
     res = await db.execute(stmt)
     db_goals = res.scalars().all()
@@ -962,6 +1075,7 @@ async def create_goal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     goal = FinancialGoal(
         user_id=current_user.id,
         name=payload.name,
@@ -982,6 +1096,7 @@ async def update_goal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     stmt = select(FinancialGoal).where(FinancialGoal.id == id, FinancialGoal.user_id == current_user.id)
     res = await db.execute(stmt)
     goal = res.scalar_one_or_none()
@@ -1002,6 +1117,7 @@ async def delete_goal(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "goal_visualization")
     stmt = select(FinancialGoal).where(FinancialGoal.id == id, FinancialGoal.user_id == current_user.id)
     res = await db.execute(stmt)
     goal = res.scalar_one_or_none()
@@ -1020,6 +1136,7 @@ async def get_vault(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     try:
         target_user_id = current_user.id
         if user_id and current_user.role == "admin":
@@ -1057,6 +1174,7 @@ async def create_vault_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     model_class = get_vault_model(type)
     
     item_data = None
@@ -1096,6 +1214,7 @@ async def update_vault_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     model_class = get_vault_model(type)
     stmt = select(model_class).where(model_class.id == id)
     if current_user.role != "admin":
@@ -1142,6 +1261,7 @@ async def delete_vault_item(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
+    await check_calculator_policy(db, current_user, "family_vault")
     model_class = get_vault_model(type)
     stmt = select(model_class).where(model_class.id == id)
     if current_user.role != "admin":
@@ -1212,4 +1332,199 @@ async def save_wow_inputs(
     await db.commit()
     await db.refresh(db_inputs)
     return {"status": "success"}
+
+# --- Generated Reports API Endpoints ---
+from app.models.generated_report import GeneratedReport
+from sqlalchemy import or_, and_, desc, asc
+
+@router.post("/reports/upload")
+async def upload_generated_report(
+    file: UploadFile = File(...),
+    tool_id: Optional[int] = Form(None),
+    calculator_name: str = Form(...),
+    client_name: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        # Read the file content
+        file_bytes = await file.read()
+        
+        # 1. Format report name based on rules
+        calc_clean = "".join(x for x in calculator_name if x.isalnum())
+        now = datetime.now()
+        date_str = now.strftime("%Y%m%d")
+        time_str = now.strftime("%H%M%S")
+        
+        if client_name and client_name.strip():
+            filename = f"{client_name.strip()}_{calc_clean}_{date_str}.pdf"
+        else:
+            filename = f"{calc_clean}_{date_str}_{time_str}.pdf"
+            
+        # 2. Upload file to Supabase storage
+        storage_path = f"generated_reports/{current_user.id}/{filename}"
+        
+        # We reuse the content type of PDF
+        content_type = "application/pdf"
+        
+        # Upload
+        success, public_url, error_msg = await upload_file_to_supabase(
+            file_bytes=file_bytes,
+            file_path=storage_path,
+            content_type=content_type
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to upload report PDF to storage: {error_msg}"
+            )
+            
+        # 3. Save database metadata record
+        report_record = GeneratedReport(
+            user_id=current_user.id,
+            tool_id=tool_id,
+            calculator_name=calculator_name,
+            report_name=filename.replace(".pdf", ""),
+            pdf_url=public_url,
+            storage_path=storage_path
+        )
+        db.add(report_record)
+        await db.commit()
+        await db.refresh(report_record)
+        
+        return {
+            "success": True,
+            "id": report_record.id,
+            "report_name": report_record.report_name,
+            "pdf_url": report_record.pdf_url,
+            "storage_path": report_record.storage_path
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Report upload error: {str(e)}"
+        )
+
+@router.get("/reports")
+async def list_generated_reports(
+    search: Optional[str] = None,
+    calculator_name: Optional[str] = None,
+    date_start: Optional[str] = None, # YYYY-MM-DD
+    date_end: Optional[str] = None, # YYYY-MM-DD
+    sort_order: Optional[str] = "newest_first", # "newest_first", "oldest_first"
+    tool_id: Optional[int] = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    # Enforce access rules
+    stmt = select(GeneratedReport)
+    
+    # Non-admins can only see their own reports
+    if current_user.role != "admin":
+        stmt = stmt.where(GeneratedReport.user_id == current_user.id)
+        
+    # Apply filters
+    if tool_id is not None:
+        stmt = stmt.where(GeneratedReport.tool_id == tool_id)
+        
+    if calculator_name and calculator_name != "All":
+        stmt = stmt.where(GeneratedReport.calculator_name == calculator_name)
+        
+    if search:
+        search_clean = f"%{search.strip().lower()}%"
+        stmt = stmt.where(func.lower(GeneratedReport.report_name).like(search_clean))
+        
+    if date_start:
+        try:
+            from sqlalchemy.sql import func as sql_func
+            start_dt = datetime.strptime(date_start, "%Y-%m-%d")
+            stmt = stmt.where(GeneratedReport.created_at >= start_dt)
+        except ValueError:
+            pass
+            
+    if date_end:
+        try:
+            # Include the full end day by adding a day
+            end_dt = datetime.strptime(date_end, "%Y-%m-%d") + timedelta(days=1)
+            stmt = stmt.where(GeneratedReport.created_at < end_dt)
+        except ValueError:
+            pass
+            
+    # Apply Sort Order
+    if sort_order == "oldest_first":
+        stmt = stmt.order_by(asc(GeneratedReport.created_at))
+    else:
+        stmt = stmt.order_by(desc(GeneratedReport.created_at))
+        
+    res = await db.execute(stmt)
+    reports = res.scalars().all()
+    
+    # Process reports to generate dynamic signed URLs for preview/download
+    from app.utils.supabase_storage import create_signed_url
+    
+    processed_reports = []
+    for r in reports:
+        signed_url, err = await create_signed_url(r.storage_path)
+        final_pdf_url = signed_url if signed_url else r.pdf_url
+        
+        processed_reports.append({
+            "id": r.id,
+            "user_id": r.user_id,
+            "tool_id": r.tool_id,
+            "calculator_name": r.calculator_name,
+            "report_name": r.report_name,
+            "pdf_url": final_pdf_url,
+            "storage_path": r.storage_path,
+            "created_at": r.created_at.isoformat() if r.created_at else None
+        })
+        
+    return processed_reports
+
+@router.delete("/reports/{report_id}")
+async def delete_generated_report(
+    report_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    try:
+        stmt = select(GeneratedReport).where(GeneratedReport.id == report_id)
+        res = await db.execute(stmt)
+        report = res.scalar_one_or_none()
+        
+        if not report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Report not found."
+            )
+            
+        # Non-admins can only delete their own reports
+        if current_user.role != "admin" and report.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. You do not have permission to delete this report."
+            )
+            
+        # 1. Delete from Supabase Storage
+        from app.utils.supabase_storage import delete_file_from_supabase
+        success, err_msg = await delete_file_from_supabase(report.storage_path)
+        if not success:
+            # We log it but proceed to delete DB record so they don't get stuck
+            print(f"[ERROR STORAGE DELETE] Failed to delete file {report.storage_path}: {err_msg}")
+            
+        # 2. Delete from Database
+        await db.delete(report)
+        await db.commit()
+        
+        return {"success": True, "message": "Report successfully deleted."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete report: {str(e)}"
+        )
+
 

@@ -17,11 +17,13 @@ import {
   Eye,
   Settings,
   AlertTriangle,
-  BookOpen
+  BookOpen,
+  Mail
 } from "lucide-react";
 import { PageHeader, Card, Button, Badge } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
+import { APP_PLACEHOLDER } from "@/constants/branding";
 
 interface Masterclass {
   masterclass_id: number;
@@ -41,9 +43,19 @@ interface Masterclass {
   tags?: string;
   learning_outcomes?: string;
   max_attendees?: number;
+  recording_type?: string;
+  recording_file_path?: string;
+  recording_public_url?: string;
   visibility: string;
+  is_hidden: boolean;
+  email_sent: boolean;
   created_at: string;
 }
+
+import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface Registration {
   user_id: number;
@@ -52,6 +64,7 @@ interface Registration {
 }
 
 export function MasterclassesPage() {
+  const { searchQuery } = useAuth();
   const [masterclasses, setMasterclasses] = useState<Masterclass[]>([]);
   const [loading, setLoading] = useState(true);
   const [formLoading, setFormLoading] = useState(false);
@@ -73,9 +86,25 @@ export function MasterclassesPage() {
   const [sendNotification, setSendNotification] = useState(true);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [recordingType, setRecordingType] = useState("zoom");
+  const [recordingFile, setRecordingFile] = useState<File | null>(null);
+  const [zoomJoinUrl, setZoomJoinUrl] = useState("");
 
   // Modal states
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  
+  const handleWatchRecording = (mc: Masterclass) => {
+    if (mc.recording_type === "zoom") {
+      if (mc.recording_url) {
+        window.open(mc.recording_url, "_blank", "noopener,noreferrer");
+      } else {
+        toast.error("Zoom recording URL not available.");
+      }
+    } else {
+      setActiveVideoUrl(`${API_URL}/api/masterclasses/${mc.masterclass_id}/stream?token=${encodeURIComponent(localStorage.getItem("token") || "")}`);
+    }
+  };
+
   const [registrationsModalMc, setRegistrationsModalMc] = useState<Masterclass | null>(null);
   const [registrationsList, setRegistrationsList] = useState<Registration[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
@@ -153,6 +182,9 @@ export function MasterclassesPage() {
     setSendNotification(false); // Default to false when editing
     setThumbnailFile(null);
     setThumbnailPreview(mc.thumbnail_url || null);
+    setRecordingType(mc.recording_type || "zoom");
+    setRecordingFile(null);
+    setZoomJoinUrl(mc.zoom_join_url || "");
   };
 
   const handleCancelEdit = () => {
@@ -170,6 +202,9 @@ export function MasterclassesPage() {
     setSendNotification(true);
     setThumbnailFile(null);
     setThumbnailPreview(null);
+    setRecordingType("zoom");
+    setRecordingFile(null);
+    setZoomJoinUrl("");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,6 +225,14 @@ export function MasterclassesPage() {
       toast.warning("Please fill in all required fields.");
       return;
     }
+    if (recordingType === "zoom" && !zoomJoinUrl) {
+      toast.warning("Please enter a Zoom Meeting URL.");
+      return;
+    }
+    if (recordingType === "uploaded" && !recordingFile && !(editingMasterclass && editingMasterclass.recording_type === "uploaded")) {
+      toast.warning("Please select a video file for the manual recording.");
+      return;
+    }
 
     setFormLoading(true);
 
@@ -206,6 +249,12 @@ export function MasterclassesPage() {
       formData.append("max_attendees", maxAttendees);
       formData.append("visibility", visibility);
       formData.append("send_notification", String(sendNotification));
+      formData.append("recording_type", recordingType);
+      formData.append("zoom_join_url", zoomJoinUrl);
+      
+      if (recordingFile) {
+        formData.append("recording_file", recordingFile);
+      }
       
       if (thumbnailFile) {
         formData.append("thumbnail", thumbnailFile);
@@ -371,7 +420,7 @@ export function MasterclassesPage() {
   };
 
   const handleToggleHideRecording = async (mc: Masterclass) => {
-    const action = mc.visibility === "hidden" ? "unhide" : "hide";
+    const action = mc.is_hidden ? "unhide" : "hide";
     try {
       const token = localStorage.getItem("token") || "";
       const res = await fetch(`${API_URL}/api/masterclasses/${mc.masterclass_id}/${action}`, {
@@ -387,6 +436,25 @@ export function MasterclassesPage() {
       }
     } catch (e) {
       toast.error("Error updating visibility.");
+    }
+  };
+
+  const handleSendEmail = async (masterclassId: number) => {
+    try {
+      const token = localStorage.getItem("token") || "";
+      const res = await fetch(`${API_URL}/api/masterclasses/${masterclassId}/send-email`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (res.ok) {
+        toast.success("Invitation emails dispatched successfully!");
+        fetchMasterclasses();
+      } else {
+        const err = await res.json();
+        toast.error(err.detail || "Failed to dispatch invitation emails.");
+      }
+    } catch (e) {
+      toast.error("Error sending emails.");
     }
   };
 
@@ -449,13 +517,21 @@ export function MasterclassesPage() {
     }
   };
 
-  const upcomingSessions = masterclasses.filter((m) => m.status === "upcoming");
-  const liveSessions = masterclasses.filter((m) => m.status === "live");
-  const completedSessions = masterclasses.filter((m) => m.status === "completed");
-  const recordedSessions = masterclasses.filter((m) => m.status === "recorded");
+  const filteredMasterclasses = masterclasses.filter(m => 
+    m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m.description && m.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (m.speaker && m.speaker.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (m.category && m.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (m.tags && m.tags.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const upcomingSessions = filteredMasterclasses.filter((m) => m.status === "upcoming");
+  const liveSessions = filteredMasterclasses.filter((m) => m.status === "live");
+  const completedSessions = filteredMasterclasses.filter((m) => m.status === "completed");
+  const recordedSessions = filteredMasterclasses.filter((m) => m.status === "recorded");
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader
         title="Webinar Management"
         subtitle="Schedule live Zoom Business sessions, edit schedules, and view attendee sign-ups."
@@ -596,15 +672,30 @@ export function MasterclassesPage() {
                   <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
                     Visibility
                   </label>
-                  <select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-card border border-border rounded-xl focus:outline-none focus:border-primary text-xs shadow-sm"
-                  >
-                    <option value="public">Public</option>
-                    <option value="private">Private</option>
-                    <option value="draft">Draft</option>
-                  </select>
+                  <div className="flex flex-col gap-2 mt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="mc-visibility"
+                        value="owner_only"
+                        checked={visibility === "owner_only"}
+                        onChange={() => setVisibility("owner_only")}
+                        className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Owners Only</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="mc-visibility"
+                        value="public"
+                        checked={visibility === "public" || visibility === "owner_employee"}
+                        onChange={() => setVisibility("public")}
+                        className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <span>Owners + Employees</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="flex items-center pt-5">
@@ -619,6 +710,74 @@ export function MasterclassesPage() {
                   </label>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
+                  Recording Source
+                </label>
+                <div className="flex gap-4 mt-1 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="mc-recording-type"
+                      value="zoom"
+                      checked={recordingType === "zoom"}
+                      onChange={() => setRecordingType("zoom")}
+                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Zoom Recording</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="mc-recording-type"
+                      value="uploaded"
+                      checked={recordingType === "uploaded"}
+                      onChange={() => setRecordingType("uploaded")}
+                      className="rounded-full border-border text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Upload Recording</span>
+                  </label>
+                </div>
+              </div>
+
+              {recordingType === "uploaded" && (
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
+                    Upload Recording File (MP4) *
+                  </label>
+                  <div className="flex items-center gap-4 mb-2">
+                    <label className="flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-xl border border-dashed border-border bg-secondary/50 hover:bg-secondary/70 text-xs font-bold transition w-full justify-center">
+                      <Upload className="h-4 w-4 text-muted-foreground" />
+                      <span>{recordingFile ? recordingFile.name : "Select Video File"}</span>
+                      <input 
+                        type="file" 
+                        accept="video/mp4,video/*" 
+                        className="hidden" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setRecordingFile(file);
+                        }} 
+                      />
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {recordingType === "zoom" && (
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
+                    Zoom Meeting URL *
+                  </label>
+                  <input
+                    type="url"
+                    value={zoomJoinUrl}
+                    onChange={(e) => setZoomJoinUrl(e.target.value)}
+                    placeholder="https://zoom.us/j/..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-border bg-background focus:ring-2 focus:ring-primary focus:border-transparent text-xs outline-none transition"
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground uppercase mb-1">
@@ -733,18 +892,16 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {upcomingSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          {s.thumbnail_url && (
-                            <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative">
-                              <img src={s.thumbnail_url} alt={s.title} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            </div>
-                          )}
+                          <div className="w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                            <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          </div>
                           
                           <div>
                             <div className="mb-2 flex items-center justify-between">
                               <div className="flex gap-1.5">
                                 <Badge tone="primary">Upcoming</Badge>
-                                <Badge tone="neutral">{s.visibility}</Badge>
+                                <Badge tone="neutral">{s.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}</Badge>
                               </div>
                               <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} Mins
@@ -787,6 +944,17 @@ export function MasterclassesPage() {
                             </span>
                             
                             <div className="flex gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleSendEmail(s.masterclass_id)}
+                                className={`font-bold text-[10px] px-2.5 flex items-center gap-1 ${s.email_sent ? "text-green-600 border-green-600/30 hover:bg-green-50" : "text-primary border-primary/30 hover:bg-primary/5"}`}
+                                title={s.email_sent ? "Resend Invitation Email" : "Send Invitation Email"}
+                              >
+                                <Mail className="h-3 w-3" />
+                                {s.email_sent ? "Invited" : "Send Invite"}
+                              </Button>
+
                               <Button 
                                 size="sm" 
                                 variant="outline" 
@@ -843,18 +1011,16 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {liveSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          {s.thumbnail_url && (
-                            <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative">
-                              <img src={s.thumbnail_url} alt={s.title} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            </div>
-                          )}
+                          <div className="w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                            <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          </div>
                           
                           <div>
                             <div className="mb-2 flex items-center justify-between">
                               <div className="flex gap-1.5">
                                 <Badge tone="warning">Live</Badge>
-                                <Badge tone="neutral">{s.visibility}</Badge>
+                                <Badge tone="neutral">{s.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}</Badge>
                               </div>
                               <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} Mins
@@ -914,18 +1080,16 @@ export function MasterclassesPage() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       {completedSessions.map((s) => (
                         <Card key={s.masterclass_id} className="flex flex-col justify-between hover:border-primary/20 transition-all group relative overflow-hidden">
-                          {s.thumbnail_url && (
-                            <div className="w-full h-32 -mx-6 -mt-6 mb-3 overflow-hidden relative">
-                              <img src={s.thumbnail_url} alt={s.title} className="w-full h-full object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                            </div>
-                          )}
+                          <div className="w-[calc(100%+3rem)] aspect-video -mx-6 -mt-6 mb-3 overflow-hidden relative bg-zinc-950">
+                            <img src={s.thumbnail_url || APP_PLACEHOLDER} alt={s.title} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                          </div>
                           
                           <div>
                             <div className="mb-2 flex items-center justify-between">
                               <div className="flex gap-1.5">
                                 <Badge tone="success">Completed</Badge>
-                                <Badge tone="neutral">{s.visibility}</Badge>
+                                <Badge tone="neutral">{s.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}</Badge>
                               </div>
                               <span className="text-[10px] text-muted-foreground font-bold flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5" /> {s.duration_minutes} Mins
@@ -988,7 +1152,7 @@ export function MasterclassesPage() {
                                   <Button 
                                     variant="outline" 
                                     size="sm" 
-                                    onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${s.masterclass_id}/stream`)}
+                                    onClick={() => handleWatchRecording(s)}
                                     className="flex-1 font-bold rounded-xl text-[10px]"
                                   >
                                     Watch
@@ -1032,11 +1196,7 @@ export function MasterclassesPage() {
                       {recordedSessions.map((r) => (
                         <Card key={r.masterclass_id} className="!p-0 overflow-hidden flex flex-col justify-between hover:border-primary/20 transition-all group relative">
                           <div className="relative flex aspect-video items-center justify-center bg-zinc-950">
-                            {r.thumbnail_url ? (
-                              <img src={r.thumbnail_url} alt={r.title} className="w-full h-full object-cover" />
-                            ) : (
-                              <Video className="h-8 w-8 text-zinc-700" />
-                            )}
+                            <img src={r.thumbnail_url || APP_PLACEHOLDER} alt={r.title} className="w-full h-full object-cover" />
                             
                             {r.visibility === "hidden" && (
                               <div className="absolute top-3 left-3 bg-red-600/90 text-white font-bold text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-full z-10 animate-pulse">
@@ -1045,7 +1205,7 @@ export function MasterclassesPage() {
                             )}
                             
                             <button 
-                              onClick={() => setActiveVideoUrl(`${API_URL}/api/masterclasses/${r.masterclass_id}/stream`)}
+                              onClick={() => handleWatchRecording(r)}
                               className="absolute inset-0 flex items-center justify-center bg-black/45"
                             >
                               <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg transform scale-95 hover:scale-105 transition duration-200">
@@ -1057,9 +1217,18 @@ export function MasterclassesPage() {
                           <div className="p-4 flex-grow flex flex-col justify-between">
                             <div>
                               <div className="flex justify-between items-center mb-1">
-                                <div className="flex gap-1">
+                                <div className="flex flex-wrap gap-1">
                                   <Badge tone="neutral">{r.category || "General"}</Badge>
                                   {r.visibility === "hidden" && <Badge tone="warning">Hidden</Badge>}
+                                  {r.recording_type === "zoom" ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 uppercase tracking-wider">
+                                      Zoom Cloud Recording
+                                    </span>
+                                  ) : r.recording_type === "uploaded" ? (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/30 dark:text-purple-300 uppercase tracking-wider">
+                                      Uploaded Recording
+                                    </span>
+                                  ) : null}
                                 </div>
                                 <span className="text-[10px] text-muted-foreground font-bold">{r.duration_minutes} Mins</span>
                               </div>
@@ -1085,7 +1254,7 @@ export function MasterclassesPage() {
                                   onClick={() => handleToggleHideRecording(r)}
                                   className="flex-1 font-bold rounded-xl text-[10px]"
                                 >
-                                  {r.visibility === "hidden" ? "Unhide" : "Hide"}
+                                  {r.is_hidden ? "Unhide" : "Hide"}
                                 </Button>
                               </div>
                               
@@ -1120,97 +1289,95 @@ export function MasterclassesPage() {
         </div>
       </div>
 
-      {/* HTML5 Video Streaming Modal */}
-      {activeVideoUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="relative w-full max-w-4xl bg-zinc-950 rounded-3xl overflow-hidden shadow-2xl border border-zinc-800 animate-in fade-in zoom-in-95 duration-200">
-            <div className="absolute top-4 right-4 z-10">
-              <button
-                onClick={() => setActiveVideoUrl(null)}
-                className="p-2 rounded-full bg-black/60 text-white hover:bg-black/85 hover:scale-105 transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="aspect-video w-full bg-black">
-              <video
-                src={activeVideoUrl}
-                controls
-                autoPlay
-                className="w-full h-full object-contain"
-              >
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          </div>
+      {/* Reusable Video Streaming Modal */}
+      <ResponsiveModal
+        isOpen={!!activeVideoUrl}
+        onClose={() => setActiveVideoUrl(null)}
+        title="Webinar Recording"
+        size="lg"
+      >
+        <div className="aspect-video w-full bg-black rounded-lg overflow-hidden">
+          <video
+            src={activeVideoUrl || ""}
+            controls
+            controlsList="nodownload"
+            autoPlay
+            className="w-full h-full object-contain"
+          >
+            Your browser does not support the video tag.
+          </video>
         </div>
-      )}
+      </ResponsiveModal>
 
-      {/* Registrations List Modal */}
-      {registrationsModalMc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg bg-card rounded-3xl overflow-hidden shadow-2xl border border-border p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center border-b border-border pb-3 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-foreground">Webinar Registrations</h3>
-                <p className="text-xs text-muted-foreground line-clamp-1">{registrationsModalMc.title}</p>
-              </div>
-              <button
-                onClick={() => setRegistrationsModalMc(null)}
-                className="p-1.5 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground transition-all"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {regsLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : registrationsList.length === 0 ? (
-              <div className="text-center py-12">
-                <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">No sign-ups found for this session yet.</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                {registrationsList.map((user) => (
-                  <div key={user.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50 border border-border/40">
-                    <div>
-                      <h4 className="text-xs font-bold text-foreground">{user.full_name}</h4>
-                      <p className="text-[10px] text-muted-foreground">{user.email}</p>
-                    </div>
-                    <Badge tone="primary">Participant</Badge>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 border-t border-border pt-4 flex justify-end">
-              <Button onClick={() => setRegistrationsModalMc(null)} className="bg-primary text-white font-bold text-xs rounded-xl px-5">
-                Close Dialog
-              </Button>
-            </div>
+      {/* Reusable Registrations List Modal */}
+      <ResponsiveModal
+        isOpen={!!registrationsModalMc}
+        onClose={() => setRegistrationsModalMc(null)}
+        title="Webinar Registrations"
+        subtitle={registrationsModalMc?.title || ""}
+        footer={
+          <Button onClick={() => setRegistrationsModalMc(null)} className="bg-primary text-white font-bold text-xs rounded-xl px-5">
+            Close Dialog
+          </Button>
+        }
+      >
+        {regsLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        </div>
-      )}
-
-      {/* Cancellation Reason Modal */}
-      {cancellingMc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-card rounded-3xl overflow-hidden shadow-2xl border border-border p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 border-b border-border pb-3.5 mb-4">
-              <div className="p-2 bg-red-100 rounded-xl">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+        ) : registrationsList.length === 0 ? (
+          <div className="flex flex-col justify-center items-center py-12">
+            <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">No sign-ups found for this session yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {registrationsList.map((user) => (
+              <div key={user.user_id} className="flex items-center justify-between p-3 rounded-2xl bg-secondary/50 border border-border/40">
+                <div>
+                  <h4 className="text-xs font-bold text-foreground">{user.full_name}</h4>
+                  <p className="text-[10px] text-muted-foreground">{user.email}</p>
+                </div>
+                <Badge tone="primary">Participant</Badge>
               </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Cancel Masterclass</h3>
-                <p className="text-[11px] text-muted-foreground">Are you sure you want to cancel this scheduled session?</p>
-              </div>
-            </div>
+            ))}
+          </div>
+        )}
+      </ResponsiveModal>
 
-            <p className="text-xs text-muted-foreground leading-normal mb-4 bg-secondary/50 p-3 rounded-2xl border border-border/50">
+      {/* Reusable Cancellation Reason Modal */}
+      <ResponsiveModal
+        isOpen={!!cancellingMc}
+        onClose={() => {
+          setCancellingMc(null);
+          setCancellationMessage("");
+        }}
+        title="Cancel Masterclass"
+        subtitle="Are you sure you want to cancel this scheduled session?"
+        footer={
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCancellingMc(null);
+                setCancellationMessage("");
+              }}
+              className="font-bold text-xs rounded-xl"
+            >
+              Go Back
+            </Button>
+            <Button 
+              onClick={confirmCancelMasterclass} 
+              className="bg-red-600 text-white hover:bg-red-700 font-bold text-xs rounded-xl px-5"
+            >
+              Confirm Cancellation
+            </Button>
+          </>
+        }
+      >
+        {cancellingMc && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground leading-normal bg-secondary/50 p-3 rounded-2xl border border-border/50">
               Webinar: <span className="font-bold text-foreground">{cancellingMc.title}</span>
             </p>
 
@@ -1226,28 +1393,9 @@ export function MasterclassesPage() {
                 className="w-full px-3.5 py-2.5 bg-card border border-border rounded-2xl focus:outline-none focus:border-primary text-xs shadow-sm"
               />
             </div>
-
-            <div className="mt-6 pt-4 border-t border-border flex justify-end gap-2.5">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setCancellingMc(null);
-                  setCancellationMessage("");
-                }}
-                className="font-bold text-xs rounded-xl"
-              >
-                Go Back
-              </Button>
-              <Button 
-                onClick={confirmCancelMasterclass} 
-                className="bg-red-600 text-white hover:bg-red-700 font-bold text-xs rounded-xl px-5"
-              >
-                Confirm Cancellation
-              </Button>
-            </div>
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

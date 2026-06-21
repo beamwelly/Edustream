@@ -13,47 +13,61 @@ def calculate_freedom_date(
     monthly_savings: float,
     stepup_rate: float
 ) -> Dict[str, Any]:
+    # Input validation checks
+    if withdrawal_rate <= 0:
+        raise ValueError("Withdrawal rate must be greater than 0")
+    if current_age <= 0:
+        raise ValueError("Current age must be greater than 0")
+    if birth_year != int(birth_year):
+        raise ValueError("Birth year must be an integer")
+
     # C16: C7*12/C10
     fi_number = current_monthly_expenses * 12 / withdrawal_rate
     
     # C17: C7*12*(1+C8)^20/C10
     fi_number_inflation_20 = current_monthly_expenses * 12 * ((1 + expected_inflation) ** 20) / withdrawal_rate
     
-    # C18: LN((C16-C11)*(C9/12)/(C12)+1)/(LN(1+C9/12)*12)
-    # Let's avoid log of negative or division by zero:
-    r_monthly = annual_investment_return / 12
-    if monthly_savings <= 0:
-        years_to_fi = 999.0
+    # Check if already financially independent
+    if current_net_worth >= fi_number:
+        years_to_fi = 0.0
+        years_to_fi_stepup = 0.0
     else:
-        log_numerator = (fi_number - current_net_worth) * r_monthly / monthly_savings + 1
-        if log_numerator <= 0:
-            # Already achieved or unreachable mathematically
-            years_to_fi = 0.0
+        # C18: LN((C16-C11)*(C9/12)/(C12)+1)/(LN(1+C9/12)*12)
+        r_monthly = annual_investment_return / 12
+        if monthly_savings <= 0:
+            years_to_fi = 999.0
         else:
-            if r_monthly == 0:
-                years_to_fi = (fi_number - current_net_worth) / (monthly_savings * 12)
+            log_val = ((fi_number - current_net_worth) * r_monthly / monthly_savings) + 1
+            if log_val <= 0:
+                years_to_fi = 999.0
             else:
-                years_to_fi = math.log(log_numerator) / (math.log(1 + r_monthly) * 12)
-                
-    # C19: LN(C16*C9/(C12*12)+1)/LN(1+C9)
-    if monthly_savings <= 0:
-        years_to_fi_stepup = 999.0
-    else:
-        log_num_step = fi_number * annual_investment_return / (monthly_savings * 12) + 1
-        if log_num_step <= 0:
-            years_to_fi_stepup = 0.0
+                if r_monthly == 0:
+                    years_to_fi = (fi_number - current_net_worth) / (monthly_savings * 12)
+                else:
+                    years_to_fi = math.log(log_val) / (math.log(1 + r_monthly) * 12)
+                    
+        # C19: LN(C16*C9/(C12*12)+1)/LN(1+C9)
+        if monthly_savings <= 0:
+            years_to_fi_stepup = 999.0
         else:
-            if annual_investment_return == 0:
-                years_to_fi_stepup = fi_number / (monthly_savings * 12)
+            log_val_step = (fi_number * annual_investment_return / (monthly_savings * 12)) + 1
+            if log_val_step <= 0:
+                years_to_fi_stepup = 999.0
             else:
-                years_to_fi_stepup = math.log(log_num_step) / math.log(1 + annual_investment_return)
+                if annual_investment_return == 0:
+                    years_to_fi_stepup = fi_number / (monthly_savings * 12)
+                else:
+                    years_to_fi_stepup = math.log(log_val_step) / math.log(1 + annual_investment_return)
+                    
+    # Clamp years to FI to avoid negative values
+    years_to_fi = max(0.0, years_to_fi)
+    years_to_fi_stepup = max(0.0, years_to_fi_stepup)
                 
-    # C20: YEAR(TODAY())+C18
-    current_year = datetime.now().year
-    fi_achievement_year = current_year + years_to_fi
+    # C20: =(C6+C5)+C18 (Birth Year + Current Age + Years to FI)
+    fi_achievement_year = birth_year + current_age + years_to_fi
     
-    # C21: C5+C18
-    fi_age_at_achievement = current_age + years_to_fi
+    # C21: C20-C6 (Achievement Year - Birth Year)
+    fi_age_at_achievement = fi_achievement_year - birth_year
     
     # F5: C16
     fi_target = fi_number
@@ -85,9 +99,8 @@ def calculate_freedom_date(
     else:
         progress_milestone = "🎊 FI ACHIEVED!"
         
-    # F14: C16*0.04
-    # Note: Using withdrawal_rate instead of hardcoded 0.04 to remain dynamic
-    annual_withdrawal = fi_number * withdrawal_rate
+    # F14: C16*0.04 (Strictly 4% withdrawal rate for annual withdrawal)
+    annual_withdrawal = fi_number * 0.04
     
     # F15: F14/12
     monthly_income_at_fi = annual_withdrawal / 12
@@ -101,16 +114,31 @@ def calculate_freedom_date(
     # F18: C16*1.5
     safe_fi_buffer = fi_number * 1.5
     
-    # B23: CONCATENATE("🎉 YOUR FINANCIAL FREEDOM DATE: January 1, ",TEXT(C20,"0")," at age ",TEXT(C21,"0.0"),"!")
-    freedom_date_message = (
-        f"🎉 YOUR FINANCIAL FREEDOM DATE: January 1, {round(fi_achievement_year)} "
-        f"at age {fi_age_at_achievement:.1f}!"
-    )
+    # B23: CONCATENATE("🎉 YOUR FINANCIAL FREEDOM DATE: ", CHOOSE(...), " 1, ", INT(C20), " at age ", C21)
+    if current_net_worth >= fi_number:
+        freedom_date_message = "🎉 Congratulations! You are already financially independent"
+    elif years_to_fi < 999:
+        c20 = fi_achievement_year
+        c21 = fi_age_at_achievement
+        fractional_year = c20 - math.floor(c20)
+        # Excel ROUND((C20-INT(C20))*12+1, 0)
+        month_num = int(math.floor(fractional_year * 12 + 1 + 0.5))
+        month_num = min(12, max(1, month_num))
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        month_name = months[month_num - 1]
+        year_val = int(math.floor(c20))
+        freedom_date_message = (
+            f"🎉 YOUR FINANCIAL FREEDOM DATE: {month_name} 1, {year_val} "
+            f"at age {c21:.1f}!"
+        )
+    else:
+        freedom_date_message = "📊 Financial Freedom date is not reachable with current savings rate."
     
     # Timeline Projection Series
     timeline_series = []
     project_years = max(10, min(40, math.ceil(years_to_fi) + 5)) if years_to_fi < 999 else 25
     
+    current_year = datetime.now().year
     curr_nw_simple = current_net_worth
     curr_nw_stepup = current_net_worth
     curr_savings = monthly_savings * 12

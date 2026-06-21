@@ -19,14 +19,15 @@ import { WowToolkitPage } from "./WowToolkitPage";
 import { FinancialDiscoveryPage } from "./FinancialDiscoveryPage";
 import { NeedsDiscoveryPage } from "./NeedsDiscoveryPage";
 import { API_URL } from "@/constants/env";
+import { useAuth } from "@/context/AuthContext";
 
 export function UserToolsPage() {
+  const { user, searchQuery, setSearchQuery } = useAuth();
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   
   // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all"); // "all", "interactive", "downloadable"
 
   // Workbook Preview Modal State
@@ -63,6 +64,29 @@ export function UserToolsPage() {
   };
 
   const filteredTools = tools.filter(t => {
+    if (user && user.role === "employee") {
+      const allowed = user.permissions?.allowed_tools || [];
+      const toolName = t.name.toLowerCase();
+      if (t.type === "downloadable" && !allowed.includes("resource_downloads")) {
+        return false;
+      }
+      if (t.type === "interactive") {
+        if ((toolName.includes("wow") || toolName.includes("retirement")) && !allowed.includes("wow_toolkit")) {
+          return false;
+        }
+        if (toolName.includes("needs discovery") && !allowed.includes("needs_discovery")) {
+          return false;
+        }
+        if (toolName.includes("discovery") && !toolName.includes("needs discovery") && !allowed.includes("financial_discovery")) {
+          return false;
+        }
+        if (!toolName.includes("wow") && !toolName.includes("retirement") && !toolName.includes("needs discovery") && !toolName.includes("discovery")) {
+          if (!allowed.includes("future_tools")) {
+            return false;
+          }
+        }
+      }
+    }
     const matchesSearch = t.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           t.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === "all" || t.type === selectedType;
@@ -188,15 +212,18 @@ export function UserToolsPage() {
   };
 
   if (activeTool === "wow") {
-    return <WowToolkitPage onBack={() => setActiveTool(null)} />;
+    const toolId = tools.find(t => t.name.toLowerCase().includes("wow") || t.name.toLowerCase().includes("freedom"))?.id || 1;
+    return <WowToolkitPage onBack={() => setActiveTool(null)} toolId={toolId} />;
   }
 
   if (activeTool === "discovery") {
-    return <FinancialDiscoveryPage onBack={() => setActiveTool(null)} />;
+    const toolId = tools.find(t => t.name.toLowerCase().includes("financial discovery") || (t.name.toLowerCase().includes("discovery") && !t.name.toLowerCase().includes("needs")))?.id || 2;
+    return <FinancialDiscoveryPage onBack={() => setActiveTool(null)} toolId={toolId} />;
   }
 
   if (activeTool === "needs-discovery") {
-    return <NeedsDiscoveryPage onBack={() => setActiveTool(null)} />;
+    const toolId = tools.find(t => t.name.toLowerCase().includes("needs discovery"))?.id || 3;
+    return <NeedsDiscoveryPage onBack={() => setActiveTool(null)} toolId={toolId} />;
   }
 
   return (
@@ -342,8 +369,8 @@ export function UserToolsPage() {
 
       {/* Spreadsheet Sandbox Preview Modal */}
       {previewTool && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <Card className="w-full max-w-3xl shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 p-0 overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-[92vw] sm:w-full sm:max-w-3xl my-auto shadow-2xl border border-border relative animate-in fade-in zoom-in-95 duration-150 p-0 overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]">
             {/* Modal Header */}
             <div className="p-4 border-b border-border bg-zinc-50 dark:bg-zinc-900 flex items-center justify-between">
               <div className="flex items-center gap-3">

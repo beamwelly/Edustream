@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
@@ -24,6 +25,7 @@ class UserResponse(BaseModel):
     organization_name: str | None = None
     is_temp_password: bool
     is_active: bool
+    permissions: Optional[dict] = None
 
 class LoginResponse(BaseModel):
     access_token: str
@@ -51,6 +53,42 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         )
         
     user_info = auth_data.get("user", {})
+    user_id = user_info.get("id")
+    user_role = user_info.get("role")
+    
+    # Fetch permissions
+    if user_role == "employee":
+        from app.models.employee_access_policy import EmployeeAccessPolicy
+        stmt_policy = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+        res_policy = await db.execute(stmt_policy)
+        policy = res_policy.scalar_one_or_none()
+        settings = policy.settings_json if policy else {}
+        user_info["permissions"] = {
+            "access_dashboard": settings.get("dashboard", True),
+            "access_content": settings.get("content_library", True),
+            "access_masterclasses": settings.get("masterclasses", True),
+            "access_meetings": settings.get("meetings", False),
+            "access_feedback": settings.get("feedback", True),
+            "allowed_tools": [
+                k for k in ("wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools", "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization", "cost_of_delay", "sip_home_loan")
+                if settings.get(k, False)
+            ],
+            "allowed_categories": []
+        }
+    else:
+        user_info["permissions"] = {
+            "access_dashboard": True,
+            "access_content": True,
+            "access_masterclasses": True,
+            "access_meetings": True,
+            "access_feedback": True,
+            "allowed_tools": [
+                "wow_toolkit", "financial_discovery", "needs_discovery", "resource_downloads", "future_tools",
+                "retirement_predictor", "financial_freedom", "family_vault", "goal_visualization",
+                "cost_of_delay", "sip_home_loan"
+            ],
+            "allowed_categories": []
+        }
     
     # Audit logging for role-routing: decode JWT to verify claims
     from app.utils.security import decode_access_token
@@ -263,7 +301,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
                 <div class="card">
                     <div class="icon">✓</div>
                     <h2>Connected Successfully!</h2>
-                    <p>EduStream is now integrated with your Google Calendar to auto-generate secure Google Meet links.</p>
+                    <p>Masterclass is now integrated with your Google Calendar to auto-generate secure Google Meet links.</p>
                     <a href="{frontend_url}/admin/meetings?google_connected=true" class="btn">Return to App</a>
                 </div>
             </body>

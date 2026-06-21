@@ -85,7 +85,7 @@ async def send_meeting_email(recipient_email: str, recipient_name: str, title: s
         <body style="font-family: Arial, sans-serif; padding: 20px; color: #333; background-color: #f9fafb;">
             <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                 <div style="background-color: #E53935; padding: 24px; text-align: center; color: #ffffff;">
-                    <h2 style="margin: 0; font-size: 20px; font-weight: bold;">EduStream Scheduled Meeting</h2>
+                    <h2 style="margin: 0; font-size: 20px; font-weight: bold;">Masterclass Scheduled Meeting</h2>
                 </div>
                 <div style="padding: 24px;">
                     <p style="font-size: 16px; margin-top: 0;">Hello {recipient_name},</p>
@@ -114,7 +114,7 @@ async def send_meeting_email(recipient_email: str, recipient_name: str, title: s
                         <a href="{meet_link}" style="background-color: #E53935; color: #ffffff; padding: 12px 24px; text-decoration: none; font-weight: bold; border-radius: 8px; font-size: 14px; display: inline-block;">Join Google Meet</a>
                     </div>
                     
-                    <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-top: 30px;">This is an automated message from your EduStream Learning Platform.</p>
+                    <p style="font-size: 12px; color: #9ca3af; text-align: center; margin-top: 30px;">This is an automated message from your Masterclass Learning Platform.</p>
                 </div>
             </div>
         </body>

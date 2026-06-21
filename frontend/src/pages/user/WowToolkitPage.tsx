@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
   ArrowLeft, 
   TrendingUp, 
@@ -25,12 +25,17 @@ import {
   Phone,
   Eye,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 import { PageHeader, Card, Button } from "@/components/common";
 import { API_URL } from "@/constants/env";
 import { useAuth } from "@/context/AuthContext";
 import { jsPDF } from "jspdf";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { GeneratedReportsTab } from "@/components/tools/GeneratedReportsTab";
 import { 
   AreaChart, 
   Area, 
@@ -77,11 +82,15 @@ interface CalculationResult {
   sensitivity_table: SensitivityPoint[];
 }
 
-export function WowToolkitPage({ onBack }: { onBack: () => void }) {
+export function WowToolkitPage({ onBack, toolId }: { onBack: () => void; toolId: number }) {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("dashboard");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset/Remount tracking
+  const [resetKey, setResetKey] = useState<number>(0);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
 
   // Parent inputs state (Retirement Age Predictor)
   const [inputs, setInputs] = useState<WowInputs>({
@@ -97,6 +106,78 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
   });
 
   const [results, setResults] = useState<CalculationResult | null>(null);
+
+  const handleResetAll = async () => {
+    setShowResetConfirm(false);
+    setSaveStatus("Resetting...");
+    
+    const defaultPayload = {
+      retirement_inputs: {
+        current_age: 35,
+        expected_retirement_age: 58,
+        life_expectancy: 85,
+        current_monthly_expenses: 15000,
+        expected_inflation_rate: 0.06,
+        current_monthly_income: 80000,
+        savings_rate: 0.3,
+        expected_investment_return: 0.12,
+        post_retirement_return: 0.07,
+      },
+      cost_of_delay_inputs: {
+        monthly_sip_amount: 5000,
+        expected_annual_return: 0.12,
+        target_age: 60,
+        current_age: 35
+      },
+      sip_home_loan_inputs: {
+        monthly_sip: 10000,
+        sip_return: 0.12,
+        sip_duration: 20,
+        stepup_rate: 0.05,
+        loan_amount: 5000000,
+        loan_rate: 0.085,
+        loan_tenure: 20,
+        down_payment: 1000000,
+        appreciation_rate: 0.06,
+        tax_benefit: 50000
+      },
+      freedom_date_inputs: {
+        current_age: 35,
+        birth_year: 1991,
+        current_monthly_expenses: 50000,
+        expected_inflation: 0.06,
+        annual_investment_return: 0.12,
+        withdrawal_rate: 0.04,
+        current_net_worth: 1000000,
+        monthly_savings: 20000,
+        stepup_rate: 0.05
+      }
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/wow/inputs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        },
+        body: JSON.stringify(defaultPayload)
+      });
+      
+      if (res.ok) {
+        setInitialInputs(defaultPayload);
+        setInputs(defaultPayload.retirement_inputs);
+        setResetKey(prev => prev + 1);
+        setSaveStatus("Reset Successful");
+        setTimeout(() => setSaveStatus(""), 2000);
+      } else {
+        setSaveStatus("Reset failed");
+      }
+    } catch (err) {
+      console.error("Error resetting inputs:", err);
+      setSaveStatus("Reset failed");
+    }
+  };
 
   // Centralized loaded inputs state from database
   const [initialInputs, setInitialInputs] = useState<any>(null);
@@ -149,6 +230,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       });
       if (res.ok) {
         setSaveStatus("Saved");
+        setInitialInputs(payload);
         setTimeout(() => setSaveStatus(""), 2000);
       } else {
         setSaveStatus("Save failed");
@@ -193,12 +275,17 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to connect to calculation engine.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
     };
 
-    calculate();
+    const timer = setTimeout(() => {
+      calculate();
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [inputs]);
 
   const handleInputChange = (key: keyof WowInputs, value: number) => {
@@ -251,6 +338,98 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
   };
 
   // Reusable PDF Generator
+  const drawFlowText = (doc: jsPDF, text: string, x: number, y: number, maxWidth: number, fontSize: number, fontStyle = "normal") => {
+    const cleanedText = text
+      .replace(/✅/g, "")
+      .replace(/⚠️/g, "")
+      .replace(/₹/g, "Rs. ")
+      .trim();
+
+    const lines = doc.splitTextToSize(cleanedText, maxWidth);
+    const spacingMultiplier = 1.15;
+    const lineHeight = fontSize * 0.352778 * spacingMultiplier;
+    
+    doc.setFont("helvetica", fontStyle);
+    doc.setFontSize(fontSize);
+    
+    let currentY = y;
+    for (let i = 0; i < lines.length; i++) {
+      if (currentY + lineHeight > 275) {
+        doc.addPage();
+        currentY = 20;
+      }
+      doc.text(lines[i], x, currentY + lineHeight);
+      currentY += lineHeight;
+    }
+    
+    return currentY + 2;
+  };
+
+  const drawTable = (doc: jsPDF, headers: string[], rows: any[][], x: number, startY: number, width: number, rowHeight = 6) => {
+    const colWidth = width / headers.length;
+    let currentY = startY;
+
+    const cleanCell = (val: any) => {
+      if (val === null || val === undefined) return "";
+      return String(val)
+        .replace(/✅/g, "")
+        .replace(/⚠️/g, "")
+        .replace(/₹/g, "Rs. ")
+        .trim();
+    };
+
+    const drawHeaders = (yPos: number) => {
+      doc.setFillColor(220, 38, 38);
+      doc.rect(x, yPos, width, rowHeight + 1, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(255, 255, 255);
+      headers.forEach((h, idx) => {
+        const cleanedH = cleanCell(h);
+        const headerLines = doc.splitTextToSize(cleanedH, colWidth - 4);
+        doc.text(headerLines, x + idx * colWidth + 2, yPos + rowHeight - 1);
+      });
+      return yPos + rowHeight + 1;
+    };
+
+    currentY = drawHeaders(currentY);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+
+    rows.forEach((row, rowIdx) => {
+      const splitCells = row.map(cell => doc.splitTextToSize(cleanCell(cell), colWidth - 4));
+      const maxLines = Math.max(1, ...splitCells.map(lines => lines.length));
+      const dynamicRowHeight = Math.max(rowHeight, maxLines * 4.5);
+
+      if (currentY + dynamicRowHeight > 275) {
+        doc.addPage();
+        currentY = drawHeaders(20);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(31, 41, 55);
+      }
+
+      if (rowIdx % 2 === 1) {
+        doc.setFillColor(244, 244, 245);
+        doc.rect(x, currentY, width, dynamicRowHeight, "F");
+      }
+
+      row.forEach((cell, cellIdx) => {
+        const lines = splitCells[cellIdx];
+        doc.text(lines, x + cellIdx * colWidth + 2, currentY + 4);
+      });
+
+      doc.setDrawColor(229, 231, 235);
+      doc.line(x, currentY + dynamicRowHeight, x + width, currentY + dynamicRowHeight);
+
+      currentY += dynamicRowHeight;
+    });
+
+    return currentY;
+  };
+
   const handleExportPDF = (moduleName: string, tabInputs: any, tabResults: any, extraData?: any) => {
     const doc = new jsPDF({
       orientation: "portrait",
@@ -260,7 +439,26 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
     
     const inputs = tabInputs || {};
     const results = tabResults || {};
-    const userName = user?.full_name || "Valued User";
+    
+    // Shadow helpers locally inside PDF exporter to replace ₹ with Rs. and clean emojis to avoid rendering glitches in jsPDF
+    const formatCurrency = (val: any) => {
+      if (val === null || val === undefined || val === "") return "Not Provided";
+      const num = typeof val === "number" ? val : parseFloat(String(val).replace(/[^0-9.-]/g, ""));
+      if (isNaN(num)) return "Not Provided";
+      return "Rs. " + Math.round(num).toLocaleString("en-IN");
+    };
+
+    const safeVal = (val: any, suffix = "") => {
+      if (val === null || val === undefined || val === "" || (typeof val === "number" && isNaN(val))) {
+        return "Not Provided";
+      }
+      return String(val)
+        .replace(/✅/g, "")
+        .replace(/⚠️/g, "")
+        .replace(/₹/g, "Rs. ")
+        .trim() + suffix;
+    };
+
     const dateStr = new Date().toLocaleDateString("en-IN", {
       day: "numeric",
       month: "long",
@@ -278,22 +476,23 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("EDUSTREAM | FINANCIAL FREEDOM TOOLKIT", 15, 10);
+    doc.text("MASTERCLASS | FINANCIAL FREEDOM TOOLKIT", 15, 12);
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`${moduleName.toUpperCase()} REPORT`, 15, 18);
+    doc.text(`${moduleName.toUpperCase()} REPORT`, 15, 19);
 
     doc.setTextColor(textColor[0], textColor[1], textColor[2]);
     doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
     doc.text("Date:", 15, 38);
     doc.setFont("helvetica", "normal");
-    doc.text(dateStr, 28, 38);
+    doc.text(dateStr, 25, 38);
 
     doc.setDrawColor(229, 231, 235);
-    doc.line(15, 43, 195, 43);
+    doc.line(15, 41, 195, 41);
 
-    let y = 52;
+    let y = 48;
     
     if (moduleName === "Retirement Age Predictor") {
       doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
@@ -331,7 +530,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(deficit ? 220 : 22, deficit ? 38 : 101, deficit ? 38 : 52); 
       doc.text(formatCurrency(defVal), 145, y + 18);
 
-      y += 35;
+      y += 32;
 
       const isDeficit = defVal < 0;
       doc.setFillColor(isDeficit ? 254 : 240, isDeficit ? 242 : 253, isDeficit ? 242 : 250);
@@ -341,16 +540,15 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.setTextColor(isDeficit ? 153 : 21, isDeficit ? 27 : 80, isDeficit ? 27 : 56);
-      doc.text(`Status: ${safeVal(results.track_status)}`, 20, y + 10);
+      doc.text(`Status: ${safeVal(results.track_status)}`, 20, y + 9.5); 
 
-      y += 25;
+      y += 22;
 
-      // Draw Vector Chart
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Corpus Needed vs Projected Accumulation", 15, y);
-      y += 6;
+      y += 5;
       const reqVal = results.required_retirement_corpus || 0;
       const projVal = results.projected_corpus_at_retirement || 0;
       const maxVal = Math.max(reqVal, projVal, 100000);
@@ -364,7 +562,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(31, 41, 55);
       doc.text("Required", 15, y + 4.5);
       doc.text(formatCurrency(reqVal), 52 + reqWidth, y + 4.5);
-      y += 9;
+      y += 8;
 
       doc.setFillColor(22, 101, 52);
       doc.rect(50, y, projWidth, 6, "F");
@@ -372,13 +570,13 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.text("Projected", 15, y + 4.5);
       doc.text(formatCurrency(projVal), 52 + projWidth, y + 4.5);
       
-      y += 18;
+      y += 15;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("User Inputs", 15, y);
-      y += 6;
+      y += 5;
       
       const inputRows = [
         ["Current Age", safeVal(inputs.current_age, " years"), "Savings Rate", formatPercent(inputs.savings_rate)],
@@ -387,40 +585,35 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         ["Monthly Expenses", formatCurrency(inputs.current_monthly_expenses), "Monthly Income", formatCurrency(inputs.current_monthly_income)],
         ["Expected Inflation", formatPercent(inputs.expected_inflation_rate), "", ""]
       ];
-      drawTable(doc, ["Parameter", "Value", "Parameter", "Value"], inputRows, 15, y, 180);
+      y = drawTable(doc, ["Parameter", "Value", "Parameter", "Value"], inputRows, 15, y, 180);
       
-      y += 48;
+      y += 8;
 
-      if (y > 220) {
-        doc.addPage();
-        y = 25;
-      }
-
-      // Summary & Recommendations
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Summary & Professional Recommendations", 15, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
+      y += 5;
+      y = drawFlowText(doc, `Based on your current monthly income of ${formatCurrency(inputs.current_monthly_income)} and savings rate of ${formatPercent(inputs.savings_rate)}, you plan to retire at age ${safeVal(inputs.expected_retirement_age)}.`, 15, y, 180, 8.5);
+      
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
-      doc.text(`Based on your current monthly income of ${formatCurrency(inputs.current_monthly_income)} and savings rate of ${formatPercent(inputs.savings_rate)}, you plan to retire at age ${safeVal(inputs.expected_retirement_age)}.`, 15, y);
-      y += 5;
       doc.text("Recommendations:", 15, y);
+      y += 4;
+      y = drawFlowText(doc, "• If you are facing a corpus deficit, consider increasing your savings rate or extending your retirement age.", 18, y, 177, 8.5);
+      y = drawFlowText(doc, "• Ensure your post-retirement portfolio is diversified to guard against long-term inflation.", 18, y, 177, 8.5);
       y += 5;
-      doc.text("• If you are facing a corpus deficit, consider increasing your savings rate or extending your retirement age.", 18, y);
-      y += 5;
-      doc.text("• Ensure your post-retirement portfolio is diversified to guard against long-term inflation.", 18, y);
-      y += 10;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Corpus Sensitivity Table", 15, y);
-      y += 6;
+      y += 5;
       const sensRows = (results.sensitivity_table || []).map((p: any) => [
         `${safeVal(p.age)} years`,
         formatCurrency(p.corpus_needed)
       ]);
-      drawTable(doc, ["Retirement Age", "Corpus Required"], sensRows, 15, y, 100);
+      y = drawTable(doc, ["Retirement Age", "Corpus Required"], sensRows, 15, y, 100);
 
     } else if (moduleName === "Cost Of Delay Calculator") {
       doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
@@ -458,25 +651,22 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(220, 38, 38);
       doc.text(formatPercent(Math.abs(currRow.delay_cost_percent || 0)), 145, y + 18);
 
-      y += 35;
+      y += 32;
 
-      doc.setFillColor(254, 242, 242);
-      doc.rect(15, y, 180, 15, "F");
-      doc.setDrawColor(252, 165, 165);
-      doc.rect(15, y, 180, 15, "S");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(153, 27, 27);
-      doc.text(safeVal(results.warning_text), 18, y + 9);
+      if (results.warning_text) {
+        doc.setFillColor(254, 242, 242);
+        doc.rect(15, y, 180, 15, "F");
+        doc.setDrawColor(252, 165, 165);
+        doc.rect(15, y, 180, 15, "S");
+        y = drawFlowText(doc, safeVal(results.warning_text), 18, y + 1, 174, 8.5, "bold");
+        y += 5;
+      }
 
-      y += 25;
-
-      // Draw Vector Chart
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Wealth Accumulation by Starting Age", 15, y);
-      y += 6;
+      y += 5;
       const c25 = (delayTable.find((r: any) => r.start_age === 25) || {}).corpus_at_target || 0;
       const c35 = (delayTable.find((r: any) => r.start_age === 35) || {}).corpus_at_target || 0;
       const c45 = (delayTable.find((r: any) => r.start_age === 45) || {}).corpus_at_target || 0;
@@ -492,14 +682,14 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(31, 41, 55);
       doc.text("Start at 25", 15, y + 4.5);
       doc.text(formatCurrency(c25), 52 + w25, y + 4.5);
-      y += 9;
+      y += 8;
 
       doc.setFillColor(234, 179, 8);
       doc.rect(50, y, w35, 6, "F");
       doc.setTextColor(31, 41, 55);
       doc.text("Start at 35", 15, y + 4.5);
       doc.text(formatCurrency(c35), 52 + w35, y + 4.5);
-      y += 9;
+      y += 8;
 
       doc.setFillColor(220, 38, 38);
       doc.rect(50, y, w45, 6, "F");
@@ -507,33 +697,28 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.text("Start at 45", 15, y + 4.5);
       doc.text(formatCurrency(c45), 52 + w45, y + 4.5);
       
-      y += 18;
+      y += 15;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Summary & Professional Recommendations", 15, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8.5);
-      doc.text(`Starting your SIP of ${formatCurrency(inputs.monthly_sip_amount)} early provides maximum compounding.`, 15, y);
       y += 5;
-      doc.text("Recommendations:", 15, y);
-      y += 5;
-      doc.text("• Start investing immediately; even a 2-year delay significantly reduces your final accumulation.", 18, y);
-      y += 5;
-      doc.text("• Set up automatic SIP transfers on your salary day to maintain discipline and avoid delay penalties.", 18, y);
+      y = drawFlowText(doc, `Starting your SIP of ${formatCurrency(inputs.monthly_sip_amount)} early provides maximum compounding.`, 15, y, 180, 8.5);
       
-      y += 15;
-      if (y > 200) {
-        doc.addPage();
-        y = 25;
-      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.text("Recommendations:", 15, y);
+      y += 4;
+      y = drawFlowText(doc, "• Start investing immediately; even a 2-year delay significantly reduces your final accumulation.", 18, y, 177, 8.5);
+      y = drawFlowText(doc, "• Set up automatic SIP transfers on your salary day to maintain discipline and avoid delay penalties.", 18, y, 177, 8.5);
+      y += 5;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Cost of Delay Comparison Table", 15, y);
-      y += 6;
+      y += 5;
 
       const delayRows = delayTable.map((row: any) => [
         `${safeVal(row.start_age)} years`,
@@ -543,7 +728,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         row.vs_starting_at_25 !== 0 ? formatCurrency(row.vs_starting_at_25) : "—",
         `${(Math.abs(row.delay_cost_percent || 0) * 100).toFixed(1)}%`
       ]);
-      drawTable(doc, ["Start Age", "Years Invested", "Total Invested", "Future Corpus", "Corpus Loss", "Penalty %"], delayRows, 15, y, 180);
+      y = drawTable(doc, ["Start Age", "Years Invested", "Total Invested", "Future Corpus", "Corpus Loss", "Penalty %"], delayRows, 15, y, 180);
 
     } else if (moduleName === "SIP + Home Loan Impact") {
       doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
@@ -570,14 +755,13 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(isBenefit ? 22 : 220, isBenefit ? 101 : 38, isBenefit ? 52 : 38);
       doc.text(formatCurrency(benefitVal), 115, y + 18);
 
-      y += 35;
+      y += 32;
 
-      // Draw Vector Chart
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("SIP Wealth vs Loan Interest paid", 15, y);
-      y += 6;
+      y += 5;
       const interestPaid = results.total_interest_paid || 0;
       const sipValue = results.future_sip_value || 0;
       const maxVal = Math.max(interestPaid, sipValue, 100000);
@@ -591,7 +775,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(31, 41, 55);
       doc.text("Interest Paid", 15, y + 4.5);
       doc.text(formatCurrency(interestPaid), 52 + wInterest, y + 4.5);
-      y += 9;
+      y += 8;
 
       doc.setFillColor(22, 101, 52);
       doc.rect(50, y, wSip, 6, "F");
@@ -599,33 +783,28 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.text("SIP Wealth", 15, y + 4.5);
       doc.text(formatCurrency(sipValue), 52 + wSip, y + 4.5);
       
-      y += 18;
+      y += 15;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Summary & Professional Recommendations", 15, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
+      y += 5;
+      y = drawFlowText(doc, `Matching your home loan of ${formatCurrency(inputs.loan_amount)} with a parallel SIP of ${formatCurrency(inputs.monthly_sip)} creates a financial hedge.`, 15, y, 180, 8.5);
+      
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
-      doc.text(`Matching your home loan of ${formatCurrency(inputs.loan_amount)} with a parallel SIP of ${formatCurrency(inputs.monthly_sip)} creates a financial hedge.`, 15, y);
-      y += 5;
       doc.text("Recommendations:", 15, y);
+      y += 4;
+      y = drawFlowText(doc, "• Maintaining a parallel SIP helps fully recover or exceed the total interest paid on the home loan.", 18, y, 177, 8.5);
+      y = drawFlowText(doc, "• Plan annual step-ups on the SIP to compound your net financial benefit over the loan tenure.", 18, y, 177, 8.5);
       y += 5;
-      doc.text("• Maintaining a parallel SIP helps fully recover or exceed the total interest paid on the home loan.", 18, y);
-      y += 5;
-      doc.text("• Plan annual step-ups on the SIP to compound your net financial benefit over the loan tenure.", 18, y);
-
-      y += 15;
-      if (y > 200) {
-        doc.addPage();
-        y = 25;
-      }
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("SIP & Loan Specifications", 15, y);
-      y += 6;
+      y += 5;
 
       const sipLoanRows = [
         ["Monthly SIP", formatCurrency(inputs.monthly_sip), "Loan Amount", formatCurrency(inputs.loan_amount)],
@@ -634,14 +813,15 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         ["Step-up Rate", formatPercent(inputs.stepup_rate), "Property Appreciation", formatPercent(inputs.appreciation_rate)],
         ["Down Payment", formatCurrency(inputs.down_payment), "Annual Tax Benefit", formatCurrency(inputs.tax_benefit)]
       ];
-      drawTable(doc, ["SIP Param", "Value", "Loan Param", "Value"], sipLoanRows, 15, y, 180);
+      y = drawTable(doc, ["SIP Param", "Value", "Loan Param", "Value"], sipLoanRows, 15, y, 180);
 
-      y += 55;
+      y += 8;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Financial Breakdown Comparison", 15, y);
-      y += 6;
+      y += 5;
 
       const breakdown = [
         ["Future SIP Value", formatCurrency(results.future_sip_value)],
@@ -650,7 +830,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         ["Future Property Value", formatCurrency(results.future_property_value)],
         ["Net Financial Benefit (SIP - Loan)", formatCurrency(results.net_financial_benefit)]
       ];
-      drawTable(doc, ["Item", "Amount"], breakdown, 15, y, 150);
+      y = drawTable(doc, ["Item", "Amount"], breakdown, 15, y, 150);
 
     } else if (moduleName === "Financial Freedom Date") {
       doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
@@ -688,24 +868,22 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       const yrsFiSU = results.years_to_fi_stepup || 0;
       doc.text(`${safeVal(yrsFiSU.toFixed(1))} Years`, 145, y + 18);
 
-      y += 35;
+      y += 32;
 
-      doc.setFillColor(240, 253, 250);
-      doc.rect(15, y, 180, 15, "F");
-      doc.setDrawColor(187, 247, 208);
-      doc.rect(15, y, 180, 15, "S");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(21, 128, 61);
-      doc.text(safeVal(results.freedom_date_message), 18, y + 9);
+      if (results.freedom_date_message) {
+        doc.setFillColor(240, 253, 250);
+        doc.rect(15, y, 180, 15, "F");
+        doc.setDrawColor(187, 247, 208);
+        doc.rect(15, y, 180, 15, "S");
+        y = drawFlowText(doc, safeVal(results.freedom_date_message), 18, y + 1, 174, 8.5, "bold");
+        y += 5;
+      }
 
-      y += 25;
-
-      // Draw Vector Chart
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Net Worth vs Target Freedom Corpus", 15, y);
-      y += 6;
+      y += 5;
       const nw = inputs.current_net_worth || 0;
       const target = results.fi_number || 1;
       const pct = Math.min(1, nw / target);
@@ -719,35 +897,29 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(31, 41, 55);
-      doc.text(`Current Net Worth: ${formatCurrency(nw)} (${(pct * 100).toFixed(1)}% of ${formatCurrency(target)})`, 15, y + 13);
+      doc.text(`Current Net Worth: ${formatCurrency(nw)} (${(pct * 100).toFixed(1)}% of ${formatCurrency(target)})`, 15, y + 12);
       
-      y += 20;
+      y += 18;
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("Summary & Professional Recommendations", 15, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
+      y += 5;
+      y = drawFlowText(doc, `Your Financial Freedom target corpus is ${formatCurrency(results.fi_number)}. Based on monthly savings of ${formatCurrency(inputs.monthly_savings)}, your timeline is estimated.`, 15, y, 180, 8.5);
+      
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
-      doc.text(`Your Financial Freedom target corpus is ${formatCurrency(results.fi_number)}. Based on monthly savings of ${formatCurrency(inputs.monthly_savings)}, your timeline is estimated.`, 15, y);
-      y += 5;
       doc.text("Recommendations:", 15, y);
+      y += 4;
+      y = drawFlowText(doc, "• Maintaining a safe withdrawal rate of 3-4% ensures your capital is preserved indefinitely.", 18, y, 177, 8.5);
+      y = drawFlowText(doc, "• Utilize a savings step-up rate of at least 5% to significantly pull forward your financial freedom date.", 18, y, 177, 8.5);
       y += 5;
-      doc.text("• Maintaining a safe withdrawal rate of 3-4% ensures your capital is preserved indefinitely.", 18, y);
-      y += 5;
-      doc.text("• Utilize a savings step-up rate of at least 5% to significantly pull forward your financial freedom date.", 18, y);
-
-      y += 15;
-      if (y > 210) {
-        doc.addPage();
-        y = 25;
-      }
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Financial Freedom Date Inputs", 15, y);
-      y += 6;
+      y += 5;
 
       const fdRows = [
         ["Current Age", safeVal(inputs.current_age, " years"), "Current Net Worth", formatCurrency(inputs.current_net_worth)],
@@ -756,7 +928,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         ["Expected Inflation", formatPercent(inputs.expected_inflation), "Savings Step-up Rate", formatPercent(inputs.stepup_rate)],
         ["Safe Withdrawal Rate", formatPercent(inputs.withdrawal_rate), "Safe FI Buffer", formatCurrency(results.safe_fi_buffer)]
       ];
-      drawTable(doc, ["Parameter", "Value", "Parameter", "Value"], fdRows, 15, y, 180);
+      y = drawTable(doc, ["Parameter", "Value", "Parameter", "Value"], fdRows, 15, y, 180);
 
     } else if (moduleName === "Goal Visualization Dashboard") {
       doc.setFillColor(cardBg[0], cardBg[1], cardBg[2]);
@@ -792,20 +964,20 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.setTextColor(22, 101, 52);
       doc.text(formatPercent(results.overall_percent_achieved), 145, y + 18);
 
-      y += 35;
+      y += 32;
 
-      // Draw Vector Chart
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
+      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Goal Progress Visualization", 15, y);
-      y += 6;
+      y += 5;
       const activeGoals = results.goals || [];
       if (activeGoals.length === 0) {
         doc.setFont("helvetica", "italic");
         doc.setFontSize(9);
         doc.setTextColor(100, 116, 139);
         doc.text("No active goals defined.", 15, y + 4);
-        y += 10;
+        y += 8;
       } else {
         activeGoals.slice(0, 3).forEach((g: any) => {
           const pctVal = g.percent_achieved || 0;
@@ -824,34 +996,28 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
           doc.text(formatPercent(pct), 155, y + 4.5);
           y += 8;
         });
-        y += 4;
+        y += 2;
       }
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text("Summary & Professional Recommendations", 15, y);
-      y += 6;
-      doc.setFont("helvetica", "normal");
+      y += 5;
+      y = drawFlowText(doc, `You have defined ${activeGoals.length} financial goals with an overall progress of ${formatPercent(results.overall_percent_achieved)}.`, 15, y, 180, 8.5);
+      
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(8.5);
-      doc.text(`You have defined ${activeGoals.length} financial goals with an overall progress of ${formatPercent(results.overall_percent_achieved)}.`, 15, y);
-      y += 5;
       doc.text("Recommendations:", 15, y);
+      y += 4;
+      y = drawFlowText(doc, "• Tag specific mutual fund portfolios/SIPs directly to each goal to ensure focused compounding.", 18, y, 177, 8.5);
+      y = drawFlowText(doc, "• Adjust goal target amounts periodically to match real-world inflation on big purchases.", 18, y, 177, 8.5);
       y += 5;
-      doc.text("• Tag specific mutual fund portfolios/SIPs directly to each goal to ensure focused compounding.", 18, y);
-      y += 5;
-      doc.text("• Adjust goal target amounts periodically to match real-world inflation on big purchases.", 18, y);
-
-      y += 15;
-      if (y > 200) {
-        doc.addPage();
-        y = 25;
-      }
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(textColor[0], textColor[1], textColor[2]);
       doc.text("Active Financial Goals Table", 15, y);
-      y += 6;
+      y += 5;
 
       const goalRows = activeGoals.map((g: any) => [
         safeVal(g.name),
@@ -862,7 +1028,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         formatPercent(g.percent_achieved),
         safeVal(g.status)
       ]);
-      drawTable(doc, ["Goal Name", "Target (₹)", "Saved (₹)", "Monthly SIP", "Timeline", "% Achieved", "Status"], goalRows, 15, y, 180);
+      y = drawTable(doc, ["Goal Name", "Target (₹)", "Saved (₹)", "Monthly SIP", "Timeline", "% Achieved", "Status"], goalRows, 15, y, 180);
 
     } else if (moduleName === "Family Financial Vault") {
       doc.setFont("helvetica", "bold");
@@ -871,13 +1037,9 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.text("CONFIDENTIAL FAMILY FINANCIAL RECORDS", 15, y);
       y += 8;
 
-      doc.setFontSize(9);
-      doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-      
       const vaultData = extraData || {};
       
-      doc.text("1. Family Member Details", 15, y);
-      y += 4;
+      y = drawFlowText(doc, "1. Family Member Details", 15, y, 180, 9, "bold");
       const famRows = (vaultData.family_members || []).map((m: any) => [
         safeVal(m.name), 
         safeVal(m.relationship), 
@@ -886,16 +1048,10 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         safeVal(m.aadhaar_last_four), 
         safeVal(m.blood_group)
       ]);
-      drawTable(doc, ["Name", "Relation", "DOB", "PAN Number", "Aadhaar Last 4", "Blood Group"], famRows, 15, y, 180, 5);
-      y += Math.max(25, famRows.length * 6 + 15);
+      y = drawTable(doc, ["Name", "Relation", "DOB", "PAN Number", "Aadhaar Last 4", "Blood Group"], famRows, 15, y, 180, 5);
+      y += 8;
 
-      if (y > 220) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.text("2. Insurance Policies", 15, y);
-      y += 4;
+      y = drawFlowText(doc, "2. Insurance Policies", 15, y, 180, 9, "bold");
       const insRows = (vaultData.insurance_policies || []).map((i: any) => [
         safeVal(i.policy_type), 
         safeVal(i.company), 
@@ -904,16 +1060,10 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         formatCurrency(i.premium_amount), 
         safeVal(i.expiry_date)
       ]);
-      drawTable(doc, ["Policy Type", "Company", "Policy No.", "Sum Assured", "Premium/Yr", "Expiry"], insRows, 15, y, 180, 5);
-      y += Math.max(25, insRows.length * 6 + 15);
+      y = drawTable(doc, ["Policy Type", "Company", "Policy No.", "Sum Assured", "Premium/Yr", "Expiry"], insRows, 15, y, 180, 5);
+      y += 8;
 
-      if (y > 220) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.text("3. Investment Portfolio", 15, y);
-      y += 4;
+      y = drawFlowText(doc, "3. Investment Portfolio", 15, y, 180, 9, "bold");
       const invRows = (vaultData.investments || []).map((i: any) => [
         safeVal(i.investment_type), 
         safeVal(i.scheme_name), 
@@ -922,16 +1072,10 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         safeVal(i.nominee), 
         safeVal(i.institution)
       ]);
-      drawTable(doc, ["Investment Type", "Scheme Name", "Folio/Account No", "Current Value", "Nominee", "Institution"], invRows, 15, y, 180, 5);
-      y += Math.max(25, invRows.length * 6 + 15);
+      y = drawTable(doc, ["Investment Type", "Scheme Name", "Folio/Account No", "Current Value", "Nominee", "Institution"], invRows, 15, y, 180, 5);
+      y += 8;
 
-      if (y > 220) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.text("4. Important Documents Checklist", 15, y);
-      y += 4;
+      y = drawFlowText(doc, "4. Important Documents Checklist", 15, y, 180, 9, "bold");
       const docRows = (vaultData.important_documents || []).map((d: any) => [
         safeVal(d.document_name), 
         safeVal(d.storage_location), 
@@ -939,16 +1083,10 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         safeVal(d.digital_copy_stored_at), 
         safeVal(d.status)
       ]);
-      drawTable(doc, ["Document Name", "Storage Location", "Last Updated", "Digital Copy At", "Status"], docRows, 15, y, 180, 5);
-      y += Math.max(25, docRows.length * 6 + 15);
+      y = drawTable(doc, ["Document Name", "Storage Location", "Last Updated", "Digital Copy At", "Status"], docRows, 15, y, 180, 5);
+      y += 8;
 
-      if (y > 220) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.text("5. Emergency Contacts & Nominees", 15, y);
-      y += 4;
+      y = drawFlowText(doc, "5. Emergency Contacts & Nominees", 15, y, 180, 9, "bold");
       const conRows = (vaultData.emergency_contacts || []).map((c: any) => [
         safeVal(c.name), 
         safeVal(c.relationship), 
@@ -956,16 +1094,10 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         safeVal(c.email), 
         safeVal(c.role_purpose)
       ]);
-      drawTable(doc, ["Name", "Relation", "Mobile", "Email", "Role / Purpose"], conRows, 15, y, 180, 5);
-      y += Math.max(25, conRows.length * 6 + 15);
+      y = drawTable(doc, ["Name", "Relation", "Mobile", "Email", "Role / Purpose"], conRows, 15, y, 180, 5);
+      y += 8;
 
-      if (y > 220) {
-        doc.addPage();
-        y = 20;
-      }
-
-      doc.text("6. Bank Accounts & Credit Cards", 15, y);
-      y += 4;
+      y = drawFlowText(doc, "6. Bank Accounts & Credit Cards", 15, y, 180, 9, "bold");
       const bankRows = (vaultData.bank_accounts || []).map((b: any) => [
         safeVal(b.bank_card_name), 
         safeVal(b.account_type), 
@@ -974,7 +1106,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         safeVal(b.nominee), 
         safeVal(b.status)
       ]);
-      drawTable(doc, ["Bank / Card Name", "Account Type", "Last 4 Digits", "Branch / Limit", "Nominee", "Status"], bankRows, 15, y, 180, 5);
+      y = drawTable(doc, ["Bank / Card Name", "Account Type", "Last 4 Digits", "Branch / Limit", "Nominee", "Status"], bankRows, 15, y, 180, 5);
     }
 
     const totalPages = (doc as any).internal.getNumberOfPages();
@@ -987,46 +1119,45 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
       doc.text(`Page ${i} of ${totalPages}`, 180, 287);
     }
 
+    // Auto-upload generated PDF to backend
+    try {
+      const pdfBlob = doc.output("blob");
+      const calcClean = moduleName.replace(/\s+/g, "");
+      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const timeStr = new Date().toTimeString().split(" ")[0].replace(/:/g, "");
+      const filename = `${calcClean}_${dateStr}_${timeStr}.pdf`;
+
+      const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("tool_id", String(toolId));
+      formData.append("calculator_name", moduleName);
+      formData.append("client_name", "");
+
+      fetch(`${API_URL}/wow/reports/upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+        },
+        body: formData
+      })
+      .then(r => r.json())
+      .then(data => {
+        console.log("PDF auto-saved to backend:", data);
+      })
+      .catch(err => {
+        console.error("Failed to auto-save PDF to backend:", err);
+      });
+    } catch (uploadErr) {
+      console.error("Failed to process auto-upload:", uploadErr);
+    }
+
     doc.save(`WOW_${moduleName.replace(/\s+/g, "_")}_Report.pdf`);
   };
 
-  const drawTable = (doc: jsPDF, headers: string[], rows: any[][], x: number, y: number, width: number, rowHeight = 6) => {
-    const colWidth = width / headers.length;
-
-    doc.setFillColor(220, 38, 38);
-    doc.rect(x, y, width, rowHeight + 1, "F");
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8.5);
-    doc.setTextColor(255, 255, 255);
-    headers.forEach((h, idx) => {
-      doc.text(h, x + idx * colWidth + 2, y + rowHeight - 1);
-    });
-
-    let currentY = y + rowHeight + 1;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(31, 41, 55);
-
-    rows.forEach((row, rowIdx) => {
-      if (rowIdx % 2 === 1) {
-        doc.setFillColor(244, 244, 245);
-        doc.rect(x, currentY, width, rowHeight, "F");
-      }
-      
-      row.forEach((cell, cellIdx) => {
-        doc.text(String(cell || ""), x + cellIdx * colWidth + 2, currentY + rowHeight - 2);
-      });
-
-      doc.setDrawColor(229, 231, 235);
-      doc.line(x, currentY + rowHeight, x + width, currentY + rowHeight);
-
-      currentY += rowHeight;
-    });
-  };
 
   return (
-    <div className="space-y-6">
+    <ResponsivePageWrapper>
       {/* Page Header with Back Navigation */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -1050,58 +1181,78 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
         )}
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex flex-wrap gap-1 border-b border-border bg-muted/30 p-1 rounded-xl max-w-fit">
-        <TabButton 
-          active={activeTab === "dashboard"} 
-          onClick={() => setActiveTab("dashboard")} 
-          icon={<Coins className="h-4 w-4" />}
-          label="Dashboard" 
-        />
-        <TabButton 
-          active={activeTab === "retirement"} 
-          onClick={() => setActiveTab("retirement")} 
-          icon={<PiggyBank className="h-4 w-4" />}
-          label="Retirement Age Predictor" 
-        />
-        <TabButton 
-          active={activeTab === "delay"} 
-          onClick={() => setActiveTab("delay")} 
-          icon={<Activity className="h-4 w-4" />}
-          label="Cost Of Delay Calculator" 
-        />
-        <TabButton 
-          active={activeTab === "loan"} 
-          onClick={() => setActiveTab("loan")} 
-          icon={<Landmark className="h-4 w-4" />}
-          label="SIP + Home Loan Impact" 
-        />
-        <TabButton 
-          active={activeTab === "freedom"} 
-          onClick={() => setActiveTab("freedom")} 
-          icon={<Calendar className="h-4 w-4" />}
-          label="Financial Freedom Date" 
-        />
-        <TabButton 
-          active={activeTab === "goal"} 
-          onClick={() => setActiveTab("goal")} 
-          icon={<Target className="h-4 w-4" />}
-          label="Goal Visualization Dashboard" 
-        />
-        <TabButton 
-          active={activeTab === "vault"} 
-          onClick={() => setActiveTab("vault")} 
-          icon={<Lock className="h-4 w-4" />}
-          label="Family Financial Vault" 
-        />
+      {/* Tabs Navigation & Reset Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4 pb-2">
+        <div className="flex overflow-x-auto md:flex-wrap gap-1 border-b border-border bg-muted/30 p-1 rounded-xl w-full md:max-w-fit max-w-full scrollbar-none">
+          <TabButton 
+            active={activeTab === "dashboard"} 
+            onClick={() => setActiveTab("dashboard")} 
+            icon={<Coins className="h-4 w-4" />}
+            label="Dashboard" 
+          />
+          <TabButton 
+            active={activeTab === "retirement"} 
+            onClick={() => setActiveTab("retirement")} 
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Retirement Predictor" 
+          />
+          <TabButton 
+            active={activeTab === "delay"} 
+            onClick={() => setActiveTab("delay")} 
+            icon={<Clock className="h-4 w-4" />}
+            label="Cost of Delay" 
+          />
+          <TabButton 
+            active={activeTab === "sip-loan"} 
+            onClick={() => setActiveTab("sip-loan")} 
+            icon={<PiggyBank className="h-4 w-4" />}
+            label="SIP + Home Loan" 
+          />
+          <TabButton 
+            active={activeTab === "freedom-date"} 
+            onClick={() => setActiveTab("freedom-date")} 
+            icon={<Calendar className="h-4 w-4" />}
+            label="Freedom Date" 
+          />
+          <TabButton 
+            active={activeTab === "goal"} 
+            onClick={() => setActiveTab("goal")} 
+            icon={<Target className="h-4 w-4" />}
+            label="Goal Visualizer" 
+          />
+          <TabButton 
+            active={activeTab === "vault"} 
+            onClick={() => setActiveTab("vault")} 
+            icon={<Lock className="h-4 w-4" />}
+            label="Financial Vault" 
+          />
+          <TabButton 
+            active={activeTab === "reports"} 
+            onClick={() => setActiveTab("reports")} 
+            icon={<FileText className="h-4 w-4" />}
+            label="Generated PDFs" 
+          />
+        </div>
+
+        {/* Clear Information Button */}
+        {activeTab !== "dashboard" && activeTab !== "reports" && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowResetConfirm(true)}
+            className="text-xs border-red-500/20 hover:bg-red-500/5 text-red-600 gap-1.5 font-bold self-start md:self-auto"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Clear Information
+          </Button>
+        )}
       </div>
 
       {/* Tab Panels */}
-      <div className="mt-4">
+      <div className="mt-6">
         {activeTab === "dashboard" && (
           <DashboardTab 
-            inputs={inputs} 
-            results={results} 
+            inputs={inputs}
+            results={results}
             loading={loading}
             formatCurrency={formatCurrency}
             onNavigate={(tab) => setActiveTab(tab)}
@@ -1110,11 +1261,12 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
         {activeTab === "retirement" && (
           <RetirementPredictorTab 
+            key={`retirement-${resetKey}`}
             inputs={inputs} 
-            results={results}
+            onChange={handleInputChange} 
+            results={results} 
             loading={loading}
             error={error}
-            onChange={handleInputChange}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             onExportPDF={() => handleExportPDF("Retirement Age Predictor", inputs, results)}
@@ -1123,6 +1275,7 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
 
         {activeTab === "delay" && (
           <CostOfDelayTab 
+            key={`delay-${resetKey}`}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             initialInputs={initialInputs}
@@ -1131,8 +1284,9 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
           />
         )}
 
-        {activeTab === "loan" && (
+        {activeTab === "sip-loan" && (
           <SipHomeLoanTab 
+            key={`sip-${resetKey}`}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             initialInputs={initialInputs}
@@ -1141,8 +1295,9 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
           />
         )}
 
-        {activeTab === "freedom" && (
+        {activeTab === "freedom-date" && (
           <FinancialFreedomDateTab 
+            key={`freedom-${resetKey}`}
             formatCurrency={formatCurrency}
             formatPercent={formatPercent}
             initialInputs={initialInputs}
@@ -1166,8 +1321,50 @@ export function WowToolkitPage({ onBack }: { onBack: () => void }) {
             onExportPDF={(vaultData) => handleExportPDF("Family Financial Vault", {}, {}, vaultData)}
           />
         )}
+
+        {activeTab === "reports" && (
+          <GeneratedReportsTab toolId={toolId} />
+        )}
       </div>
-    </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <Card className="w-full max-w-md p-6 relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-foreground">Clear All Information?</h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Are you sure you want to clear all inputs? This action cannot be undone. All calculator fields will be reset to their default initial values.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowResetConfirm(false)}
+                className="text-xs border-border/80"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetAll}
+                className="text-xs bg-red-600 hover:bg-red-700 text-white border-none font-bold"
+              >
+                Confirm Reset
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </ResponsivePageWrapper>
   );
 }
 
@@ -1186,7 +1383,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+      className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all shrink-0 ${
         active 
           ? "bg-background text-foreground shadow-sm" 
           : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
@@ -1327,14 +1524,14 @@ function DashboardTab({
             title="SIP + Home Loan Impact" 
             desc="Compare standard mortgages against asset accumulation returns." 
             icon={<Landmark className="h-5 w-5" />} 
-            onClick={() => onNavigate("loan")}
+            onClick={() => onNavigate("sip-loan")}
             ctaLabel="Open Calculator"
           />
           <NavigationCard 
             title="Financial Freedom Date" 
             desc="Find the exact day you hit complete independence." 
             icon={<Calendar className="h-5 w-5" />} 
-            onClick={() => onNavigate("freedom")}
+            onClick={() => onNavigate("freedom-date")}
             ctaLabel="Open Calculator"
           />
           <NavigationCard 
@@ -1588,7 +1785,7 @@ function RetirementPredictorTab({
             )}
           </Card>
 
-          {results && results.sensitivity_table && results.sensitivity_table.length > 0 && (
+          {results && results.sensitivity_table && results.sensitivity_table.length > 0 ? (
             <Card className="p-5">
               <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
                 📈 Corpus Required vs. Retirement Age
@@ -1656,6 +1853,17 @@ function RetirementPredictorTab({
                 💡 <b>How to read this chart:</b> Retiring earlier dramatically expands the required corpus size because your investments have fewer years to grow, and you have more years in retirement to support with inflated expenses.
               </p>
             </Card>
+          ) : (
+            <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+              {loading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span>Calculating and generating chart...</span>
+                </div>
+              ) : (
+                <span>No data available. Configure inputs to generate retirement predictor chart.</span>
+              )}
+            </Card>
           )}
 
           <Card className="p-4 bg-muted/10">
@@ -1699,14 +1907,16 @@ function CostOfDelayTab({
     target_age: 60,
     current_age: 35
   });
+  const isInitialized = useRef(false);
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial inputs
   useEffect(() => {
-    if (initialInputs?.cost_of_delay_inputs && Object.keys(initialInputs.cost_of_delay_inputs).length > 0) {
+    if (initialInputs?.cost_of_delay_inputs && Object.keys(initialInputs.cost_of_delay_inputs).length > 0 && !isInitialized.current) {
       setInputs(initialInputs.cost_of_delay_inputs);
+      isInitialized.current = true;
     }
   }, [initialInputs]);
 
@@ -1721,18 +1931,22 @@ function CostOfDelayTab({
   useEffect(() => {
     if (inputs.monthly_sip_amount <= 0) {
       setError("Monthly SIP Amount must be greater than zero.");
+      setResults(null);
       return;
     }
     if (inputs.expected_annual_return < 0 || inputs.expected_annual_return > 1) {
       setError("Expected Annual Return must be between 0% and 100% (0.0 and 1.0).");
+      setResults(null);
       return;
     }
     if (inputs.current_age < 0 || inputs.target_age < 0) {
       setError("Age values cannot be negative.");
+      setResults(null);
       return;
     }
     if (inputs.current_age >= inputs.target_age) {
       setError("Current Age must be less than Target Age.");
+      setResults(null);
       return;
     }
     setError(null);
@@ -1756,6 +1970,7 @@ function CostOfDelayTab({
         setResults(data);
       } catch (err: any) {
         setError(err.message || "Failed to calculate.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -1890,37 +2105,45 @@ function CostOfDelayTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {results?.delay_table.map((row: any) => {
-                    const isSelected = row.start_age === inputs.current_age;
-                    return (
-                      <tr 
-                        key={row.start_age} 
-                        className={`border-b border-border/50 transition-colors ${
-                          isSelected ? "bg-primary-soft/30 font-semibold" : "hover:bg-muted/10"
-                        }`}
-                      >
-                        <td className="p-3 flex items-center gap-1.5">
-                          {row.start_age}
-                          {isSelected && <span className="text-[9px] bg-primary text-primary-foreground px-1.5 py-0.2 rounded-full">Current</span>}
-                        </td>
-                        <td className="p-3 text-right">{row.years_to_invest}</td>
-                        <td className="p-3 text-right">{formatCurrency(row.total_invested)}</td>
-                        <td className="p-3 text-right">{formatCurrency(row.corpus_at_target)}</td>
-                        <td className="p-3 text-right text-destructive">
-                          {row.vs_starting_at_25 !== 0 ? formatCurrency(row.vs_starting_at_25) : "—"}
-                        </td>
-                        <td className="p-3 text-right text-destructive font-medium">
-                          {row.delay_cost_percent !== 0 ? `${(Math.abs(row.delay_cost_percent) * 100).toFixed(1)}%` : "0.0%"}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {results && results.delay_table && results.delay_table.length > 0 ? (
+                    results.delay_table.map((row: any) => {
+                      const isSelected = row.start_age === inputs.current_age;
+                      return (
+                        <tr 
+                          key={row.start_age} 
+                          className={`border-b border-border/50 transition-colors ${
+                            isSelected ? "bg-primary-soft/30 font-semibold" : "hover:bg-muted/10"
+                          }`}
+                        >
+                          <td className="p-3 flex items-center gap-1.5">
+                            {row.start_age}
+                            {isSelected && <span className="text-[9px] bg-primary text-primary-foreground px-1.5 py-0.2 rounded-full">Current</span>}
+                          </td>
+                          <td className="p-3 text-right">{row.years_to_invest}</td>
+                          <td className="p-3 text-right">{formatCurrency(row.total_invested)}</td>
+                          <td className="p-3 text-right">{formatCurrency(row.corpus_at_target)}</td>
+                          <td className="p-3 text-right text-destructive">
+                            {row.vs_starting_at_25 !== 0 ? formatCurrency(row.vs_starting_at_25) : "—"}
+                          </td>
+                          <td className="p-3 text-right text-destructive font-medium">
+                            {row.delay_cost_percent !== 0 ? `${(Math.abs(row.delay_cost_percent) * 100).toFixed(1)}%` : "0.0%"}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="p-6 text-center text-muted-foreground">
+                        {loading ? "Calculating delay table..." : "No data available."}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </Card>
 
-          {results && (
+          {results && results.delay_table && results.delay_table.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="p-5">
                 <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
@@ -1962,6 +2185,29 @@ function CostOfDelayTab({
                 </div>
               </Card>
             </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Calculating and generating chart...</span>
+                  </div>
+                ) : (
+                  <span>No future corpus data. Configure inputs to calculate.</span>
+                )}
+              </Card>
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Calculating and generating chart...</span>
+                  </div>
+                ) : (
+                  <span>No percentage penalty data. Configure inputs to calculate.</span>
+                )}
+              </Card>
+            </div>
           )}
         </div>
       </div>
@@ -1999,14 +2245,16 @@ function SipHomeLoanTab({
     appreciation_rate: 0.06,
     tax_benefit: 50000
   });
+  const isInitialized = useRef(false);
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial inputs
   useEffect(() => {
-    if (initialInputs?.sip_home_loan_inputs && Object.keys(initialInputs.sip_home_loan_inputs).length > 0) {
+    if (initialInputs?.sip_home_loan_inputs && Object.keys(initialInputs.sip_home_loan_inputs).length > 0 && !isInitialized.current) {
       setInputs(initialInputs.sip_home_loan_inputs);
+      isInitialized.current = true;
     }
   }, [initialInputs]);
 
@@ -2021,10 +2269,12 @@ function SipHomeLoanTab({
   useEffect(() => {
     if (inputs.monthly_sip < 0 || inputs.loan_amount < 0 || inputs.down_payment < 0) {
       setError("Financial amounts cannot be negative.");
+      setResults(null);
       return;
     }
     if (inputs.sip_duration <= 0 || inputs.loan_tenure <= 0) {
       setError("Tenures/durations must be greater than zero.");
+      setResults(null);
       return;
     }
     setError(null);
@@ -2048,6 +2298,7 @@ function SipHomeLoanTab({
         setResults(data);
       } catch (err: any) {
         setError(err.message || "Failed to calculate.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -2055,7 +2306,7 @@ function SipHomeLoanTab({
 
     const debounceTimer = setTimeout(() => {
       calculate();
-    }, 200);
+    }, 500);
     return () => clearTimeout(debounceTimer);
   }, [inputs]);
 
@@ -2217,7 +2468,7 @@ function SipHomeLoanTab({
             </div>
           )}
 
-          {results && (
+          {results && results.sip_series && results.sip_series.length > 0 ? (
             <div className="space-y-6">
               <Card className="p-5">
                 <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
@@ -2302,6 +2553,41 @@ function SipHomeLoanTab({
                 </Card>
               </div>
             </div>
+          ) : (
+            <div className="space-y-6">
+              <Card className="p-5 flex flex-col items-center justify-center h-72 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Calculating and generating chart...</span>
+                  </div>
+                ) : (
+                  <span>No SIP wealth accumulation data. Configure inputs to calculate.</span>
+                )}
+              </Card>
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span>Generating amortization schedule...</span>
+                    </div>
+                  ) : (
+                    <span>No mortgage amortization data. Configure inputs to calculate.</span>
+                  )}
+                </Card>
+                <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                  {loading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span>Generating appreciation chart...</span>
+                    </div>
+                  ) : (
+                    <span>No property value appreciation data. Configure inputs to calculate.</span>
+                  )}
+                </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -2338,14 +2624,16 @@ function FinancialFreedomDateTab({
     monthly_savings: 20000,
     stepup_rate: 0.05
   });
+  const isInitialized = useRef(false);
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial inputs
   useEffect(() => {
-    if (initialInputs?.freedom_date_inputs && Object.keys(initialInputs.freedom_date_inputs).length > 0) {
+    if (initialInputs?.freedom_date_inputs && Object.keys(initialInputs.freedom_date_inputs).length > 0 && !isInitialized.current) {
       setInputs(initialInputs.freedom_date_inputs);
+      isInitialized.current = true;
     }
   }, [initialInputs]);
 
@@ -2360,10 +2648,12 @@ function FinancialFreedomDateTab({
   useEffect(() => {
     if (inputs.current_age < 0 || inputs.birth_year < 0 || inputs.current_monthly_expenses < 0 || inputs.current_net_worth < 0 || inputs.monthly_savings < 0) {
       setError("Input values cannot be negative.");
+      setResults(null);
       return;
     }
     if (inputs.withdrawal_rate <= 0) {
       setError("Withdrawal Rate must be greater than zero.");
+      setResults(null);
       return;
     }
     setError(null);
@@ -2387,6 +2677,7 @@ function FinancialFreedomDateTab({
         setResults(data);
       } catch (err: any) {
         setError(err.message || "Failed to calculate.");
+        setResults(null);
       } finally {
         setLoading(false);
       }
@@ -2394,21 +2685,12 @@ function FinancialFreedomDateTab({
 
     const debounceTimer = setTimeout(() => {
       calculate();
-    }, 200);
+    }, 500);
     return () => clearTimeout(debounceTimer);
   }, [inputs]);
 
   const handleValChange = (key: string, val: number) => {
-    setInputs(prev => {
-      const next = { ...prev, [key]: val };
-      if (key === "current_age") {
-        next.birth_year = new Date().getFullYear() - val;
-      }
-      if (key === "birth_year") {
-        next.current_age = new Date().getFullYear() - val;
-      }
-      return next;
-    });
+    setInputs(prev => ({ ...prev, [key]: val }));
   };
 
   const formatChartValue = (value: number) => {
@@ -2553,14 +2835,14 @@ function FinancialFreedomDateTab({
             </div>
           )}
 
-          {results && (
+          {results && results.timeline_series && results.timeline_series.length > 0 ? (
             <Card className="p-5">
               <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
                 📈 Wealth Accumulation Projection to Freedom
               </h4>
               <div className="h-72 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={results.projection_series} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
+                  <AreaChart data={results.timeline_series} margin={{ top: 10, right: 10, left: 10, bottom: 5 }}>
                     <defs>
                       <linearGradient id="colorProjSimple" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
@@ -2576,11 +2858,22 @@ function FinancialFreedomDateTab({
                     <YAxis tickFormatter={formatChartValue} tick={{ fill: "currentColor", fontSize: 10 }} />
                     <Tooltip formatter={(v: any) => [formatCurrency(Number(v)), "Balance"]} labelFormatter={(label) => `Age: ${label}`} contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', borderRadius: '8px', fontSize: '11px' }} />
                     <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px' }} />
-                    <Area type="monotone" name="Simple Savings Growth" dataKey="simple_balance" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorProjSimple)" strokeWidth={2} />
-                    <Area type="monotone" name="Step-Up Savings Growth" dataKey="stepup_balance" stroke="#10b981" fillOpacity={1} fill="url(#colorProjStepup)" strokeWidth={2} />
+                    <Area type="monotone" name="Simple Savings Growth" dataKey="simple_net_worth" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorProjSimple)" strokeWidth={2} />
+                    <Area type="monotone" name="Step-Up Savings Growth" dataKey="stepup_net_worth" stroke="#10b981" fillOpacity={1} fill="url(#colorProjStepup)" strokeWidth={2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </Card>
+          ) : (
+            <Card className="p-5 flex flex-col items-center justify-center h-72 text-xs text-muted-foreground">
+              {loading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span>Calculating and generating chart...</span>
+                </div>
+              ) : (
+                <span>No projection data. Configure inputs to calculate wealth projection.</span>
+              )}
             </Card>
           )}
         </div>
@@ -2911,7 +3204,7 @@ function GoalVisualizationDashboardTab({
             </div>
           </Card>
 
-          {goalsData && goalsData.goals.length > 0 && (
+          {goalsData && goalsData.goals.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="p-5">
                 <h4 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4">
@@ -2955,6 +3248,29 @@ function GoalVisualizationDashboardTab({
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Loading goals...</span>
+                  </div>
+                ) : (
+                  <span>No goal allocation data. Create a financial goal to visualize target allocation.</span>
+                )}
+              </Card>
+              <Card className="p-5 flex flex-col items-center justify-center h-64 text-xs text-muted-foreground">
+                {loading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span>Loading goals...</span>
+                  </div>
+                ) : (
+                  <span>No SIP data. Create a financial goal to visualize monthly SIP contributions.</span>
+                )}
               </Card>
             </div>
           )}

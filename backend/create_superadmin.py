@@ -8,7 +8,7 @@ from app.models.user import User
 async def create_superadmin():
     # Credentials for the admin
     full_name = os.getenv("ADMIN_NAME", "Admin")
-    email = os.getenv("ADMIN_EMAIL", "admin@edustream.com")
+    email = os.getenv("ADMIN_EMAIL", "bhargavi@equitywala.com")
     password = os.getenv("ADMIN_PASSWORD", "Admin@123")
     
     # Hash the password directly using bcrypt to avoid passlib version conflicts
@@ -44,7 +44,7 @@ async def create_superadmin():
                 existing_email.role = "admin"
                 existing_email.full_name = full_name
                 existing_email.hashed_password = hashed_password
-                existing_email.company_name = "EduStream"
+                existing_email.company_name = "Masterclass"
                 existing_email.is_active = True
                 await session.commit()
                 print("Successfully promoted existing user to admin role!")

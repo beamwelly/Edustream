@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.models.user import User
 from app.utils.security import verify_password, create_access_token
 
@@ -12,8 +12,8 @@ async def authenticate_user(db: AsyncSession, email: str, password: str, role: s
             - auth_data: Dictionary containing access_token and user info if successful; None otherwise.
             - error_message: Error string explaining failure; None if successful.
     """
-    # 1. Fetch user by email
-    stmt = select(User).where(User.email == email)
+    email_clean = email.strip().lower()
+    stmt = select(User).where(func.lower(User.email) == email_clean)
     result = await db.execute(stmt)
     user = result.scalar_one_or_none()
     

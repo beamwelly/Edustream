@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { Calendar, Video, FileText, Clock, Loader2 } from "lucide-react";
-import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { PageHeader, Card, Button, Badge, AccessDenied } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
+
 
 interface UserInfo {
   id: number;
@@ -38,9 +42,10 @@ interface MeetingResponse {
   created_at: string;
 }
 
-const slots = ["10:00 AM", "11:30 AM", "02:00 PM", "04:30 PM"];
+const slots = ["10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM"];
 
 export function UserMeetingsPage() {
+  const { user } = useAuth();
   const [meetings, setMeetings] = useState<MeetingResponse[]>([]);
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,8 +85,12 @@ export function UserMeetingsPage() {
   };
 
   useEffect(() => {
+    if (user && user.role === "employee" && !user.permissions?.access_meetings) {
+      setLoading(false);
+      return;
+    }
     fetchMeetingsData();
-  }, []);
+  }, [user]);
 
   const handleRequestMeeting = async () => {
     if (!topic.trim()) {
@@ -168,8 +177,12 @@ export function UserMeetingsPage() {
     }
   };
 
+  if (user && user.role === "employee" && !user.permissions?.access_meetings) {
+    return <AccessDenied message="You do not have permission to access Meetings." />;
+  }
+
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader title="Meetings" subtitle="Schedule a meeting and review past conversations." />
 
       {loading ? (
@@ -202,7 +215,7 @@ export function UserMeetingsPage() {
                   >
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
-                        {u.full_name} ({u.role === "admin" ? "Admin" : u.organization_name || "EduStream"})
+                        {u.full_name} ({u.role === "admin" ? "Admin" : u.organization_name || "Masterclass"})
                       </option>
                     ))}
                   </select>
@@ -248,6 +261,7 @@ export function UserMeetingsPage() {
                     </button>
                   ))}
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground italic">Each scheduled meeting is 30 minutes in duration.</p>
               </div>
 
               <div className="mt-6 flex justify-end">
@@ -432,46 +446,35 @@ export function UserMeetingsPage() {
         </>
       )}
 
-      {/* Centered post-meeting MOM notes read-only modal */}
-      {showNotesModal && selectedNotes && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-lg shadow-2xl border border-border bg-card animate-zoom-in relative">
-            <button 
-              onClick={() => setShowNotesModal(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground text-lg font-bold"
-            >
-              ✕
-            </button>
-            <div className="border-b border-border pb-3 mb-4">
-              <h3 className="text-lg font-bold text-foreground">Post-Meeting Summary</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Meeting: <strong className="text-foreground">{selectedNotes.title}</strong></p>
+      {/* Reusable Post-Meeting Summary Modal */}
+      <ResponsiveModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        title="Post-Meeting Summary"
+        subtitle={`Meeting: ${selectedNotes?.title || ""}`}
+        footer={<Button onClick={() => setShowNotesModal(false)}>Close Summary</Button>}
+      >
+        <div className="space-y-4 text-sm">
+          <div>
+            <h4 className="font-semibold text-foreground mb-1">Minutes of Meeting (MOM) / Notes</h4>
+            <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
+              {selectedNotes?.notes || "No general notes recorded."}
             </div>
-            <div className="space-y-4 text-sm max-h-[350px] overflow-y-auto pr-1">
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">Minutes of Meeting (MOM) / Notes</h4>
-                <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
-                  {selectedNotes.notes || "No general notes recorded."}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">Action Items</h4>
-                <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
-                  {selectedNotes.action_items || "No action items recorded."}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground mb-1">Next Steps</h4>
-                <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
-                  {selectedNotes.next_steps || "No next steps recorded."}
-                </div>
-              </div>
+          </div>
+          <div>
+            <h4 className="font-semibold text-foreground mb-1">Action Items</h4>
+            <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
+              {selectedNotes?.action_items || "No action items recorded."}
             </div>
-            <div className="mt-5 flex justify-end">
-              <Button onClick={() => setShowNotesModal(false)}>Close Summary</Button>
+          </div>
+          <div>
+            <h4 className="font-semibold text-foreground mb-1">Next Steps</h4>
+            <div className="bg-secondary/40 p-3 rounded-lg border border-border text-muted-foreground whitespace-pre-wrap">
+              {selectedNotes?.next_steps || "No next steps recorded."}
             </div>
-          </Card>
+          </div>
         </div>
-      )}
-    </>
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

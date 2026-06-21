@@ -18,6 +18,7 @@ class ToolRegistry(Base):
     storage_filename: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     icon_name: Mapped[str] = mapped_column(String(50), default="TrendingUp", nullable=False) # Lucide icon identifier
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    visibility: Mapped[str] = mapped_column(String(50), default="owner_only", server_default="owner_only", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

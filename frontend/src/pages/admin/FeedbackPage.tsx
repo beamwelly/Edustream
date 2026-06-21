@@ -16,6 +16,8 @@ import {
   Legend
 } from "recharts";
 
+import { useAuth } from "@/context/AuthContext";
+
 interface FeedbackItem {
   id: number;
   user_id: number;
@@ -34,9 +36,9 @@ interface FeedbackItem {
 export function AdminFeedbackPage() {
   const [feedbacks, setFeedbacks] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { searchQuery, setSearchQuery } = useAuth();
   
   // Filtering & Search
-  const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -105,9 +107,9 @@ export function AdminFeedbackPage() {
   // Filtering Logic
   const filteredFeedbacks = feedbacks.filter(f => {
     const matchesSearch = 
-      f.user_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (f.session_title && f.session_title.toLowerCase().includes(searchTerm.toLowerCase()));
+      f.user_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (f.session_title && f.session_title.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesType = typeFilter === "all" || f.feedback_type === typeFilter;
     const matchesStatus = statusFilter === "all" || f.status === statusFilter;
     return matchesSearch && matchesType && matchesStatus;
@@ -192,18 +194,24 @@ export function AdminFeedbackPage() {
                 <h3 className="text-sm font-bold text-foreground">Average Rating by Category</h3>
               </div>
               <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
-                    <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 600 }} stroke="#9CA3AF" />
-                    <YAxis domain={[0, 5]} tick={{ fontSize: 9 }} stroke="#9CA3AF" />
-                    <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                    <Bar dataKey="avgRating" radius={[4, 4, 0, 0]} barSize={35}>
-                      {barChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.avgRating >= 4 ? "#166534" : entry.avgRating >= 2.5 ? "#EAB308" : "#DC2626"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {feedbacks.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                    No data available.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -25, bottom: 5 }}>
+                      <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 600 }} stroke="#9CA3AF" />
+                      <YAxis domain={[0, 5]} tick={{ fontSize: 9 }} stroke="#9CA3AF" />
+                      <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                      <Bar dataKey="avgRating" radius={[4, 4, 0, 0]} barSize={35}>
+                        {barChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.avgRating >= 4 ? "#166534" : entry.avgRating >= 2.5 ? "#EAB308" : "#DC2626"} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </Card>
 
@@ -253,8 +261,8 @@ export function AdminFeedbackPage() {
                 <input
                   type="text"
                   placeholder="Search user, comment..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs outline-none focus:border-primary min-w-[150px]"
                 />
                 

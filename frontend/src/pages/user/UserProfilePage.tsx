@@ -4,6 +4,8 @@ import { PageHeader, Card, Button } from "@/components/common";
 import { apiFetch } from "@/services/api";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+
 
 interface UserProfile {
   id: number;
@@ -181,7 +183,7 @@ export function UserProfilePage() {
     : "U";
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader title="Profile" subtitle="Keep your professional and contact details current." />
 
       {isLoading ? (
@@ -223,7 +225,7 @@ export function UserProfilePage() {
                 </div>
                 <div className="flex items-center gap-2.5 text-muted-foreground">
                   <Building2 className="h-4 w-4 text-primary/70 flex-shrink-0" />
-                  <span className="truncate">{profile?.organization_name || "EduStream Platform"}</span>
+                  <span className="truncate">{profile?.organization_name || "Masterclass Platform"}</span>
                 </div>
                 <div className="flex items-center gap-2.5 text-muted-foreground">
                   <Shield className="h-4 w-4 text-primary/70 flex-shrink-0" />
@@ -238,7 +240,7 @@ export function UserProfilePage() {
             <Card>
               <h3 className="text-base font-bold text-foreground mb-4.5 border-b border-border/60 pb-3">Edit Details</h3>
               <form onSubmit={handleSave} className="space-y-6">
-                <div className="grid gap-5 md:grid-cols-2">
+                <div className="grid gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-semibold text-muted-foreground">Full Name *</span>
                     <input
@@ -296,7 +298,7 @@ export function UserProfilePage() {
                 {profile?.role === "user" && (
                   <div className="mt-6 border-t border-border/60 pt-6 space-y-5">
                     <h4 className="text-sm font-bold text-foreground">Professional Profile</h4>
-                    <div className="grid gap-5 md:grid-cols-2">
+                    <div className="grid gap-5 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
                       <label className="block">
                         <span className="mb-1.5 block text-sm font-semibold text-muted-foreground">Department *</span>
                         <input
@@ -343,7 +345,7 @@ export function UserProfilePage() {
                         />
                       </label>
 
-                      <label className="block md:col-span-2">
+                      <label className="block md:col-span-2 xl:col-span-3">
                         <span className="mb-1.5 block text-sm font-semibold text-muted-foreground">Products dealt with *</span>
                         <input
                           type="text"
@@ -354,7 +356,7 @@ export function UserProfilePage() {
                         />
                       </label>
 
-                      <label className="block md:col-span-2">
+                      <label className="block md:col-span-2 xl:col-span-3">
                         <span className="mb-1.5 block text-sm font-semibold text-muted-foreground">Designation / Role (Optional)</span>
                         <input
                           type="text"
@@ -431,6 +433,6 @@ export function UserProfilePage() {
           </div>
         </div>
       )}
-    </>
+    </ResponsivePageWrapper>
   );
 }

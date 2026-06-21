@@ -154,7 +154,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
                 <div class="card">
                     <div class="icon">✓</div>
                     <h2>Connected Successfully!</h2>
-                    <p>EduStream is now integrated with your Google Calendar to auto-generate secure Google Meet links.</p>
+                    <p>Masterclass is now integrated with your Google Calendar to auto-generate secure Google Meet links.</p>
                     <a href="{frontend_url}/super-admin/meetings?google_connected=true" class="btn">Return to App</a>
                 </div>
             </body>

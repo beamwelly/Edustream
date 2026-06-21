@@ -10,6 +10,15 @@ export interface User {
   organization_name?: string | null;
   is_temp_password: boolean;
   is_active: boolean;
+  permissions?: {
+    access_dashboard: boolean;
+    access_content: boolean;
+    access_masterclasses: boolean;
+    access_meetings: boolean;
+    access_feedback: boolean;
+    allowed_tools: string[];
+    allowed_categories: string[];
+  } | null;
 }
 
 interface LoginResponse {
@@ -26,6 +35,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string, role?: string) => Promise<void>;
   logout: () => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Initialize authentication from localStorage
   useEffect(() => {
@@ -88,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setRole(null);
     setUser(null);
+    setSearchQuery("");
     // Redirect to landing page
     window.location.href = "/";
   };
@@ -104,6 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isLoading,
         login,
         logout,
+        searchQuery,
+        setSearchQuery,
       }}
     >
       {children}

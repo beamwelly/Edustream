@@ -2,6 +2,7 @@ import re
 import secrets
 import string
 import io
+import os
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +28,18 @@ def hash_password(password: str) -> str:
     salt = bcrypt.gensalt()
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
+async def get_or_create_organization(db: AsyncSession, org_name: str) -> int:
+    from app.models.organization import Organization
+    name_clean = org_name.strip()
+    stmt = select(Organization).where(func.lower(Organization.organization_name) == name_clean.lower())
+    res = await db.execute(stmt)
+    org = res.scalar_one_or_none()
+    if not org:
+        org = Organization(organization_name=name_clean)
+        db.add(org)
+        await db.flush()
+    return org.id
+
 async def create_standard_user(
     db: AsyncSession,
     full_name: str,
@@ -34,10 +47,12 @@ async def create_standard_user(
     company_name: str,
     department: str,
     designation: str,
-    is_active: bool = True
+    is_active: bool = True,
+    role: str = "user",
+    organization_id: Optional[int] = None
 ) -> User:
     """
-    Registers a new standard User with role='user'.
+    Registers a new User (role can be 'user', 'owner', or 'employee').
     Dispatches a professional SMTP email with temporary credentials and new branding.
     """
     full_name_clean = full_name.strip()
@@ -56,6 +71,19 @@ async def create_standard_user(
     if result_user.scalar_one_or_none():
         raise ValueError(f"Email address '{email_clean}' is already registered.")
 
+    # Resolve or create organization for Owner / User roles if organization_id is not provided
+    if role in ["owner", "user"]:
+        if not organization_id and company_name_clean:
+            organization_id = await get_or_create_organization(db, company_name_clean)
+
+    # Resolve organization name if id is given
+    if organization_id:
+        from app.models.organization import Organization
+        org_res = await db.execute(select(Organization).where(Organization.id == organization_id))
+        org = org_res.scalar_one_or_none()
+        if org:
+            company_name_clean = org.organization_name
+
     # Generate temporary password
     temp_password = generate_random_password()
     hashed = hash_password(temp_password)
@@ -65,53 +93,59 @@ async def create_standard_user(
         full_name=full_name_clean,
         email=email_clean,
         hashed_password=hashed,
-        role="user",
+        role=role,
         company_name=company_name_clean,
         department=department_clean,
         designation=designation_clean,
         is_active=is_active,
-        is_temp_password=True
+        is_temp_password=True,
+        organization_id=organization_id
     )
     db.add(new_user)
     await db.flush()
 
+    # Create permissions if role is employee - REMOVED under new centralized access architecture
+    pass
+
     # Assemble HTML Email content (using the new red #E53935 branding)
-    email_subject = "Welcome to EduStream - Onboarding Credentials"
+    email_subject = "Welcome to Masterclass - Onboarding Credentials"
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:8081")
     login_url = f"{frontend_url}/login"
+    
+    role_display = role.capitalize()
     
     email_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1a202c;">
          <div style="text-align: center; margin-bottom: 20px;">
               <div style="display: inline-block; padding: 10px 20px; background-color: #E53935; color: #ffffff; font-weight: bold; font-size: 24px; border-radius: 8px;">
-                   E
+                   M
               </div>
-              <h2 style="color: #E53935; margin-top: 10px; font-size: 20px; font-weight: 600;">Welcome to EduStream!</h2>
+              <h2 style="color: #E53935; margin-top: 10px; font-size: 20px; font-weight: 600;">Welcome to Masterclass!</h2>
          </div>
          
          <p>Hello <strong>{full_name_clean}</strong>,</p>
-         <p>You have been added as a User under: <strong>{company_name_clean}</strong> on the <strong>EduStream Learning & Content Platform</strong>.</p>
+         <p>You have been added as a {role_display} under: <strong>{company_name_clean}</strong> on the <strong>Masterclass Learning & Content Platform</strong>.</p>
          <p>Below are your secure temporary credentials:</p>
          
          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin: 25px 0;">
               <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Portal Login URL:</strong> <a href="{login_url}" style="color: #E53935; text-decoration: underline;">{login_url}</a></p>
               <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Email:</strong> <span style="font-family: monospace; font-size: 15px; color: #0f172a;">{email_clean}</span></p>
               <p style="margin: 0 0 10px 0; font-size: 14px;"><strong>Temporary Password:</strong> <code style="background-color: #e2e8f0; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 15px; color: #0f172a; font-weight: bold;">{temp_password}</code></p>
-              <p style="margin: 0; font-size: 14px;"><strong>Assigned Role:</strong> <span style="color: #4B5563; font-weight: 600;">User</span></p>
+              <p style="margin: 0; font-size: 14px;"><strong>Assigned Role:</strong> <span style="color: #4B5563; font-weight: 600;">{role_display}</span></p>
          </div>
         
-        <div style="color: #dc2626; font-size: 13px; font-weight: bold; background-color: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fee2e2; border-left: 5px solid #dc2626; margin: 20px 0;">
-            ⚠️ IMPORTANT SECURITY POLICY:<br/>
-            • There is NO "Forgot Password" or password recovery feature on this platform.<br/>
-            • These credentials are generated and sent EXACTLY ONCE.<br/>
-            • These credentials will be your permanent login credentials. You must store and keep this password completely secure for all future portal sessions.
-        </div>
-        
-        <p style="margin-top: 25px;">Should you have any questions or require custom setup help, please do not hesitate to contact our platform assistance team.</p>
-        <p style="margin-bottom: 0;">Warm regards,<br/><strong>The EduStream Team</strong></p>
-        
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0 20px 0;" />
-        <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">This is an automated notification. Please do not reply directly to this email.</p>
+         <div style="color: #dc2626; font-size: 13px; font-weight: bold; background-color: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fee2e2; border-left: 5px solid #dc2626; margin: 20px 0;">
+             ⚠️ IMPORTANT SECURITY POLICY:<br/>
+             • There is NO "Forgot Password" or password recovery feature on this platform.<br/>
+             • These credentials are generated and sent EXACTLY ONCE.<br/>
+             • These credentials will be your permanent login credentials. You must store and keep this password completely secure for all future portal sessions.
+         </div>
+         
+         <p style="margin-top: 25px;">Should you have any questions or require custom setup help, please do not hesitate to contact our platform assistance team.</p>
+         <p style="margin-bottom: 0;">Warm regards,<br/><strong>The Masterclass Team</strong></p>
+         
+         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0 20px 0;" />
+         <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 0;">This is an automated notification. Please do not reply directly to this email.</p>
     </div>
     """
 
@@ -133,10 +167,10 @@ async def create_standard_user(
 
 async def get_all_users_mgmt(db: AsyncSession, search_query: Optional[str] = None) -> List[User]:
     """
-    Retrieves all standard users (role == 'user').
-    Allows searching by name, email, company_name, department, designation.
+    Retrieves all users except system admins.
+    Allows searching by name, email, company_name, department, designation, and role.
     """
-    stmt = select(User).where(User.role == "user").order_by(User.created_at.desc())
+    stmt = select(User).where(User.role != "admin").order_by(User.created_at.desc())
     
     res = await db.execute(stmt)
     users = res.scalars().all()
@@ -150,7 +184,8 @@ async def get_all_users_mgmt(db: AsyncSession, search_query: Optional[str] = Non
             comp_match = sq in (u.company_name or "").lower()
             dept_match = sq in (u.department or "").lower()
             des_match = sq in (u.designation or "").lower()
-            if name_match or email_match or comp_match or dept_match or des_match:
+            role_match = sq in (u.role or "").lower()
+            if name_match or email_match or comp_match or dept_match or des_match or role_match:
                 filtered.append(u)
         return filtered
         
@@ -182,14 +217,17 @@ async def process_bulk_upload_users(db: AsyncSession, file_content: bytes, file_
     # Clean columns
     df.columns = [col.strip().lower().replace(" ", "_") for col in df.columns]
     
-    # Map raw headers like 'company_name', 'name' etc.
+    # Map raw headers
     header_mapping = {
         "name": "full_name",
         "email": "email",
         "company_name": "company_name",
         "company": "company_name",
         "department": "department",
-        "designation": "designation"
+        "designation": "designation",
+        "role": "role",
+        "organization_id": "organization_id",
+        "organization": "organization_id"
     }
     
     normalized_cols = {}
@@ -221,6 +259,11 @@ async def process_bulk_upload_users(db: AsyncSession, file_content: bytes, file_
         company = str(row.get("company_name", "")).strip()
         dept = str(row.get("department", "")).strip()
         desig = str(row.get("designation", "")).strip()
+        
+        # Read optional role from sheet, fallback to employee
+        role = str(row.get("role", "employee")).strip().lower()
+        if role not in ["owner", "employee", "user"]:
+            role = "employee"
 
         # Check empty fields
         if not name or name.lower() == "nan":
@@ -259,6 +302,9 @@ async def process_bulk_upload_users(db: AsyncSession, file_content: bytes, file_
         uploaded_emails.add(email_lower)
 
         try:
+            # Resolve or create organization based on company name
+            org_id = await get_or_create_organization(db, company)
+            
             await create_standard_user(
                 db=db,
                 full_name=name,
@@ -266,7 +312,9 @@ async def process_bulk_upload_users(db: AsyncSession, file_content: bytes, file_
                 company_name=company,
                 department=dept,
                 designation=desig,
-                is_active=True
+                is_active=True,
+                role=role,
+                organization_id=org_id
             )
             success_count += 1
         except ValueError as val_err:

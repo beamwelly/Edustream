@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.models.user import User
-from app.routes.users import get_current_user
+from app.routes.users import require_tool_permission
 from app.models.needs_discovery import NeedsDiscoveryProfile
 from pydantic import BaseModel
 from typing import Optional
@@ -19,7 +19,7 @@ class NeedsDiscoverySavePayload(BaseModel):
 @router.get("")
 async def get_needs_discovery_data(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_tool_permission("needs_discovery"))
 ):
     stmt = select(NeedsDiscoveryProfile).where(NeedsDiscoveryProfile.user_id == current_user.id)
     result = await db.execute(stmt)
@@ -44,7 +44,7 @@ async def get_needs_discovery_data(
 async def save_needs_discovery_data(
     payload: NeedsDiscoverySavePayload,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_tool_permission("needs_discovery"))
 ):
     stmt = select(NeedsDiscoveryProfile).where(NeedsDiscoveryProfile.user_id == current_user.id)
     result = await db.execute(stmt)
@@ -76,7 +76,7 @@ async def save_needs_discovery_data(
 @router.post("/reset")
 async def reset_needs_discovery_data(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_tool_permission("needs_discovery"))
 ):
     stmt = select(NeedsDiscoveryProfile).where(NeedsDiscoveryProfile.user_id == current_user.id)
     result = await db.execute(stmt)

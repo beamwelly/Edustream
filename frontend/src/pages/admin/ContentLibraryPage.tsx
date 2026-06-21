@@ -29,9 +29,13 @@ import {
   List
 } from "lucide-react";
 import { PageHeader, Card, Button, Badge } from "@/components/common";
+import { ResponsivePageWrapper } from "@/components/layout/ResponsivePageWrapper";
+import { ResponsiveModal } from "@/components/layout/ResponsiveModal";
 import { apiFetch } from "@/services/api";
+
 import { API_URL } from "@/constants/env";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 import JSZip from "jszip";
 import { 
   PDFThumbnail, 
@@ -61,11 +65,13 @@ interface ContentItem {
   public_url: string;
   uploaded_by: string;
   uploaded_at: string;
+  content_date?: string;
   is_active: boolean;
   original_filename?: string;
   warning?: string;
   organization_name?: string;
   folder?: string;
+  visibility?: string;
 }
 
 const getDownloadUrl = (item: ContentItem) => {
@@ -102,6 +108,8 @@ const triggerDownload = (item: ContentItem) => {
 };
 
 export function ContentLibraryPage() {
+  const { searchQuery, setSearchQuery } = useAuth();
+
   // DB States
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<ContentItem[]>([]);
@@ -110,7 +118,6 @@ export function ContentLibraryPage() {
 
   // Filter & Search States
   const [activeCategory, setActiveCategory] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
   const [dateSort, setDateSort] = useState<"newest" | "oldest" | "month-wise" | "file-type">("newest");
 
@@ -142,13 +149,17 @@ export function ContentLibraryPage() {
   const [uploadCustomFolder, setUploadCustomFolder] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSingleSubmitting, setIsSingleSubmitting] = useState(false);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [uploadVisibility, setUploadVisibility] = useState("owner_employee");
+  const [uploadContentDate, setUploadContentDate] = useState("");
+  const [bulkVisibility, setBulkVisibility] = useState("owner_employee");
 
   // Bulk Upload Form States
   const [bulkCategory, setBulkCategory] = useState("");
   const [selectedBulkFiles, setSelectedBulkFiles] = useState<FileList | null>(null);
   const [selectedZipFile, setSelectedZipFile] = useState<File | null>(null);
   const [bulkUploadType, setBulkUploadType] = useState<"files" | "zip">("files");
-  const [bulkFileMetadata, setBulkFileMetadata] = useState<Record<string, { category: string; newCategoryName?: string }>>({});
+  const [bulkFileMetadata, setBulkFileMetadata] = useState<Record<string, { category: string; newCategoryName?: string; contentDate?: string }>>({});
   const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
 
   // Category Manager Form States
@@ -162,6 +173,8 @@ export function ContentLibraryPage() {
   const [editDesc, setEditDesc] = useState("");
   const [editCategory, setEditCategory] = useState("");
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editVisibility, setEditVisibility] = useState("owner_employee");
+  const [editContentDate, setEditContentDate] = useState("");
   const [isEditSubmitting, setIsEditSubmitting] = useState(false);
 
   // Delete Action State
@@ -178,7 +191,7 @@ export function ContentLibraryPage() {
   const yearsList = React.useMemo(() => {
     const years = new Set<string>();
     items.forEach(item => {
-      const yr = new Date(item.uploaded_at).getFullYear();
+      const yr = new Date(item.content_date || item.uploaded_at).getFullYear();
       if (!isNaN(yr)) years.add(String(yr));
     });
     return Array.from(years).sort().reverse();
@@ -234,13 +247,13 @@ export function ContentLibraryPage() {
     }
 
     if (monthFilter !== "All") {
-      const d = new Date(item.uploaded_at);
+      const d = new Date(item.content_date || item.uploaded_at);
       const mName = d.toLocaleString("default", { month: "long" });
       if (mName !== monthFilter) return false;
     }
 
     if (yearFilter !== "All") {
-      const d = new Date(item.uploaded_at);
+      const d = new Date(item.content_date || item.uploaded_at);
       if (String(d.getFullYear()) !== yearFilter) return false;
     }
 
@@ -254,11 +267,11 @@ export function ContentLibraryPage() {
   const sortedItems = React.useMemo(() => {
     const itemsCopy = [...filteredItems];
     if (dateSort === "newest") {
-      return itemsCopy.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(b.content_date || b.uploaded_at).getTime() - new Date(a.content_date || a.uploaded_at).getTime());
     } else if (dateSort === "oldest") {
-      return itemsCopy.sort((a, b) => new Date(a.uploaded_at).getTime() - new Date(b.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(a.content_date || a.uploaded_at).getTime() - new Date(b.content_date || b.uploaded_at).getTime());
     } else if (dateSort === "month-wise") {
-      return itemsCopy.sort((a, b) => new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime());
+      return itemsCopy.sort((a, b) => new Date(b.content_date || b.uploaded_at).getTime() - new Date(a.content_date || a.uploaded_at).getTime());
     } else if (dateSort === "file-type") {
       return itemsCopy.sort((a, b) => a.file_type.localeCompare(b.file_type));
     }
@@ -268,7 +281,7 @@ export function ContentLibraryPage() {
   const groupedByMonth = React.useMemo(() => {
     const groups: Record<string, typeof sortedItems> = {};
     sortedItems.forEach(item => {
-      const label = getMonthYearLabel(item.uploaded_at);
+      const label = getMonthYearLabel(item.content_date || item.uploaded_at);
       if (!groups[label]) {
         groups[label] = [];
       }
@@ -337,6 +350,19 @@ export function ContentLibraryPage() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchOrganizations = async () => {
+    try {
+      const data = await apiFetch<any[]>("/users/organizations");
+      setOrganizations(data || []);
+    } catch (err) {
+      console.error("Failed to load organizations:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrganizations();
   }, []);
 
   // --- API Fetch Helpers ---
@@ -468,6 +494,10 @@ export function ContentLibraryPage() {
     
     const folderVal = uploadFolder === "Custom" ? uploadCustomFolder.trim() : uploadFolder;
     formData.append("folder", folderVal || "General");
+    formData.append("visibility", uploadVisibility);
+    if (uploadContentDate) {
+      formData.append("content_date", new Date(uploadContentDate).toISOString());
+    }
 
     try {
       // Send dynamic multipart data to upload
@@ -491,6 +521,7 @@ export function ContentLibraryPage() {
       setUploadDesc("");
       setUploadFolder("General");
       setUploadCustomFolder("");
+      setUploadContentDate("");
       setIsUploadOpen(false);
       fetchContentItems();
     } catch (err: any) {
@@ -535,7 +566,7 @@ export function ContentLibraryPage() {
     setIsBulkSubmitting(true);
 
     try {
-      const payloadFiles: Array<{ file: string; filename: string; category: string }> = [];
+      const payloadFiles: Array<{ file: string; filename: string; category: string; content_date?: string }> = [];
       const defaultCategory = categories[0]?.name || "General";
 
       if (bulkUploadType === "files" && selectedBulkFiles) {
@@ -553,10 +584,12 @@ export function ContentLibraryPage() {
             }
             selectedCat = newCat;
           }
+          const contentDateVal = meta.contentDate ? new Date(meta.contentDate).toISOString() : undefined;
           payloadFiles.push({
             file: base64,
             filename: file.name,
-            category: selectedCat
+            category: selectedCat,
+            content_date: contentDateVal
           });
         }
       } else if (bulkUploadType === "zip" && selectedZipFile) {
@@ -579,10 +612,12 @@ export function ContentLibraryPage() {
             }
             selectedCat = newCat;
           }
+          const contentDateVal = meta.contentDate ? new Date(meta.contentDate).toISOString() : undefined;
           payloadFiles.push({
             file: base64,
             filename: baseName,
-            category: selectedCat
+            category: selectedCat,
+            content_date: contentDateVal
           });
         }
       }
@@ -593,7 +628,10 @@ export function ContentLibraryPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
-        body: JSON.stringify({ files: payloadFiles })
+        body: JSON.stringify({
+          files: payloadFiles,
+          visibility: bulkVisibility
+        })
       }).then(async (res) => {
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -610,6 +648,7 @@ export function ContentLibraryPage() {
       setSelectedBulkFiles(null);
       setSelectedZipFile(null);
       setBulkFileMetadata({});
+      setBulkVisibility("owner_employee");
       setIsBulkOpen(false);
       fetchContentItems();
     } catch (err: any) {
@@ -666,6 +705,8 @@ export function ContentLibraryPage() {
     setEditDesc(item.description || "");
     setEditCategory(item.category);
     setEditIsActive(item.is_active);
+    setEditVisibility(item.visibility || "owner_employee");
+    setEditContentDate(item.content_date ? item.content_date.split("T")[0] : "");
     setActiveDropdownId(null);
   };
 
@@ -685,12 +726,15 @@ export function ContentLibraryPage() {
           title: editTitle.trim(),
           description: editDesc.trim(),
           category: editCategory,
-          is_active: editIsActive
+          is_active: editIsActive,
+          visibility: editVisibility,
+          content_date: editContentDate ? new Date(editContentDate).toISOString() : null
         })
       });
 
       toast.success("Resource metadata updated successfully!");
       setSelectedItemForEdit(null);
+      setEditContentDate("");
       fetchContentItems();
     } catch (err: any) {
       toast.error(err.message || "Failed to update resource");
@@ -878,19 +922,17 @@ export function ContentLibraryPage() {
           )}
 
           <div className="mt-auto pt-3">
-            {/* Organization / Company Uploader Info Display */}
+            {/* Visibility / Uploader Info Display */}
             <div className="flex flex-col text-left mb-2.5 border-t border-border/40 pt-2.5">
               <span className="text-xs font-bold text-foreground truncate">Uploaded by: {item.uploaded_by}</span>
-              <span className="text-[10px] text-muted-foreground truncate">{item.organization_name || "EduStream"}</span>
+              <span className="text-[10px] text-muted-foreground truncate">
+                Visibility: {item.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}
+              </span>
             </div>
 
             {/* Premium details */}
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 mb-3 text-[10px] text-muted-foreground font-semibold">
-              <span>{getMonthYearLabel(item.uploaded_at)}</span>
-              <span>•</span>
-              <span>Downloads: {mockDownloads}</span>
-              <span>•</span>
-              <span>Views: {mockViews}</span>
+              <span>{getMonthYearLabel(item.content_date || item.uploaded_at)}</span>
             </div>
 
             <div className="flex items-center justify-between border-t border-border/20 pt-2">
@@ -962,7 +1004,7 @@ export function ContentLibraryPage() {
   const uniqueFileTypes = ["PDF", "DOCX", "XLSX", "PPTX", "Video", "Image", "Archive"];
 
   return (
-    <>
+    <ResponsivePageWrapper>
       <PageHeader
         title="Content Library"
         subtitle="Upload, curate, and distribute dynamic educational resources across the workspace."
@@ -1028,7 +1070,7 @@ export function ContentLibraryPage() {
           </div>
 
           {/* View Switcher and Sort */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2.5">
             {/* View Mode Toggle */}
             <div className="flex items-center gap-1 rounded-lg border border-border bg-card p-1 shadow-sm">
               <button
@@ -1311,19 +1353,15 @@ export function ContentLibraryPage() {
                 <th className="p-4">File</th>
                 <th className="p-4">Type</th>
                 <th className="p-4">Category</th>
-                <th className="p-4">Upload Date</th>
+                <th className="p-4">Content Date</th>
                 <th className="p-4">Month</th>
                 <th className="p-4">Uploaded By</th>
-                <th className="p-4">Downloads</th>
-                <th className="p-4">Views</th>
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {sortedItems.map((item) => {
                 const { icon: Icon, badgeClass, colorClass } = getIconAndBadgeConfig(item.file_type);
-                const mockDownloads = (item.id * 13) % 47;
-                const mockViews = (item.id * 29) % 183;
                 return (
                   <tr 
                     key={item.id} 
@@ -1343,19 +1381,19 @@ export function ContentLibraryPage() {
                     </td>
                     <td className="p-4 text-muted-foreground text-xs">{item.category}</td>
                     <td className="p-4 text-muted-foreground text-xs">
-                      {new Date(item.uploaded_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}
+                      {new Date(item.content_date || item.uploaded_at).toLocaleDateString(undefined, {month: "short", day: "numeric", year: "numeric"})}
                     </td>
                     <td className="p-4 text-muted-foreground text-xs font-medium">
-                      {getMonthYearLabel(item.uploaded_at)}
+                      {getMonthYearLabel(item.content_date || item.uploaded_at)}
                     </td>
                     <td className="p-4">
                       <div className="flex flex-col">
                         <span className="text-xs font-bold text-foreground">{item.uploaded_by}</span>
-                        <span className="text-[10px] text-muted-foreground">{item.organization_name || "EduStream"}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {item.visibility === "owner_only" ? "Owners Only" : "Owners + Employees"}
+                        </span>
                       </div>
                     </td>
-                    <td className="p-4 text-muted-foreground text-xs font-bold">{mockDownloads}</td>
-                    <td className="p-4 text-muted-foreground text-xs font-bold">{mockViews}</td>
                     <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="relative inline-block text-left">
                         <button 
@@ -1416,595 +1454,680 @@ export function ContentLibraryPage() {
       )}
 
       {/* --- MODAL 1: ADD SINGLE ASSET MODAL --- */}
-      {isUploadOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-bold text-foreground">Add Resource to Library</h3>
-              <button 
-                onClick={() => { setIsUploadOpen(false); setSelectedFile(null); }} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSingleUpload} className="space-y-4">
-              {/* File Input Select area */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select File</label>
-                <div className="relative flex flex-col items-center justify-center border border-border bg-card rounded-lg p-6 hover:bg-secondary/40 cursor-pointer transition-all">
-                  <input
-                    type="file"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        const file = e.target.files[0];
-                        setSelectedFile(file);
-                        // Autocomplete title
-                        const nameWithoutExt = file.name.includes(".") ? file.name.substring(0, file.name.lastIndexOf('.')) : file.name;
-                        setUploadTitle(nameWithoutExt.replace(/[_-]/g, " ").trim());
-                      }
-                    }}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <UploadCloud className="h-8 w-8 text-primary mb-1.5" />
-                  <span className="text-xs text-foreground font-semibold">
-                    {selectedFile ? selectedFile.name : "Click to select a file"}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground mt-0.5">
-                    {selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : "Supports assets up to 500MB"}
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Title</label>
-                <input
-                  value={uploadTitle}
-                  onChange={(e) => setUploadTitle(e.target.value)}
-                  placeholder="e.g. Q4 Growth Roadmap"
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Description (Optional)</label>
-                <textarea
-                  value={uploadDesc}
-                  onChange={(e) => setUploadDesc(e.target.value)}
-                  placeholder="Summarize or add instructions for this asset..."
-                  rows={3}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Category</label>
-                  <select
-                    value={uploadCategory}
-                    onChange={(e) => setUploadCategory(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
-                    required
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Folder</label>
-                  <select
-                    value={uploadFolder}
-                    onChange={(e) => setUploadFolder(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
-                    required
-                  >
-                    {["Finance", "Marketing", "Training", "HR", "Operations", "General", "Custom"].map((f) => (
-                      <option key={f} value={f}>{f === "Custom" ? "Custom Folder..." : f}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {uploadFolder === "Custom" && (
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Custom Folder Name</label>
-                  <input
-                    value={uploadCustomFolder}
-                    onChange={(e) => setUploadCustomFolder(e.target.value)}
-                    placeholder="Enter custom folder name"
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => { setIsUploadOpen(false); setSelectedFile(null); }}
-                  disabled={isSingleSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isSingleSubmitting}
-                >
-                  {isSingleSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Uploading to Supabase...
-                    </>
-                  ) : "Upload resource"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 2: BULK UPLOAD ASSETS MODAL --- */}
-      {isBulkOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className={`w-full transition-all duration-300 ${Object.keys(bulkFileMetadata).length > 0 ? "w-[90vw] md:w-[85vw] max-w-6xl" : "max-w-lg"} rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200`}>
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-bold text-foreground">Bulk Upload Curations</h3>
-              <button 
-                onClick={() => { setIsBulkOpen(false); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex border-b border-border mb-4">
-              <button
-                type="button"
-                onClick={() => { setBulkUploadType("files"); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
-                className={`flex-1 pb-2 text-sm font-semibold border-b-2 transition-all ${bulkUploadType === "files" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
-              >
-                Multiple Files
-              </button>
-              <button
-                type="button"
-                onClick={() => { setBulkUploadType("zip"); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
-                className={`flex-1 pb-2 text-sm font-semibold border-b-2 transition-all ${bulkUploadType === "zip" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
-              >
-                ZIP Archive Extract
-              </button>
-            </div>
-
-            <form onSubmit={handleBulkUpload} className="space-y-4">
-              {bulkUploadType === "files" ? (
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select Files</label>
-                  <div className="relative flex flex-col items-center justify-center border border-border bg-card rounded-lg p-6 hover:bg-secondary/40 cursor-pointer transition-all">
-                    <input
-                      type="file"
-                      multiple
-                      onChange={handleBulkFilesChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <UploadCloud className="h-8 w-8 text-primary mb-1.5" />
-                    <span className="text-xs text-foreground font-semibold">
-                      {selectedBulkFiles && selectedBulkFiles.length > 0 
-                        ? `${selectedBulkFiles.length} files selected` 
-                        : "Click to select multiple files"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground mt-0.5">
-                      Batch upload will store and index all files in one transaction
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select ZIP Archive</label>
-                  <div className="relative flex flex-col items-center justify-center border border-border bg-card rounded-lg p-6 hover:bg-secondary/40 cursor-pointer transition-all">
-                    <input
-                      type="file"
-                      accept=".zip"
-                      onChange={handleBulkZipChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Archive className="h-8 w-8 text-primary mb-1.5" />
-                    <span className="text-xs text-foreground font-semibold">
-                      {selectedZipFile ? selectedZipFile.name : "Select ZIP file"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground mt-0.5">
-                      Unzips fully in-memory and indexes all contained files automatically
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {Object.keys(bulkFileMetadata).length > 0 && (
-                <div className="flex flex-col gap-2 mt-4 border-t border-border pt-4">
-                  <label className="block text-xs font-bold text-foreground uppercase mb-1">
-                    File Mapping Configuration (Table shows: File Name, Category)
-                  </label>
-                  <div className="flex items-center justify-between bg-secondary/30 p-2.5 rounded-lg border border-border mb-2">
-                    <span className="text-xs font-semibold text-foreground">Apply category to all files:</span>
-                    <select
-                      id="bulk-apply-category-select"
-                      className="rounded border border-border bg-card py-1 px-2 text-xs text-foreground outline-none cursor-pointer"
-                      defaultValue=""
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val) {
-                          setBulkFileMetadata((prev) => {
-                            const updated = { ...prev };
-                            Object.keys(updated).forEach((k) => {
-                              updated[k] = { 
-                                ...updated[k], 
-                                category: val,
-                                newCategoryName: val === "__new_category__" ? "" : updated[k]?.newCategoryName
-                              };
-                            });
-                            return updated;
-                          });
-                        }
-                      }}
-                    >
-                      <option value="">Select Category...</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="overflow-y-auto max-h-[300px] rounded-lg border border-border bg-muted/10 relative">
-                    <table className="w-full text-left text-xs border-collapse table-fixed">
-                      <thead className="sticky top-0 bg-card border-b border-border z-10">
-                        <tr className="bg-muted/30 font-semibold text-muted-foreground uppercase">
-                          <th className="p-3 w-[60%]">File Name</th>
-                          <th className="p-3 w-[40%] min-w-[250px]" style={{ minWidth: "250px" }}>Category</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {Object.keys(bulkFileMetadata).map((filename) => {
-                          const itemMeta = bulkFileMetadata[filename];
-                          return (
-                            <tr key={filename} className="hover:bg-secondary/20">
-                              <td className="p-3 font-semibold text-foreground">
-                                <div className="truncate w-full block" title={filename}>
-                                  {filename}
-                                </div>
-                              </td>
-                              <td className="p-3" style={{ minWidth: "250px" }}>
-                                <div className="flex flex-col gap-1.5">
-                                  <select
-                                    value={itemMeta.category}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      setBulkFileMetadata((prev) => ({
-                                        ...prev,
-                                        [filename]: {
-                                          ...prev[filename],
-                                          category: val,
-                                          newCategoryName: val === "__new_category__" ? "" : prev[filename]?.newCategoryName
-                                        }
-                                      }));
-                                    }}
-                                    className="w-full rounded border border-border bg-card py-1 px-2 text-xs text-foreground focus:border-primary outline-none cursor-pointer"
-                                  >
-                                    {categories.map((c) => (
-                                      <option key={c.id} value={c.name}>
-                                        {c.name}
-                                      </option>
-                                    ))}
-                                    <option value="__new_category__">+ Create New Category</option>
-                                  </select>
-                                  {itemMeta.category === "__new_category__" && (
-                                    <div className="mt-1 flex flex-col gap-1">
-                                      <input
-                                        type="text"
-                                        placeholder="Enter new category name"
-                                        value={itemMeta.newCategoryName || ""}
-                                        onChange={(e) => {
-                                          setBulkFileMetadata((prev) => ({
-                                            ...prev,
-                                            [filename]: {
-                                              ...prev[filename],
-                                              newCategoryName: e.target.value
-                                            }
-                                          }));
-                                        }}
-                                        className="w-full rounded border border-border bg-card py-1 px-2 text-xs text-foreground focus:border-primary outline-none"
-                                        required
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* General Category Fallback */}
-              {Object.keys(bulkFileMetadata).length === 0 && (
-                <div>
-                  <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Fallback Category</label>
-                  <select
-                    value={bulkCategory}
-                    onChange={(e) => setBulkCategory(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
-                    required
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => { setIsBulkOpen(false); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
-                  disabled={isBulkSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isBulkSubmitting}
-                >
-                  {isBulkSubmitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" /> Uploading batch...
-                    </>
-                  ) : "Start bulk upload"}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* --- MODAL 3: CATEGORY MANAGEMENT MODAL --- */}
-      {isCategoryManageOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-bold text-foreground">Manage Resource Categories</h3>
-              <button 
-                onClick={() => { setIsCategoryManageOpen(false); setNewCategoryName(""); setEditingCategoryId(null); }} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Create Category form */}
-            <form onSubmit={handleCreateCategory} className="flex gap-2 mb-4">
+      <ResponsiveModal
+        isOpen={isUploadOpen}
+        onClose={() => { setIsUploadOpen(false); setSelectedFile(null); }}
+        title="Add Resource to Library"
+        size="sm"
+      >
+        <form onSubmit={handleSingleUpload} className="space-y-4">
+          {/* File Input Select area */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select File</label>
+            <div className="relative flex flex-col items-center justify-center border border-border bg-card rounded-lg p-6 hover:bg-secondary/40 cursor-pointer transition-all">
               <input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="New category name (e.g. Operations)"
-                className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+                type="file"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    const file = e.target.files[0];
+                    setSelectedFile(file);
+                    // Autocomplete title
+                    const nameWithoutExt = file.name.includes(".") ? file.name.substring(0, file.name.lastIndexOf('.')) : file.name;
+                    setUploadTitle(nameWithoutExt.replace(/[_-]/g, " ").trim());
+                  }
+                }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+              <UploadCloud className="h-8 w-8 text-primary mb-1.5" />
+              <span className="text-xs text-foreground font-semibold">
+                {selectedFile ? selectedFile.name : "Click to select a file"}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">
+                {selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB` : "Supports assets up to 500MB"}
+              </span>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Title</label>
+            <input
+              value={uploadTitle}
+              onChange={(e) => setUploadTitle(e.target.value)}
+              placeholder="e.g. Q4 Growth Roadmap"
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Description (Optional)</label>
+            <textarea
+              value={uploadDesc}
+              onChange={(e) => setUploadDesc(e.target.value)}
+              placeholder="Summarize or add instructions for this asset..."
+              rows={3}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Content Date (Optional)</label>
+            <input
+              type="date"
+              value={uploadContentDate}
+              onChange={(e) => setUploadContentDate(e.target.value)}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary text-muted-foreground"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Category</label>
+              <select
+                value={uploadCategory}
+                onChange={(e) => setUploadCategory(e.target.value)}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
+                required
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Folder</label>
+              <select
+                value={uploadFolder}
+                onChange={(e) => setUploadFolder(e.target.value)}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
+                required
+              >
+                {["Finance", "Marketing", "Training", "HR", "Operations", "General", "Custom"].map((f) => (
+                  <option key={f} value={f}>{f === "Custom" ? "Custom Folder..." : f}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {uploadFolder === "Custom" && (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Custom Folder Name</label>
+              <input
+                value={uploadCustomFolder}
+                onChange={(e) => setUploadCustomFolder(e.target.value)}
+                placeholder="Enter custom folder name"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
                 required
               />
-              <Button type="submit" disabled={isCategorySubmitting}>
-                <Plus className="h-4 w-4" /> Add
-              </Button>
-            </form>
-
-            <div className="max-h-60 overflow-y-auto border border-border rounded-lg divide-y divide-border bg-secondary/10">
-              {categories.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No categories defined. Add one above.</p>
-              ) : (
-                categories.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between p-3 bg-card hover:bg-secondary/20 transition-all">
-                    {editingCategoryId === c.id ? (
-                      <div className="flex items-center gap-2 flex-1 mr-2">
-                        <input
-                          value={editingCategoryName}
-                          onChange={(e) => setEditingCategoryName(e.target.value)}
-                          className="flex-1 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:border-primary"
-                        />
-                        <button 
-                          onClick={() => handleRenameCategory(c.id)} 
-                          className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); }} 
-                          className="p-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span className="text-sm font-semibold text-foreground">{c.name}</span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => { setEditingCategoryId(c.id); setEditingCategoryName(c.name); }}
-                            className="p-1.5 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCategory(c.id, c.name)}
-                            className="p-1.5 rounded-full text-red-500 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))
-              )}
             </div>
+          )}
 
-            <div className="flex justify-end border-t border-border pt-4 mt-4">
-              <Button onClick={() => { setIsCategoryManageOpen(false); setNewCategoryName(""); setEditingCategoryId(null); }}>
-                Done
-              </Button>
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Visibility</label>
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="uploadVisibility"
+                  value="owner_only"
+                  checked={uploadVisibility === "owner_only"}
+                  onChange={(e) => setUploadVisibility(e.target.value)}
+                  className="text-primary focus:ring-primary h-4 w-4"
+                />
+                Owners Only
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="uploadVisibility"
+                  value="owner_employee"
+                  checked={uploadVisibility === "owner_employee"}
+                  onChange={(e) => setUploadVisibility(e.target.value)}
+                  className="text-primary focus:ring-primary h-4 w-4"
+                />
+                Owners + Employees
+              </label>
             </div>
           </div>
+
+          <div className="flex justify-end gap-2 border-t border-border pt-4 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => { setIsUploadOpen(false); setSelectedFile(null); }}
+              disabled={isSingleSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSingleSubmitting}
+            >
+              {isSingleSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Uploading to Supabase...
+                </>
+              ) : "Upload resource"}
+            </Button>
+          </div>
+        </form>
+      </ResponsiveModal>
+
+      {/* --- MODAL 2: BULK UPLOAD ASSETS MODAL --- */}
+      <ResponsiveModal
+        isOpen={isBulkOpen}
+        onClose={() => { setIsBulkOpen(false); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
+        title="Bulk Upload Curations"
+        size={Object.keys(bulkFileMetadata).length > 0 ? "xl" : "sm"}
+      >
+        <div className="flex border-b border-border mb-4">
+          <button
+            type="button"
+            onClick={() => { setBulkUploadType("files"); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
+            className={`flex-1 pb-2 text-sm font-semibold border-b-2 transition-all ${bulkUploadType === "files" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
+          >
+            Multiple Files
+          </button>
+          <button
+            type="button"
+            onClick={() => { setBulkUploadType("zip"); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
+            className={`flex-1 pb-2 text-sm font-semibold border-b-2 transition-all ${bulkUploadType === "zip" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
+          >
+            ZIP Archive Extract
+          </button>
         </div>
-      )}
 
-      {/* --- MODAL 4: EDIT METADATA MODAL --- */}
-      {selectedItemForEdit && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <h3 className="text-base font-bold text-foreground">Edit Resource Metadata</h3>
-              <button 
-                onClick={() => setSelectedItemForEdit(null)} 
-                className="rounded-full p-1 text-muted-foreground hover:bg-secondary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Title</label>
+        <form onSubmit={handleBulkUpload} className="space-y-4">
+          {bulkUploadType === "files" ? (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select Files</label>
+              <div className="relative flex flex-col items-center justify-center border border-border bg-card rounded-lg p-6 hover:bg-secondary/40 cursor-pointer transition-all">
                 <input
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
-                  required
+                  type="file"
+                  multiple
+                  onChange={handleBulkFilesChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
+                <UploadCloud className="h-8 w-8 text-primary mb-1.5" />
+                <span className="text-xs text-foreground font-semibold">
+                  {selectedBulkFiles && selectedBulkFiles.length > 0 
+                    ? `${selectedBulkFiles.length} files selected` 
+                    : "Click to select multiple files"}
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">
+                  Batch upload will store and index all files in one transaction
+                </span>
               </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Description</label>
-                <textarea
-                  value={editDesc}
-                  onChange={(e) => setEditDesc(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+            </div>
+          ) : (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1.5 uppercase">Select ZIP Archive</label>
+              <div className="relative flex flex-col items-center justify-center border border-border bg-card rounded-lg p-6 hover:bg-secondary/40 cursor-pointer transition-all">
+                <input
+                  type="file"
+                  accept=".zip"
+                  onChange={handleBulkZipChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
+                <Archive className="h-8 w-8 text-primary mb-1.5" />
+                <span className="text-xs text-foreground font-semibold">
+                  {selectedZipFile ? selectedZipFile.name : "Select ZIP file"}
+                </span>
+                <span className="text-[10px] text-muted-foreground mt-0.5">
+                  Unzips fully in-memory and indexes all contained files automatically
+                </span>
               </div>
+            </div>
+          )}
 
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Category</label>
+          {Object.keys(bulkFileMetadata).length > 0 && (
+            <div className="flex flex-col gap-2 mt-4 border-t border-border pt-4">
+              <label className="block text-xs font-bold text-foreground uppercase mb-1">
+                File Mapping Configuration (Table shows: File Name, Category)
+              </label>
+              <div className="flex items-center justify-between bg-secondary/30 p-2.5 rounded-lg border border-border mb-2">
+                <span className="text-xs font-semibold text-foreground">Apply category to all files:</span>
                 <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
-                  required
+                  id="bulk-apply-category-select"
+                  className="rounded border border-border bg-card py-1 px-2 text-xs text-foreground outline-none cursor-pointer"
+                  defaultValue=""
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) {
+                      setBulkFileMetadata((prev) => {
+                        const updated = { ...prev };
+                        Object.keys(updated).forEach((k) => {
+                          updated[k] = { 
+                            ...updated[k], 
+                            category: val,
+                            newCategoryName: val === "__new_category__" ? "" : updated[k]?.newCategoryName
+                          };
+                        });
+                        return updated;
+                      });
+                    }
+                  }}
                 >
+                  <option value="">Select Category...</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
                 </select>
               </div>
+              <div className="overflow-x-auto max-h-[300px] rounded-lg border border-border bg-muted/10 relative">
+                <table className="w-full text-left text-xs border-collapse table-fixed">
+                  <thead className="sticky top-0 bg-card border-b border-border z-10">
+                    <tr className="bg-muted/30 font-semibold text-muted-foreground uppercase">
+                      <th className="p-3 w-[45%]">File Name</th>
+                      <th className="p-3 w-[30%] min-w-[200px]" style={{ minWidth: "200px" }}>Category</th>
+                      <th className="p-3 w-[25%]">Content Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {Object.keys(bulkFileMetadata).map((filename) => {
+                      const itemMeta = bulkFileMetadata[filename];
+                      return (
+                        <tr key={filename} className="hover:bg-secondary/20">
+                          <td className="p-3 font-semibold text-foreground">
+                            <div className="truncate w-full block" title={filename}>
+                              {filename}
+                            </div>
+                          </td>
+                          <td className="p-3" style={{ minWidth: "200px" }}>
+                            <div className="flex flex-col gap-1.5">
+                              <select
+                                value={itemMeta.category}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setBulkFileMetadata((prev) => ({
+                                    ...prev,
+                                    [filename]: {
+                                      ...prev[filename],
+                                      category: val,
+                                      newCategoryName: val === "__new_category__" ? "" : prev[filename]?.newCategoryName
+                                    }
+                                  }));
+                                }}
+                                className="w-full rounded border border-border bg-card py-1 px-2 text-xs text-foreground focus:border-primary outline-none cursor-pointer"
+                              >
+                                {categories.map((c) => (
+                                  <option key={c.id} value={c.name}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                                <option value="__new_category__">+ Create New Category</option>
+                              </select>
+                              {itemMeta.category === "__new_category__" && (
+                                <div className="mt-1 flex flex-col gap-1">
+                                  <input
+                                    type="text"
+                                    placeholder="Enter new category name"
+                                    value={itemMeta.newCategoryName || ""}
+                                    onChange={(e) => {
+                                      setBulkFileMetadata((prev) => ({
+                                        ...prev,
+                                        [filename]: {
+                                          ...prev[filename],
+                                          newCategoryName: e.target.value
+                                        }
+                                      }));
+                                    }}
+                                    className="w-full rounded border border-border bg-card py-1 px-2 text-xs text-foreground focus:border-primary outline-none"
+                                    required
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <input
+                              type="date"
+                              value={itemMeta.contentDate || ""}
+                              onChange={(e) => {
+                                setBulkFileMetadata((prev) => ({
+                                  ...prev,
+                                  [filename]: {
+                                    ...prev[filename],
+                                    contentDate: e.target.value
+                                  }
+                                }));
+                              }}
+                              className="w-full rounded border border-border bg-card py-1 px-2 text-xs text-foreground focus:border-primary outline-none cursor-pointer"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
-              <div className="flex items-center gap-2 pt-1.5">
+          {/* General Category Fallback */}
+          {Object.keys(bulkFileMetadata).length === 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Fallback Category</label>
+              <select
+                value={bulkCategory}
+                onChange={(e) => setBulkCategory(e.target.value)}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
+                required
+              >
+                {categories.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Visibility</label>
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
                 <input
-                  type="checkbox"
-                  id="editIsActive"
-                  checked={editIsActive}
-                  onChange={(e) => setEditIsActive(e.target.checked)}
-                  className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                  type="radio"
+                  name="bulkVisibility"
+                  value="owner_only"
+                  checked={bulkVisibility === "owner_only"}
+                  onChange={(e) => setBulkVisibility(e.target.value)}
+                  className="text-primary focus:ring-primary h-4 w-4"
                 />
-                <label htmlFor="editIsActive" className="text-sm font-semibold text-foreground cursor-pointer select-none">
-                  Make resource active (visible to standard users)
-                </label>
-              </div>
+                Owners Only
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="bulkVisibility"
+                  value="owner_employee"
+                  checked={bulkVisibility === "owner_employee"}
+                  onChange={(e) => setBulkVisibility(e.target.value)}
+                  className="text-primary focus:ring-primary h-4 w-4"
+                />
+                Owners + Employees
+              </label>
+            </div>
+          </div>
 
-              <div className="flex justify-end gap-2 border-t border-border pt-4 mt-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setSelectedItemForEdit(null)}
-                  disabled={isEditSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isEditSubmitting}
-                >
-                  {isEditSubmitting ? "Saving..." : "Save changes"}
-                </Button>
-              </div>
-            </form>
+          <div className="flex justify-end gap-2 border-t border-border pt-4 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => { setIsBulkOpen(false); setSelectedBulkFiles(null); setSelectedZipFile(null); setBulkFileMetadata({}); }}
+              disabled={isBulkSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isBulkSubmitting}
+            >
+              {isBulkSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Uploading batch...
+                </>
+              ) : "Start bulk upload"}
+            </Button>
+          </div>
+        </form>
+      </ResponsiveModal>
+
+      {/* --- MODAL 3: CATEGORY MANAGEMENT MODAL --- */}
+      <ResponsiveModal
+        isOpen={isCategoryManageOpen}
+        onClose={() => { setIsCategoryManageOpen(false); setNewCategoryName(""); setEditingCategoryId(null); }}
+        title="Manage Resource Categories"
+        size="sm"
+        footer={
+          <Button onClick={() => { setIsCategoryManageOpen(false); setNewCategoryName(""); setEditingCategoryId(null); }}>
+            Done
+          </Button>
+        }
+      >
+        <div className="space-y-4">
+          {/* Create Category form */}
+          <form onSubmit={handleCreateCategory} className="flex gap-2 mb-4">
+            <input
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              placeholder="New category name (e.g. Operations)"
+              className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+              required
+            />
+            <Button type="submit" disabled={isCategorySubmitting}>
+              <Plus className="h-4 w-4" /> Add
+            </Button>
+          </form>
+
+          <div className="border border-border rounded-lg divide-y divide-border bg-secondary/10 overflow-hidden">
+            {categories.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">No categories defined. Add one above.</p>
+            ) : (
+              categories.map((c) => (
+                <div key={c.id} className="flex items-center justify-between p-3 bg-card hover:bg-secondary/20 transition-all">
+                  {editingCategoryId === c.id ? (
+                    <div className="flex items-center gap-2 flex-1 mr-2">
+                      <input
+                        value={editingCategoryName}
+                        onChange={(e) => setEditingCategoryName(e.target.value)}
+                        className="flex-1 rounded-md border border-border bg-card px-2 py-1 text-xs outline-none focus:border-primary"
+                      />
+                      <button 
+                        onClick={() => handleRenameCategory(c.id)} 
+                        className="p-1 rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                      </button>
+                      <button 
+                        onClick={() => { setEditingCategoryId(null); setEditingCategoryName(""); }} 
+                        className="p-1 rounded bg-red-50 text-red-700 hover:bg-red-100"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className="text-sm font-semibold text-foreground">{c.name}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => { setEditingCategoryId(c.id); setEditingCategoryName(c.name); }}
+                          className="p-1.5 rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(c.id, c.name)}
+                          className="p-1.5 rounded-full text-red-500 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
-      )}
+      </ResponsiveModal>
+
+      <ResponsiveModal
+        isOpen={!!selectedItemForEdit}
+        onClose={() => setSelectedItemForEdit(null)}
+        title="Edit Resource Metadata"
+        size="sm"
+      >
+        <form onSubmit={handleEditSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Title</label>
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Description</label>
+            <textarea
+              value={editDesc}
+              onChange={(e) => setEditDesc(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Content Date (Optional)</label>
+            <input
+              type="date"
+              value={editContentDate}
+              onChange={(e) => setEditContentDate(e.target.value)}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary text-muted-foreground"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Category</label>
+            <select
+              value={editCategory}
+              onChange={(e) => setEditCategory(e.target.value)}
+              className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm outline-none focus:border-primary cursor-pointer text-muted-foreground"
+              required
+            >
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-1 uppercase">Visibility</label>
+            <div className="flex gap-4 mt-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="editVisibility"
+                  value="owner_only"
+                  checked={editVisibility === "owner_only"}
+                  onChange={(e) => setEditVisibility(e.target.value)}
+                  className="text-primary focus:ring-primary h-4 w-4"
+                />
+                Owners Only
+              </label>
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground cursor-pointer select-none">
+                <input
+                  type="radio"
+                  name="editVisibility"
+                  value="owner_employee"
+                  checked={editVisibility === "owner_employee"}
+                  onChange={(e) => setEditVisibility(e.target.value)}
+                  className="text-primary focus:ring-primary h-4 w-4"
+                />
+                Owners + Employees
+              </label>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1.5">
+            <input
+              type="checkbox"
+              id="editIsActive"
+              checked={editIsActive}
+              onChange={(e) => setEditIsActive(e.target.checked)}
+              className="rounded border-border text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+            />
+            <label htmlFor="editIsActive" className="text-sm font-semibold text-foreground cursor-pointer select-none">
+              Make resource active (visible to standard users)
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 border-t border-border pt-4 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setSelectedItemForEdit(null)}
+              disabled={isEditSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isEditSubmitting}
+            >
+              {isEditSubmitting ? "Saving..." : "Save changes"}
+            </Button>
+          </div>
+        </form>
+      </ResponsiveModal>
 
       {/* --- MODAL 5: DELETE CONFIRMATION MODAL --- */}
-      {selectedItemForDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center gap-3 text-red-600 mb-3">
-              <Trash2 className="h-6 w-6" />
-              <h3 className="text-base font-bold">Purge Resource</h3>
+      <ResponsiveModal
+        isOpen={!!selectedItemForDelete}
+        onClose={() => setSelectedItemForDelete(null)}
+        title="Purge Resource"
+        size="sm"
+        footer={
+          <>
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedItemForDelete(null)}
+              disabled={isDeleteSubmitting}
+            >
+              Cancel
+            </Button>
+            <button 
+              onClick={handleDeleteSubmit}
+              disabled={isDeleteSubmitting}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white hover:opacity-90 active:scale-[0.98] px-4 py-2 text-sm font-medium transition-all"
+            >
+              {isDeleteSubmitting ? "Purging..." : "Confirm Purge"}
+            </button>
+          </>
+        }
+      >
+        {selectedItemForDelete && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-red-600">
+              <Trash2 className="h-6 w-6 flex-shrink-0" />
+              <h4 className="text-base font-bold">Purge Resource Warning</h4>
             </div>
-            
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground">
               Are you completely sure you want to delete <strong>'{selectedItemForDelete.title}'</strong>?
               This action is permanent and will physically remove the file from your Supabase Storage bucket and Neon PostgreSQL.
             </p>
-
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button 
-                variant="outline" 
-                onClick={() => setSelectedItemForDelete(null)}
-                disabled={isDeleteSubmitting}
-              >
-                Cancel
-              </Button>
-              <button 
-                onClick={handleDeleteSubmit}
-                disabled={isDeleteSubmitting}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-600 text-white hover:opacity-90 active:scale-[0.98] px-4 py-2 text-sm font-medium transition-all"
-              >
-                {isDeleteSubmitting ? "Purging..." : "Confirm Purge"}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
+      </ResponsiveModal>
 
       {/* --- MODAL 6: RESOURCE PREVIEWER MODAL --- */}
-      {selectedItemForPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-4xl h-[85vh] rounded-xl border border-border bg-card p-6 shadow-xl flex flex-col animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-foreground truncate max-w-xl">{selectedItemForPreview.title}</h3>
-                <p className="text-xs text-muted-foreground">{selectedItemForPreview.file_type} • {selectedItemForPreview.file_size} • Shared by {selectedItemForPreview.uploaded_by}</p>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => triggerDownload(selectedItemForPreview)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-all"
-                >
-                  <Download className="h-3.5 w-3.5" /> Download
-                </button>
-                <button 
-                  onClick={() => setSelectedItemForPreview(null)} 
-                  className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
+      <ResponsiveModal
+        isOpen={!!selectedItemForPreview}
+        onClose={() => setSelectedItemForPreview(null)}
+        title={selectedItemForPreview?.title || "Resource Preview"}
+        subtitle={selectedItemForPreview ? `${selectedItemForPreview.file_type} • ${selectedItemForPreview.file_size} • Shared by ${selectedItemForPreview.uploaded_by}` : ""}
+        size="lg"
+        footer={
+          selectedItemForPreview && (
+            <button 
+              onClick={() => triggerDownload(selectedItemForPreview)}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-all"
+            >
+              <Download className="h-3.5 w-3.5" /> Download original file
+            </button>
+          )
+        }
+      >
+        {selectedItemForPreview && (
+          <div className="flex flex-col gap-4 h-full min-h-0">
             {/* Preview Frame Area */}
-            <div className="flex-1 bg-secondary/20 rounded-lg overflow-hidden border border-border/60 flex items-center justify-center p-2 w-full">
+            <div className="bg-secondary/20 rounded-lg overflow-hidden border border-border/60 flex items-center justify-center p-2 w-full min-h-[400px] max-h-[60vh]">
               {selectedItemForPreview.file_type.toUpperCase() === "PDF" ? (
                 <iframe
                   src={selectedItemForPreview.public_url}
-                  className="w-full h-full border-none rounded-md"
+                  className="w-full h-full min-h-[400px] border-none rounded-md"
                   title="PDF Preview"
                 />
               ) : ["DOCX", "DOC"].includes(selectedItemForPreview.file_type.toUpperCase()) ? (
@@ -2045,14 +2168,14 @@ export function ContentLibraryPage() {
             </div>
 
             {selectedItemForPreview.description && (
-              <div className="mt-4 border-t border-border/40 pt-3">
+              <div className="border-t border-border/40 pt-3">
                 <h5 className="text-xs font-bold text-foreground mb-1">Description</h5>
-                <p className="text-xs text-muted-foreground line-clamp-2">{selectedItemForPreview.description}</p>
+                <p className="text-xs text-muted-foreground">{selectedItemForPreview.description}</p>
               </div>
             )}
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </ResponsiveModal>
+    </ResponsivePageWrapper>
   );
 }

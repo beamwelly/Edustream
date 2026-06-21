@@ -1,4 +1,4 @@
-# EduStream Backend
+# Masterclass Backend
 
 FastAPI service for the learning platform.
 

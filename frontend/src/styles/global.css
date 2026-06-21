@@ -42,7 +42,7 @@
 :root {
   --radius: 0.625rem;
 
-  /* EduStream palette */
+  /* Masterclass palette */
   --background: oklch(0.984 0.003 247);            /* #F8F9FB */
   --foreground: oklch(0.27 0.034 264);             /* #1F2937 */
   --card: oklch(1 0 0);
@@ -81,6 +81,7 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    box-sizing: border-box;
   }
   html {
     color: var(--color-foreground);
@@ -93,6 +94,17 @@
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4 { letter-spacing: -0.01em; }
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+  svg {
+    max-width: 100%;
+  }
+  button, input, textarea {
+    min-width: 0;
+  }
 }
 
 @utility shadow-soft {
@@ -100,4 +112,10 @@
 }
 @utility shadow-card {
   box-shadow: var(--shadow-card);
+}
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

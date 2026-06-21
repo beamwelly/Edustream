@@ -14,6 +14,7 @@ from sqlalchemy import select, update, delete, or_, func
 
 from app.database.session import get_db
 from app.models.user import User
+from app.routes.users import require_permission
 from app.models.content import ContentCategory, ContentItem
 from app.utils.security import decode_access_token
 from app.utils.supabase_storage import (
@@ -137,18 +138,22 @@ class CategoryUpdate(BaseModel):
 @router.get("/categories")
 async def list_categories(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("content_library"))
 ):
     cached_cats = cache_get("content:categories")
     if cached_cats is not None:
-        return cached_cats
-
-    stmt = select(ContentCategory).order_by(ContentCategory.name.asc())
-    res = await db.execute(stmt)
-    cats = res.scalars().all()
+        cats_data = list(cached_cats)
+    else:
+        stmt = select(ContentCategory).order_by(ContentCategory.name.asc())
+        res = await db.execute(stmt)
+        cats = res.scalars().all()
+        cats_data = [{"id": c.id, "name": c.name} for c in cats]
+        cache_set("content:categories", cats_data, ttl=3600)
     
-    cats_data = [{"id": c.id, "name": c.name} for c in cats]
-    cache_set("content:categories", cats_data, ttl=3600)
+    if current_user.role == "employee":
+        # Removed category-specific filtering under global policy model
+        pass
+        
     return cats_data
 
 @router.post("/categories")
@@ -258,6 +263,9 @@ class ContentUpdatePayload(BaseModel):
     description: Optional[str] = None
     category: str
     is_active: bool
+    visibility: Optional[str] = "owner_employee"
+    content_date: Optional[str] = None
+
 
 # --- Content Endpoints ---
 
@@ -268,20 +276,28 @@ async def list_content_items(
     file_type: Optional[str] = None,
     sort: Optional[str] = "newest",
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(require_permission("content_library"))
 ):
     role = current_user.role
+    org_id = current_user.organization_id or 0
     ttl = 300
-    cache_key = f"content:list:{role}:{search or ''}:{category or ''}:{file_type or ''}:{sort or ''}"
+    user_suffix = f":{current_user.id}" if current_user.role != "admin" else ""
+    cache_key = f"content:list:{role}:{org_id}:{search or ''}:{category or ''}:{file_type or ''}:{sort or ''}{user_suffix}"
     cached_data = cache_get(cache_key)
     if cached_data is not None:
         return cached_data
 
     stmt = select(ContentItem)
-
-    # For standard users, only active files are served
+    # 30-day registration visibility filter for non-admin users
     if current_user.role != "admin":
+        from datetime import timedelta
+        threshold = current_user.created_at - timedelta(days=30)
+        stmt = stmt.where(func.coalesce(ContentItem.content_date, ContentItem.uploaded_at) >= threshold)
+
+    # For standard users, only active files are served. Admins and Owners can see all.
+    if current_user.role not in ("admin", "owner"):
         stmt = stmt.where(ContentItem.is_active == True)
+        stmt = stmt.where(ContentItem.visibility == "owner_employee")
 
     # Filters
     if search:
@@ -299,9 +315,9 @@ async def list_content_items(
 
     # Sort
     if sort == "oldest":
-        stmt = stmt.order_by(ContentItem.uploaded_at.asc())
+        stmt = stmt.order_by(func.coalesce(ContentItem.content_date, ContentItem.uploaded_at).asc())
     else:
-        stmt = stmt.order_by(ContentItem.uploaded_at.desc())
+        stmt = stmt.order_by(func.coalesce(ContentItem.content_date, ContentItem.uploaded_at).desc())
 
     res = await db.execute(stmt)
     items = res.scalars().all()
@@ -313,7 +329,7 @@ async def list_content_items(
     user_orgs = {}
     for u in users:
         if u.full_name:
-            user_orgs[u.full_name] = u.company_name or "EduStream"
+            user_orgs[u.full_name] = u.company_name or "Masterclass"
 
     async def process_item(item):
         # Explicit required logging
@@ -348,6 +364,7 @@ async def list_content_items(
             "public_url": public_url,
             "uploaded_by": item.uploaded_by,
             "uploaded_at": item.uploaded_at.isoformat() if item.uploaded_at else None,
+            "content_date": item.content_date.isoformat() if item.content_date else None,
             "is_active": item.is_active,
             "storage_provider": item.storage_provider,
             "bucket_name": item.bucket_name,
@@ -356,7 +373,7 @@ async def list_content_items(
             "warning": item_warning,
             "mime_type": item.mime_type,
             "folder": item.folder,
-            "organization_name": user_orgs.get(item.uploaded_by, "EduStream")
+            "organization_name": user_orgs.get(item.uploaded_by, "Masterclass")
         }
 
     import asyncio
@@ -373,6 +390,8 @@ async def upload_content(
     description: Optional[str] = Form(None),
     category: str = Form(...),
     folder: Optional[str] = Form("General"),
+    visibility: Optional[str] = Form("owner_employee"),
+    content_date: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_admin)
 ):
@@ -429,6 +448,16 @@ async def upload_content(
     print(f"Storage Path: {storage_path}")
     print("---------------------")
 
+    parsed_content_date = None
+    if content_date:
+        try:
+            from datetime import timezone
+            parsed_content_date = datetime.fromisoformat(content_date.replace("Z", "+00:00"))
+            if parsed_content_date.tzinfo is None:
+                parsed_content_date = parsed_content_date.replace(tzinfo=timezone.utc)
+        except Exception:
+            pass
+
     # Create metadata item in Neon PostgreSQL
     new_item = ContentItem(
         title=title.strip(),
@@ -447,7 +476,9 @@ async def upload_content(
         original_filename=file.filename,
         storage_filename=unique_filename,
         warning=None,
-        mime_type=content_type
+        mime_type=content_type,
+        visibility=visibility or "owner_employee",
+        content_date=parsed_content_date
     )
     db.add(new_item)
     await db.commit()
@@ -675,6 +706,19 @@ async def update_content_metadata(
     item.description = payload.description.strip() if payload.description else None
     item.category = payload.category
     item.is_active = payload.is_active
+    item.visibility = payload.visibility or "owner_employee"
+    
+    if payload.content_date:
+        try:
+            from datetime import timezone
+            parsed = datetime.fromisoformat(payload.content_date.replace("Z", "+00:00"))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            item.content_date = parsed
+        except Exception:
+            pass
+    else:
+        item.content_date = None
 
     await db.commit()
     await db.refresh(item)
@@ -700,18 +744,40 @@ async def download_content_file(
     """
     from fastapi.responses import StreamingResponse
 
-    # 1. Authenticate session if token query param is provided
-    if token:
-        payload = decode_access_token(token)
-        if not payload:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Download aborted: Session has expired.")
-
-    # 2. Query Neon DB metadata
+    # Query Neon DB metadata
     stmt = select(ContentItem).where(ContentItem.id == item_id)
     res = await db.execute(stmt)
     item = res.scalar_one_or_none()
     if not item:
         raise HTTPException(status_code=404, detail="Requested file not found in database catalog.")
+
+    # 1. Authenticate session if token query param is provided
+    if token:
+        payload = decode_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Download aborted: Session has expired.")
+        user_id = payload.get("user_id")
+        if user_id:
+            stmt_user = select(User).where(User.id == int(user_id))
+            res_user = await db.execute(stmt_user)
+            user = res_user.scalar_one_or_none()
+            if user:
+                if not user.is_active:
+                    raise HTTPException(status_code=403, detail="User account is inactive.")
+                if user.role != "admin":
+                    from datetime import timedelta
+                    if item.uploaded_at < user.created_at - timedelta(days=30):
+                        raise HTTPException(status_code=403, detail="Access denied. Asset is outside of your account registration 30-day visibility window.")
+                if user.role == "employee":
+                    from app.models.employee_access_policy import EmployeeAccessPolicy
+                    policy_stmt = select(EmployeeAccessPolicy).where(EmployeeAccessPolicy.id == 1)
+                    policy_res = await db.execute(policy_stmt)
+                    policy = policy_res.scalar_one_or_none()
+                    settings = policy.settings_json if policy else {}
+                    if not settings.get("content_library", True):
+                        raise HTTPException(status_code=403, detail="Access denied. Global Employee Policy restricts access to Content Library.")
+                    if item.visibility == "owner_only":
+                        raise HTTPException(status_code=403, detail="Access denied. This file is restricted to owner only.")
 
     # 3. Create signed URL for physical bucket query validation
     signed_url, _ = await create_signed_url(item.storage_path)
@@ -832,9 +898,11 @@ class BulkUploadFile(BaseModel):
     file: str  # Base64 string
     filename: str
     category: str
+    content_date: Optional[str] = None
 
 class BulkUploadRequest(BaseModel):
     files: List[BulkUploadFile]
+    visibility: Optional[str] = "owner_employee"
 
 @router.post("/bulk-upload")
 async def bulk_upload_content_multi(
@@ -920,6 +988,16 @@ async def bulk_upload_content_multi(
                 failed_count += 1
                 continue
                 
+            parsed_content_date = None
+            if f.content_date:
+                try:
+                    from datetime import timezone
+                    parsed_content_date = datetime.fromisoformat(f.content_date.replace("Z", "+00:00"))
+                    if parsed_content_date.tzinfo is None:
+                        parsed_content_date = parsed_content_date.replace(tzinfo=timezone.utc)
+                except Exception:
+                    pass
+
             # DB entry
             new_item = ContentItem(
                 title=f.filename.rsplit(".", 1)[0] if "." in f.filename else f.filename,
@@ -936,7 +1014,9 @@ async def bulk_upload_content_multi(
                 bucket_name=BUCKET_NAME,
                 original_filename=f.filename,
                 storage_filename=unique_filename,
-                mime_type=content_type
+                mime_type=content_type,
+                visibility=payload.visibility or "owner_employee",
+                content_date=parsed_content_date
             )
             db.add(new_item)
             success_count += 1

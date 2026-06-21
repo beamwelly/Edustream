@@ -14,6 +14,8 @@ from app.models.meeting import GoogleIntegration, Meeting
 from app.models.tool import ToolRegistry
 from app.models.masterclass import Masterclass, MasterclassRecording, MasterclassRegistration, MasterclassWatchHistory, MasterclassEmailLog
 from app.models.notification import Notification
+from app.models.employee_permission import EmployeePermission
+from app.models.employee_access_policy import EmployeeAccessPolicy
 from app.models.feedback import Feedback
 from app.models.wow import (
     FinancialGoal,
@@ -76,6 +78,7 @@ async def lifespan(app: FastAPI):
 
         from app.models.financial_discovery import FinancialDiscoveryProfile
         from app.models.needs_discovery import NeedsDiscoveryProfile
+        from app.models.generated_report import GeneratedReport
         await conn.run_sync(Base.metadata.create_all)
         
         from sqlalchemy import text
@@ -88,10 +91,15 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS warning VARCHAR(500);"))
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS mime_type VARCHAR(255);"))
             await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS folder VARCHAR(255) DEFAULT 'General';"))
+            await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_employee';"))
+            await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS organization_id INTEGER;"))
+            await conn.execute(text("ALTER TABLE content_library ADD COLUMN IF NOT EXISTS content_date TIMESTAMP WITH TIME ZONE;"))
+
             
             # Tools registry table migrations
             await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS original_filename VARCHAR(500);"))
             await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS storage_filename VARCHAR(500);"))
+            await conn.execute(text("ALTER TABLE tools_registry ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_only';"))
             
             # Masterclasses migrations
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS recording_filename VARCHAR(500);"))
@@ -104,8 +112,11 @@ async def lifespan(app: FastAPI):
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS tags VARCHAR(1000);"))
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS learning_outcomes VARCHAR(2000);"))
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS max_attendees INTEGER;"))
-            await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'public';"))
+            await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_only';"))
             await conn.execute(text("ALTER TABLE masterclasses ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'edustream';"))
+
+            # Masterclass recordings migration
+            await conn.execute(text("ALTER TABLE masterclass_recordings ADD COLUMN IF NOT EXISTS visibility VARCHAR(50) DEFAULT 'owner_only';"))
             
             # User table migrations
             await conn.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS company_name VARCHAR(255);"))
@@ -126,10 +137,16 @@ async def lifespan(app: FastAPI):
             # Fallback company_name for super_admin
             await conn.execute(text("""
                 UPDATE users
-                SET company_name = 'EduStream'
+                SET company_name = 'Masterclass'
                 WHERE (company_name IS NULL OR company_name = '');
             """))
-            # Role migration removed to prevent resetting admin users to standard users on reload
+
+            # Seed global employee access policy
+            await conn.execute(text("""
+                INSERT INTO employee_access_policy (id, settings_json, updated_by, updated_at)
+                VALUES (1, '{"dashboard": true, "content_library": true, "masterclasses": true, "meetings": false, "feedback": true, "wow_toolkit": true, "retirement_predictor": true, "financial_freedom": true, "family_vault": true, "goal_visualization": true, "cost_of_delay": true, "sip_home_loan": true}', 'system', NOW())
+                ON CONFLICT (id) DO NOTHING;
+            """))
             pass
         except Exception as e:
             print("DB Migration Alter Query Warning:", str(e))
@@ -167,7 +184,7 @@ async def lifespan(app: FastAPI):
     await engine.dispose()
 
 app = FastAPI(
-    title="EduStream API",
+    title="Masterclass API",
     description="Learning platform API",
     version="0.1.0",
     lifespan=lifespan
@@ -176,12 +193,14 @@ app = FastAPI(
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from fastapi.encoders import jsonable_encoder
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     print("VALIDATION ERROR DETAILS:", exc.errors())
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()},
+        content={"detail": jsonable_encoder(exc.errors())},
     )
 frontend_origins_str = os.getenv("FRONTEND_URL", "")
 frontend_origins = [origin.strip() for origin in frontend_origins_str.split(",") if origin.strip()]
@@ -247,9 +266,12 @@ app.include_router(financial_discovery_router)
 from app.routes.needs_discovery import router as needs_discovery_router
 app.include_router(needs_discovery_router)
 
+from app.routes.search import router as search_router
+app.include_router(search_router)
+
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "edustream-api"}
+    return {"status": "ok", "service": "masterclass-api"}
 
 from app.services.email_service import send_email_async
 
@@ -258,11 +280,11 @@ async def test_email(to: str):
     """
     Simple test endpoint to verify SMTP configuration and send a test email.
     """
-    subject = "EduStream SMTP Connection Test"
+    subject = "Masterclass SMTP Connection Test"
     body = f"""
     <html>
         <body style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-            <h2 style="color: #4F46E5;">EduStream SMTP Connection Success!</h2>
+            <h2 style="color: #4F46E5;">Masterclass SMTP Connection Success!</h2>
             <p>This is a test email sent from the FastAPI backend to verify your Gmail SMTP integration.</p>
             <p><strong>SMTP Host:</strong> {os.getenv("SMTP_HOST")}</p>
             <p><strong>Sender Email:</strong> {os.getenv("SMTP_FROM")}</p>

@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db
 from app.models.user import User
-from app.routes.users import get_current_user
+from app.routes.users import require_tool_permission
 from app.models.financial_discovery import FinancialDiscoveryProfile
 from pydantic import BaseModel
 from typing import Optional
@@ -21,7 +21,7 @@ class DiscoverySavePayload(BaseModel):
 @router.get("")
 async def get_discovery_data(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_tool_permission("financial_discovery"))
 ):
     stmt = select(FinancialDiscoveryProfile).where(FinancialDiscoveryProfile.user_id == current_user.id)
     result = await db.execute(stmt)
@@ -50,7 +50,7 @@ async def get_discovery_data(
 async def save_discovery_data(
     payload: DiscoverySavePayload,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_tool_permission("financial_discovery"))
 ):
     stmt = select(FinancialDiscoveryProfile).where(FinancialDiscoveryProfile.user_id == current_user.id)
     result = await db.execute(stmt)
@@ -88,7 +88,7 @@ async def save_discovery_data(
 @router.post("/reset")
 async def reset_discovery_data(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_tool_permission("financial_discovery"))
 ):
     stmt = select(FinancialDiscoveryProfile).where(FinancialDiscoveryProfile.user_id == current_user.id)
     result = await db.execute(stmt)
