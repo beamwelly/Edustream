@@ -1183,7 +1183,7 @@ export function WowToolkitPage({ onBack, toolId }: { onBack: () => void; toolId:
 
       {/* Tabs Navigation & Reset Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mt-4 pb-2">
-        <div className="flex flex-wrap gap-1 border-b border-border bg-muted/30 p-1 rounded-xl max-w-fit">
+        <div className="flex overflow-x-auto md:flex-wrap gap-1 border-b border-border bg-muted/30 p-1 rounded-xl w-full md:max-w-fit max-w-full scrollbar-none">
           <TabButton 
             active={activeTab === "dashboard"} 
             onClick={() => setActiveTab("dashboard")} 
@@ -1383,7 +1383,7 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+      className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all shrink-0 ${
         active 
           ? "bg-background text-foreground shadow-sm" 
           : "text-muted-foreground hover:bg-background/40 hover:text-foreground"
@@ -1524,14 +1524,14 @@ function DashboardTab({
             title="SIP + Home Loan Impact" 
             desc="Compare standard mortgages against asset accumulation returns." 
             icon={<Landmark className="h-5 w-5" />} 
-            onClick={() => onNavigate("loan")}
+            onClick={() => onNavigate("sip-loan")}
             ctaLabel="Open Calculator"
           />
           <NavigationCard 
             title="Financial Freedom Date" 
             desc="Find the exact day you hit complete independence." 
             icon={<Calendar className="h-5 w-5" />} 
-            onClick={() => onNavigate("freedom")}
+            onClick={() => onNavigate("freedom-date")}
             ctaLabel="Open Calculator"
           />
           <NavigationCard 

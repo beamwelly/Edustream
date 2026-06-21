@@ -133,7 +133,7 @@ def calculate_sip_home_loan_impact(
     
     for y in range(0, max_years + 1):
         # Property Value Compounding
-        prop_val = (loan_amount + down_payment) * ((1 + appreciation_rate) ** y)
+        prop_val = loan_amount * ((1 + appreciation_rate) ** y)
         
         if y == 0:
             loan_series.append({

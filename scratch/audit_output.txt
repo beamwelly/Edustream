@@ -1,0 +1,857 @@
+=== Sheet: 🏠 Dashboard ===
+A1 | Formula: 💎  RETIREMENT WEALTH PLANNER  |  Your Complete Financial Freedom Toolkit | Value: 💎  RETIREMENT WEALTH PLANNER  |  Your Complete Financial Freedom Toolkit
+A2 | Formula: India Edition · All figures in Indian Rupees (₹) | Value: India Edition · All figures in Indian Rupees (₹)
+A3 | Formula: 📌  NAVIGATE YOUR WEALTH PLANNER — Click any sheet tab below | Value: 📌  NAVIGATE YOUR WEALTH PLANNER — Click any sheet tab below
+B4 | Formula: ⏰ | Value: ⏰
+D4 | Formula: 💸 | Value: 💸
+F4 | Formula: 🏠 | Value: 🏠
+B5 | Formula: Retirement Age
+Predictor | Value: Retirement Age
+Predictor
+D5 | Formula: Cost of Delay
+Calculator | Value: Cost of Delay
+Calculator
+F5 | Formula: SIP + Home Loan
+Impact | Value: SIP + Home Loan
+Impact
+B6 | Formula: Calculate your ideal
+retirement age | Value: Calculate your ideal
+retirement age
+D6 | Formula: See the price of
+procrastination | Value: See the price of
+procrastination
+F6 | Formula: Balance investments
+vs EMI burden | Value: Balance investments
+vs EMI burden
+B8 | Formula: → Go to '📊 Retirement Age' tab | Value: → Go to '📊 Retirement Age' tab
+D8 | Formula: → Go to '💸 Cost of Delay' tab | Value: → Go to '💸 Cost of Delay' tab
+F8 | Formula: → Go to '🏠 SIP & Home Loan' tab | Value: → Go to '🏠 SIP & Home Loan' tab
+B11 | Formula: 🗓 | Value: 🗓
+D11 | Formula: 🎯 | Value: 🎯
+F11 | Formula: 🏦 | Value: 🏦
+B12 | Formula: Financial Freedom
+Date | Value: Financial Freedom
+Date
+D12 | Formula: Goal Visualization
+Dashboard | Value: Goal Visualization
+Dashboard
+F12 | Formula: Family Financial
+Vault | Value: Family Financial
+Vault
+B13 | Formula: Find your exact
+FI date | Value: Find your exact
+FI date
+D13 | Formula: Track all financial
+goals in one place | Value: Track all financial
+goals in one place
+F13 | Formula: Secure family docs
+& nominees | Value: Secure family docs
+& nominees
+B15 | Formula: → Go to '🗓 Freedom Date' tab | Value: → Go to '🗓 Freedom Date' tab
+D15 | Formula: → Go to '🎯 Goal Dashboard' tab | Value: → Go to '🎯 Goal Dashboard' tab
+F15 | Formula: → Go to '🏦 Family Vault' tab | Value: → Go to '🏦 Family Vault' tab
+A19 | Formula: 📊  QUICK SUMMARY — Pulls from your inputs across all sheets | Value: 📊  QUICK SUMMARY — Pulls from your inputs across all sheets
+B20 | Formula: Current Age | Value: Current Age
+C20 | Formula: Retirement Age | Value: Retirement Age
+D20 | Formula: Years to Retire | Value: Years to Retire
+E20 | Formula: Monthly SIP | Value: Monthly SIP
+F20 | Formula: Corpus at Retirement | Value: Corpus at Retirement
+G20 | Formula: Financial Freedom Date | Value: Financial Freedom Date
+B21 | Formula: ='📊 Retirement Age'!C5 | Value: 30
+C21 | Formula: ='📊 Retirement Age'!C14 | Value: None
+D21 | Formula: ='📊 Retirement Age'!C15 | Value: 28
+E21 | Formula: ='🏠 SIP & Home Loan'!C5 | Value: 15000
+F21 | Formula: ='📊 Retirement Age'!C22 | Value: 312141943.1
+G21 | Formula: ='🗓 Freedom Date'!C20 | Value: 2072.888249
+A23 | Formula: 💡  PRO TIPS:  Blue cells = Your inputs  |  Black cells = Auto-calculated  |  All calculations use Indian tax-adjusted returns | Value: 💡  PRO TIPS:  Blue cells = Your inputs  |  Black cells = Auto-calculated  |  All calculations use Indian tax-adjusted returns
+
+
+=== Sheet: 📊 Retirement Age ===
+A1 | Formula: ⏰  RETIREMENT AGE PREDICTOR | Value: ⏰  RETIREMENT AGE PREDICTOR
+A2 | Formula: Answer a few questions to find your optimal retirement age and corpus needed | Value: Answer a few questions to find your optimal retirement age and corpus needed
+B4 | Formula: 📋  PERSONAL & FINANCIAL INPUTS | Value: 📋  PERSONAL & FINANCIAL INPUTS
+E4 | Formula: 📈  RETIREMENT AGE SENSITIVITY TABLE | Value: 📈  RETIREMENT AGE SENSITIVITY TABLE
+B5 | Formula: Current Age (years) | Value: Current Age (years)
+C5 | Formula: 30.0 | Value: 30.0
+E5 | Formula: Retire At Age | Value: Retire At Age
+F5 | Formula: Corpus Needed (₹) | Value: Corpus Needed (₹)
+B6 | Formula: Expected Retirement Age | Value: Expected Retirement Age
+C6 | Formula: 58.0 | Value: 58.0
+E6 | Formula: 45.0 | Value: 45.0
+F6 | Formula: =IF(E6<=$C$5,0,$C$8*((1+$C$9)^(E6-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E6)))/($C$13-$C$9)*(1+$C$13))) | Value: 166680628.7
+B7 | Formula: Life Expectancy (years) | Value: Life Expectancy (years)
+C7 | Formula: 85.0 | Value: 85.0
+E7 | Formula: 48.0 | Value: 48.0
+F7 | Formula: =IF(E7<=$C$5,0,$C$8*((1+$C$9)^(E7-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E7)))/($C$13-$C$9)*(1+$C$13))) | Value: 194435566
+B8 | Formula: Current Monthly Expenses (₹) | Value: Current Monthly Expenses (₹)
+C8 | Formula: 60000.0 | Value: 60000.0
+E8 | Formula: 50.0 | Value: 50.0
+F8 | Formula: =IF(E8<=$C$5,0,$C$8*((1+$C$9)^(E8-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E8)))/($C$13-$C$9)*(1+$C$13))) | Value: 214931616.5
+B9 | Formula: Expected Inflation Rate | Value: Expected Inflation Rate
+C9 | Formula: 0.06 | Value: 0.06
+E9 | Formula: 52.0 | Value: 52.0
+F9 | Formula: =IF(E9<=$C$5,0,$C$8*((1+$C$9)^(E9-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E9)))/($C$13-$C$9)*(1+$C$13))) | Value: 237032811.6
+B10 | Formula: Current Monthly Income (₹) | Value: Current Monthly Income (₹)
+C10 | Formula: 150000.0 | Value: 150000.0
+E10 | Formula: 54.0 | Value: 54.0
+F10 | Formula: =IF(E10<=$C$5,0,$C$8*((1+$C$9)^(E10-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E10)))/($C$13-$C$9)*(1+$C$13))) | Value: 260693924.7
+B11 | Formula: Savings Rate (% of income) | Value: Savings Rate (% of income)
+C11 | Formula: 0.3 | Value: 0.3
+E11 | Formula: 55.0 | Value: 55.0
+F11 | Formula: =IF(E11<=$C$5,0,$C$8*((1+$C$9)^(E11-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E11)))/($C$13-$C$9)*(1+$C$13))) | Value: 273076950.6
+B12 | Formula: Expected Investment Return | Value: Expected Investment Return
+C12 | Formula: 0.12 | Value: 0.12
+E12 | Formula: 56.0 | Value: 56.0
+F12 | Formula: =IF(E12<=$C$5,0,$C$8*((1+$C$9)^(E12-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E12)))/($C$13-$C$9)*(1+$C$13))) | Value: 285800193.9
+B13 | Formula: Post-Retirement Return | Value: Post-Retirement Return
+C13 | Formula: 0.07 | Value: 0.07
+E13 | Formula: 57.0 | Value: 57.0
+F13 | Formula: =IF(E13<=$C$5,0,$C$8*((1+$C$9)^(E13-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E13)))/($C$13-$C$9)*(1+$C$13))) | Value: 298834286
+B14 | Formula: 📊  CALCULATED RESULTS | Value: 📊  CALCULATED RESULTS
+E14 | Formula: 58.0 | Value: 58.0
+F14 | Formula: =IF(E14<=$C$5,0,$C$8*((1+$C$9)^(E14-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E14)))/($C$13-$C$9)*(1+$C$13))) | Value: 312141943.1
+B15 | Formula: Years to Retirement | Value: Years to Retirement
+C15 | Formula: =C6-C5 | Value: 28
+E15 | Formula: 60.0 | Value: 60.0
+F15 | Formula: =IF(E15<=$C$5,0,$C$8*((1+$C$9)^(E15-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E15)))/($C$13-$C$9)*(1+$C$13))) | Value: 339381661.5
+B16 | Formula: Years in Retirement | Value: Years in Retirement
+C16 | Formula: =C7-C6 | Value: 27
+E16 | Formula: 62.0 | Value: 62.0
+F16 | Formula: =IF(E16<=$C$5,0,$C$8*((1+$C$9)^(E16-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E16)))/($C$13-$C$9)*(1+$C$13))) | Value: 367011451
+B17 | Formula: Monthly Savings (₹) | Value: Monthly Savings (₹)
+C17 | Formula: =C10*C11 | Value: 45000
+E17 | Formula: 65.0 | Value: 65.0
+F17 | Formula: =IF(E17<=$C$5,0,$C$8*((1+$C$9)^(E17-$C$5))*(12*(1-(1+$C$9)^(-($C$7-E17)))/($C$13-$C$9)*(1+$C$13))) | Value: 407505283.3
+B18 | Formula: Monthly Expenses at Retirement (₹) | Value: Monthly Expenses at Retirement (₹)
+C18 | Formula: =C8*((1+C9)^C15) | Value: 306701.2018
+B19 | Formula: Annual Expenses at Retirement (₹) | Value: Annual Expenses at Retirement (₹)
+C19 | Formula: =C18*12 | Value: 3680414.422
+E19 | Formula: 📌  RULES OF THUMB | Value: 📌  RULES OF THUMB
+B20 | Formula: Expenses Inflation-Adj Total (₹) | Value: Expenses Inflation-Adj Total (₹)
+C20 | Formula: =C19*(1-(1+C9)^(-C16))/(C13-C9)*((1+C13)) | Value: 312141943.1
+E20 | Formula: • 25x Rule: Corpus = 25× Annual Expenses | Value: • 25x Rule: Corpus = 25× Annual Expenses
+B21 | Formula: Current Corpus Value (₹) | Value: Current Corpus Value (₹)
+C21 | Formula: =C10*C11*12*((1+C12)^C15-1)/C12*(1+C12) | Value: 115334687.1
+E21 | Formula: • 4% Rule: Withdraw max 4% per year | Value: • 4% Rule: Withdraw max 4% per year
+B22 | Formula: Required Retirement Corpus (₹) | Value: Required Retirement Corpus (₹)
+C22 | Formula: =C20 | Value: 312141943.1
+E22 | Formula: • 100-Age Rule: Equity allocation % | Value: • 100-Age Rule: Equity allocation %
+B23 | Formula: Corpus Surplus / (Deficit) (₹) | Value: Corpus Surplus / (Deficit) (₹)
+C23 | Formula: =C21-C22 | Value: -196807256.1
+E23 | Formula: • Save at least 20-30% of income | Value: • Save at least 20-30% of income
+B24 | Formula: Savings Corpus at Retirement (₹) | Value: Savings Corpus at Retirement (₹)
+C24 | Formula: =C21 | Value: 115334687.1
+E24 | Formula: • Emergency fund = 6 months expenses | Value: • Emergency fund = 6 months expenses
+B25 | Formula: Corpus as Monthly Income Years | Value: Corpus as Monthly Income Years
+C25 | Formula: =C21/(C18*12) | Value: 31.33741853
+E25 | Formula: • Term insurance = 15-20× annual income | Value: • Term insurance = 15-20× annual income
+B26 | Formula: =IF(C23>=0,"✅ On Track! Your savings plan is sufficient","⚠️ Gap detected! Increase savings rate or delay retirement") | Value: ⚠️ Gap detected! Increase savings rate or delay retirement
+E26 | Formula: • Review plan every 2 years | Value: • Review plan every 2 years
+
+
+=== Sheet: 💸 Cost of Delay ===
+A1 | Formula: 💸  COST OF DELAY CALCULATOR — Every Year Counts! | Value: 💸  COST OF DELAY CALCULATOR — Every Year Counts!
+A2 | Formula: Discover how much you lose by starting your SIP late — the compounding penalty in real ₹ | Value: Discover how much you lose by starting your SIP late — the compounding penalty in real ₹
+B4 | Formula: 📋  BASE INPUTS | Value: 📋  BASE INPUTS
+B5 | Formula: Monthly SIP Amount (₹) | Value: Monthly SIP Amount (₹)
+C5 | Formula: 10000.0 | Value: 10000.0
+B6 | Formula: Expected Annual Return | Value: Expected Annual Return
+C6 | Formula: 0.12 | Value: 0.12
+B7 | Formula: Target Age for Corpus | Value: Target Age for Corpus
+C7 | Formula: 60.0 | Value: 60.0
+B8 | Formula: Current Age (to start) | Value: Current Age (to start)
+C8 | Formula: 40.0 | Value: 40.0
+B10 | Formula: ⏳  DELAY PENALTY TABLE — Start at Different Ages | Value: ⏳  DELAY PENALTY TABLE — Start at Different Ages
+B11 | Formula: Start Age | Value: Start Age
+C11 | Formula: Years to Invest | Value: Years to Invest
+D11 | Formula: Total Invested (₹) | Value: Total Invested (₹)
+E11 | Formula: Corpus at 60 (₹) | Value: Corpus at 60 (₹)
+F11 | Formula: vs Starting at 25 (₹) | Value: vs Starting at 25 (₹)
+G11 | Formula: Delay Cost % | Value: Delay Cost %
+B12 | Formula: =$C$8 | Value: 40
+C12 | Formula: =MAX(0,$C$7-B12) | Value: 20
+D12 | Formula: =IF(B12<=$C$7,$C$5*12*($C$7-B12),0) | Value: 2400000
+E12 | Formula: =IF(B12>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B12)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 9991479.19
+F12 | Formula: — | Value: —
+G12 | Formula: BASE | Value: BASE
+B13 | Formula: =$C$8+2 | Value: 42
+C13 | Formula: =MAX(0,$C$7-B13) | Value: 18
+D13 | Formula: =IF(B13<=$C$7,$C$5*12*($C$7-B13),0) | Value: 2160000
+E13 | Formula: =IF(B13>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B13)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 7654392.362
+F13 | Formula: =E13-E12 | Value: -2337086.828
+G13 | Formula: =IF(E12=0,0,(E13-E12)/E12) | Value: -0.2339079914
+B14 | Formula: =$C$8+5 | Value: 45
+C14 | Formula: =MAX(0,$C$7-B14) | Value: 15
+D14 | Formula: =IF(B14<=$C$7,$C$5*12*($C$7-B14),0) | Value: 1800000
+E14 | Formula: =IF(B14>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B14)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 5045759.995
+F14 | Formula: =E14-E12 | Value: -4945719.195
+G14 | Formula: =IF(E12=0,0,(E14-E12)/E12) | Value: -0.4949936942
+B15 | Formula: =$C$8+7 | Value: 47
+C15 | Formula: =MAX(0,$C$7-B15) | Value: 13
+D15 | Formula: =IF(B15<=$C$7,$C$5*12*($C$7-B15),0) | Value: 1560000
+E15 | Formula: =IF(B15>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B15)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 3759311.448
+F15 | Formula: =E15-E12 | Value: -6232167.742
+G15 | Formula: =IF(E12=0,0,(E15-E12)/E12) | Value: -0.6237482583
+B16 | Formula: =$C$8+10 | Value: 50
+C16 | Formula: =MAX(0,$C$7-B16) | Value: 10
+D16 | Formula: =IF(B16<=$C$7,$C$5*12*($C$7-B16),0) | Value: 1200000
+E16 | Formula: =IF(B16>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B16)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 2323390.764
+F16 | Formula: =E16-E12 | Value: -7668088.427
+G16 | Formula: =IF(E12=0,0,(E16-E12)/E12) | Value: -0.7674627831
+B17 | Formula: =$C$8+13 | Value: 53
+C17 | Formula: =MAX(0,$C$7-B17) | Value: 7
+D17 | Formula: =IF(B17<=$C$7,$C$5*12*($C$7-B17),0) | Value: 840000
+E17 | Formula: =IF(B17>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B17)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 1319789.971
+F17 | Formula: =E17-E12 | Value: -8671689.219
+G17 | Formula: =IF(E12=0,0,(E17-E12)/E12) | Value: -0.8679084502
+B18 | Formula: =$C$8+15 | Value: 55
+C18 | Formula: =MAX(0,$C$7-B18) | Value: 5
+D18 | Formula: =IF(B18<=$C$7,$C$5*12*($C$7-B18),0) | Value: 600000
+E18 | Formula: =IF(B18>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B18)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 824863.6655
+F18 | Formula: =E18-E12 | Value: -9166615.525
+G18 | Formula: =IF(E12=0,0,(E18-E12)/E12) | Value: -0.9174432884
+B19 | Formula: =$C$8+17 | Value: 57
+C19 | Formula: =MAX(0,$C$7-B19) | Value: 3
+D19 | Formula: =IF(B19<=$C$7,$C$5*12*($C$7-B19),0) | Value: 360000
+E19 | Formula: =IF(B19>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B19)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 435076.4714
+F19 | Formula: =E19-E12 | Value: -9556402.719
+G19 | Formula: =IF(E12=0,0,(E19-E12)/E12) | Value: -0.9564552492
+B20 | Formula: =$C$8+20 | Value: 60
+C20 | Formula: =MAX(0,$C$7-B20) | Value: 0
+D20 | Formula: =IF(B20<=$C$7,$C$5*12*($C$7-B20),0) | Value: 0
+E20 | Formula: =IF(B20>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B20)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 0
+F20 | Formula: =E20-E12 | Value: -9991479.19
+G20 | Formula: =IF(E12=0,0,(E20-E12)/E12) | Value: -1
+B21 | Formula: =$C$8+23 | Value: 63
+C21 | Formula: =MAX(0,$C$7-B21) | Value: 0
+D21 | Formula: =IF(B21<=$C$7,$C$5*12*($C$7-B21),0) | Value: 0
+E21 | Formula: =IF(B21>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B21)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 0
+F21 | Formula: =E21-E12 | Value: -9991479.19
+G21 | Formula: =IF(E12=0,0,(E21-E12)/E12) | Value: -1
+B22 | Formula: =$C$8+25 | Value: 65
+C22 | Formula: =MAX(0,$C$7-B22) | Value: 0
+D22 | Formula: =IF(B22<=$C$7,$C$5*12*($C$7-B22),0) | Value: 0
+E22 | Formula: =IF(B22>=$C$7,0,$C$5*(((1+$C$6/12)^(($C$7-B22)*12)-1)/($C$6/12))*(1+$C$6/12)) | Value: 0
+F22 | Formula: =E22-E12 | Value: -9991479.19
+G22 | Formula: =IF(E12=0,0,(E22-E12)/E12) | Value: -1
+B24 | Formula: =CONCATENATE("💥 Starting at ",TEXT(B17,"0")," instead of ",TEXT(B12,"0"),": You lose ₹",TEXT(E17-E12,"#,##0")," in corpus — ",TEXT((E17-E12)/E12*-1,"0.0%")," penalty!") | Value: 💥 Starting at 53 instead of 40: You lose ₹-8,671,689 in corpus — 86.8% penalty!
+B26 | Formula: =CONCATENATE("🔢  COMPOUNDING POWER: ₹",TEXT(C5,"#,##0"),"/month at ",TEXT(C6*100,"0"),"% p.a.") | Value: 🔢  COMPOUNDING POWER: ₹10,000/month at 12% p.a.
+B27 | Formula: 5 years | Value: 5 years
+C27 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(5*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹8.2L corpus
+D27 | Formula: ="₹"&TEXT($C$5*12*5/100000,"0.0")&"L invested" | Value: ₹6.0L invested
+E27 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(5*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*5),"0.0")&"x!" | Value: Money grew 1.4x!
+B28 | Formula: 10 years | Value: 10 years
+C28 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(10*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹23.2L corpus
+D28 | Formula: ="₹"&TEXT($C$5*12*10/100000,"0.0")&"L invested" | Value: ₹12.0L invested
+E28 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(10*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*10),"0.0")&"x!" | Value: Money grew 1.9x!
+B29 | Formula: 15 years | Value: 15 years
+C29 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(15*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹50.5L corpus
+D29 | Formula: ="₹"&TEXT($C$5*12*15/100000,"0.0")&"L invested" | Value: ₹18.0L invested
+E29 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(15*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*15),"0.0")&"x!" | Value: Money grew 2.8x!
+B30 | Formula: 20 years | Value: 20 years
+C30 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(20*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹99.9L corpus
+D30 | Formula: ="₹"&TEXT($C$5*12*20/100000,"0.0")&"L invested" | Value: ₹24.0L invested
+E30 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(20*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*20),"0.0")&"x!" | Value: Money grew 4.2x!
+B31 | Formula: 25 years | Value: 25 years
+C31 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(25*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹189.8L corpus
+D31 | Formula: ="₹"&TEXT($C$5*12*25/100000,"0.0")&"L invested" | Value: ₹30.0L invested
+E31 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(25*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*25),"0.0")&"x!" | Value: Money grew 6.3x!
+B32 | Formula: 30 years | Value: 30 years
+C32 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(30*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹353.0L corpus
+D32 | Formula: ="₹"&TEXT($C$5*12*30/100000,"0.0")&"L invested" | Value: ₹36.0L invested
+E32 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(30*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*30),"0.0")&"x!" | Value: Money grew 9.8x!
+B33 | Formula: 35 years | Value: 35 years
+C33 | Formula: ="₹"&TEXT($C$5*(((1+$C$6/12)^(35*12)-1)/($C$6/12))*(1+$C$6/12)/100000,"0.0")&"L corpus" | Value: ₹649.5L corpus
+D33 | Formula: ="₹"&TEXT($C$5*12*35/100000,"0.0")&"L invested" | Value: ₹42.0L invested
+E33 | Formula: ="Money grew "&TEXT($C$5*(((1+$C$6/12)^(35*12)-1)/($C$6/12))*(1+$C$6/12)/($C$5*12*35),"0.0")&"x!" | Value: Money grew 15.5x!
+
+
+=== Sheet: 🏠 SIP & Home Loan ===
+A1 | Formula: 🏠  SIP + HOME LOAN IMPACT CALCULATOR | Value: 🏠  SIP + HOME LOAN IMPACT CALCULATOR
+A2 | Formula: Compare: What happens when you take a home loan vs continue pure SIP investments? | Value: Compare: What happens when you take a home loan vs continue pure SIP investments?
+B4 | Formula: 📈  SIP CALCULATOR INPUTS | Value: 📈  SIP CALCULATOR INPUTS
+E4 | Formula: 🏡  HOME LOAN INPUTS | Value: 🏡  HOME LOAN INPUTS
+B5 | Formula: Monthly SIP Amount (₹) | Value: Monthly SIP Amount (₹)
+C5 | Formula: 15000.0 | Value: 15000.0
+E5 | Formula: Home Loan Amount (₹) | Value: Home Loan Amount (₹)
+F5 | Formula: 5000000.0 | Value: 5000000.0
+B6 | Formula: SIP Annual Return (%) | Value: SIP Annual Return (%)
+C6 | Formula: 0.12 | Value: 0.12
+E6 | Formula: Loan Interest Rate (Annual %) | Value: Loan Interest Rate (Annual %)
+F6 | Formula: 0.0875 | Value: 0.0875
+B7 | Formula: SIP Duration (Years) | Value: SIP Duration (Years)
+C7 | Formula: 20.0 | Value: 20.0
+E7 | Formula: Loan Tenure (Years) | Value: Loan Tenure (Years)
+F7 | Formula: 20.0 | Value: 20.0
+B8 | Formula: Step-up Rate (Annual %) | Value: Step-up Rate (Annual %)
+C8 | Formula: 0.1 | Value: 0.1
+E8 | Formula: Down Payment (₹) | Value: Down Payment (₹)
+F8 | Formula: 1000000.0 | Value: 1000000.0
+E9 | Formula: Property Appreciation Rate | Value: Property Appreciation Rate
+F9 | Formula: 0.06 | Value: 0.06
+B10 | Formula: 📊  SIP RESULTS (Without Home Loan) | Value: 📊  SIP RESULTS (Without Home Loan)
+E10 | Formula: 📊  HOME LOAN RESULTS | Value: 📊  HOME LOAN RESULTS
+B11 | Formula: Simple SIP Corpus (₹) | Value: Simple SIP Corpus (₹)
+C11 | Formula: =C5*(((1+C6/12)^(C7*12)-1)/(C6/12))*(1+C6/12) | Value: 14987218.79
+E11 | Formula: Monthly EMI (₹) | Value: Monthly EMI (₹)
+F11 | Formula: =F5*(F6/12*(1+F6/12)^(F7*12))/((1+F6/12)^(F7*12)-1) | Value: 44185.53545
+B12 | Formula: Total Amount Invested (₹) | Value: Total Amount Invested (₹)
+C12 | Formula: =C5*12*C7 | Value: 3600000
+E12 | Formula: Total Amount Paid (₹) | Value: Total Amount Paid (₹)
+F12 | Formula: =F11*F7*12 | Value: 10604528.51
+B13 | Formula: Wealth Gain (₹) | Value: Wealth Gain (₹)
+C13 | Formula: =C11-C12 | Value: 11387218.79
+E13 | Formula: Total Interest Paid (₹) | Value: Total Interest Paid (₹)
+F13 | Formula: =F12-F5 | Value: 5604528.507
+B14 | Formula: Step-up SIP Corpus (₹) | Value: Step-up SIP Corpus (₹)
+C14 | Formula: =C5*12*((((1+C6)^C7-(1+C8)^C7))/(C6-C8))*(1+C6) | Value: 29421434.89
+E14 | Formula: Property Value at Maturity (₹) | Value: Property Value at Maturity (₹)
+F14 | Formula: =F5*(1+F9)^F7 | Value: 16035677.36
+B15 | Formula: Return Multiple | Value: Return Multiple
+C15 | Formula: =C11/(C5*12*C7) | Value: 4.163116329
+E15 | Formula: Net Property Gain (₹) | Value: Net Property Gain (₹)
+F15 | Formula: =F14-(F5+F8+F13) | Value: 4431148.854
+E16 | Formula: SIP if EMI invested instead (₹) | Value: SIP if EMI invested instead (₹)
+F16 | Formula: =F11*(((1+C6/12)^(F7*12)-1)/(C6/12))*(1+C6/12) | Value: 44147885.79
+E17 | Formula: SIP Advantage over Property (₹) | Value: SIP Advantage over Property (₹)
+F17 | Formula: =F16-F15 | Value: 39716736.94
+B19 | Formula: ⚖️  COMBINED STRATEGY: SIP + HOME LOAN | Value: ⚖️  COMBINED STRATEGY: SIP + HOME LOAN
+B20 | Formula: Total Monthly Outflow (₹) | Value: Total Monthly Outflow (₹)
+C20 | Formula: =C5+F11 | Value: 59185.53545
+B21 | Formula: SIP Corpus (20 years) | Value: SIP Corpus (20 years)
+C21 | Formula: =C11 | Value: 14987218.79
+B22 | Formula: Property Net Value (20 years) | Value: Property Net Value (20 years)
+C22 | Formula: =F14-F13 | Value: 10431148.85
+B23 | Formula: Combined Wealth (₹) | Value: Combined Wealth (₹)
+C23 | Formula: =C21+C22 | Value: 25418367.64
+B24 | Formula: Tax Benefit (Home Loan 80C+24b, ₹/yr) | Value: Tax Benefit (Home Loan 80C+24b, ₹/yr)
+C24 | Formula: 200000.0 | Value: 200000.0
+B25 | Formula: Effective EMI After Tax (₹/month) | Value: Effective EMI After Tax (₹/month)
+C25 | Formula: =(F11*12-C24)/12 | Value: 27518.86878
+B26 | Formula: =IF(C23>(C11+F14),"✅ Balanced approach beats pure SIP by ₹"&TEXT(C23-C11,"#,##0"),"📊 Review strategy — pure SIP may be better") | Value: 📊 Review strategy — pure SIP may be better
+
+
+=== Sheet: 🗓 Freedom Date ===
+A1 | Formula: 🗓  FINANCIAL FREEDOM DATE CALCULATOR | Value: 🗓  FINANCIAL FREEDOM DATE CALCULATOR
+A2 | Formula: Calculate the exact date you achieve Financial Independence — never work for money again! | Value: Calculate the exact date you achieve Financial Independence — never work for money again!
+B4 | Formula: 📋  YOUR FINANCIAL SNAPSHOT | Value: 📋  YOUR FINANCIAL SNAPSHOT
+E4 | Formula: 📊  FI PROGRESS TRACKER | Value: 📊  FI PROGRESS TRACKER
+B5 | Formula: Current Age | Value: Current Age
+C5 | Formula: 58.0 | Value: 58.0
+E5 | Formula: FI Target (₹) | Value: FI Target (₹)
+F5 | Formula: ='🗓 Freedom Date'!C16 | Value: 18000000
+B6 | Formula: Birth Year | Value: Birth Year
+C6 | Formula: 1999.0 | Value: 1999.0
+E6 | Formula: Current Net Worth (₹) | Value: Current Net Worth (₹)
+F6 | Formula: ='🗓 Freedom Date'!C11 | Value: 1000000
+B7 | Formula: Current Monthly Expenses (₹) | Value: Current Monthly Expenses (₹)
+C7 | Formula: 60000.0 | Value: 60000.0
+E7 | Formula: Remaining Gap (₹) | Value: Remaining Gap (₹)
+F7 | Formula: =F5-F6 | Value: 17000000
+B8 | Formula: Expected Annual Inflation | Value: Expected Annual Inflation
+C8 | Formula: 0.06 | Value: 0.06
+E8 | Formula: % of FI Achieved | Value: % of FI Achieved
+F8 | Formula: =F6/F5 | Value: 0.05555555556
+B9 | Formula: Annual Investment Return | Value: Annual Investment Return
+C9 | Formula: 0.12 | Value: 0.12
+E9 | Formula: Years Remaining (approx.) | Value: Years Remaining (approx.)
+F9 | Formula: ='🗓 Freedom Date'!C18 | Value: 15.88824878
+B10 | Formula: Post-FI Withdrawal Rate (4% rule) | Value: Post-FI Withdrawal Rate (4% rule)
+C10 | Formula: 0.04 | Value: 0.04
+E10 | Formula: Monthly ₹ saved toward FI | Value: Monthly ₹ saved toward FI
+F10 | Formula: ='🗓 Freedom Date'!C12 | Value: 30000
+B11 | Formula: Current Net Worth / Savings (₹) | Value: Current Net Worth / Savings (₹)
+C11 | Formula: 1000000.0 | Value: 1000000.0
+E11 | Formula: FI Progress Milestone | Value: FI Progress Milestone
+F11 | Formula: =IF(F8<0.25,"🌱 Early Stage",IF(F8<0.5,"🌿 Growing",IF(F8<0.75,"🌳 Halfway!",IF(F8<1,"🔥 Almost There!","🎊 FI ACHIEVED!")))) | Value: 🌱 Early Stage
+B12 | Formula: Monthly Savings / Investment (₹) | Value: Monthly Savings / Investment (₹)
+C12 | Formula: 30000.0 | Value: 30000.0
+B13 | Formula: Annual Savings Step-up Rate | Value: Annual Savings Step-up Rate
+C13 | Formula: 0.1 | Value: 0.1
+E13 | Formula: 💰  MONTHLY INCOME AT FI | Value: 💰  MONTHLY INCOME AT FI
+E14 | Formula: Annual Withdrawal (4% rule) (₹) | Value: Annual Withdrawal (4% rule) (₹)
+F14 | Formula: =C16*0.04 | Value: 720000
+B15 | Formula: 🎯  FINANCIAL INDEPENDENCE CALCULATIONS | Value: 🎯  FINANCIAL INDEPENDENCE CALCULATIONS
+E15 | Formula: Monthly Income at FI (₹) | Value: Monthly Income at FI (₹)
+F15 | Formula: =F14/12 | Value: 60000
+B16 | Formula: FI Number (Required Corpus) (₹) | Value: FI Number (Required Corpus) (₹)
+C16 | Formula: =C7*12/C10 | Value: 18000000
+E16 | Formula: Monthly Income (Inflation 10yr) (₹) | Value: Monthly Income (Inflation 10yr) (₹)
+F16 | Formula: =F15*(1+C8)^10 | Value: 107450.8618
+B17 | Formula: FI Number (Inflation Adj. 20 yrs) (₹) | Value: FI Number (Inflation Adj. 20 yrs) (₹)
+C17 | Formula: =C7*12*(1+C8)^20/C10 | Value: 57728438.5
+E17 | Formula: Monthly Income (Inflation 20yr) (₹) | Value: Monthly Income (Inflation 20yr) (₹)
+F17 | Formula: =F15*(1+C8)^20 | Value: 192428.1283
+B18 | Formula: Years to FI (approx.) | Value: Years to FI (approx.)
+C18 | Formula: =LN((C16-C11)*(C9/12)/(C12)+1)/(LN(1+C9/12)*12) | Value: 15.88824878
+E18 | Formula: Safe FI Buffer (1.5x needed) (₹) | Value: Safe FI Buffer (1.5x needed) (₹)
+F18 | Formula: =C16*1.5 | Value: 27000000
+B19 | Formula: Years to FI (Step-up SIP) | Value: Years to FI (Step-up SIP)
+C19 | Formula: =LN(C16*C9/(C12*12)+1)/LN(1+C9) | Value: 17.17049963
+B20 | Formula: FI Achievement Year | Value: FI Achievement Year
+C20 | Formula: =(C6+C5)+C18 | Value: 2072.888249
+B21 | Formula: FI Age at Achievement | Value: FI Age at Achievement
+C21 | Formula: =C20-C6 | Value: 73.88824878
+B23 | Formula: =CONCATENATE("🎉 YOUR FINANCIAL FREEDOM DATE: ",CHOOSE(MIN(12,MAX(1,ROUND((C20-INT(C20))*12+1,0))),"January","February","March","April","May","June","July","August","September","October","November","December")," 1, ",TEXT(INT(C20),"0")," at age ",TEXT(C21,"0.0"),"!") | Value: 🎉 YOUR FINANCIAL FREEDOM DATE: December 1, 2072 at age 73.9!
+B26 | Formula: 🏆  FI MILESTONE TRACKER | Value: 🏆  FI MILESTONE TRACKER
+B27 | Formula: Milestone | Value: Milestone
+D27 | Formula: Example (₹60k/mo) | Value: Example (₹60k/mo)
+E27 | Formula: Description | Value: Description
+B28 | Formula: 1× Monthly Expenses | Value: 1× Monthly Expenses
+D28 | Formula: ="₹"&TEXT(C7/100000,"0.0")&"L" | Value: ₹0.6L
+E28 | Formula: Starter Emergency Fund | Value: Starter Emergency Fund
+B29 | Formula: 6× Monthly Expenses | Value: 6× Monthly Expenses
+D29 | Formula: ="₹"&TEXT(C7*6/100000,"0.0")&"L" | Value: ₹3.6L
+E29 | Formula: Full Emergency Fund | Value: Full Emergency Fund
+B30 | Formula: 25× Annual Expenses | Value: 25× Annual Expenses
+D30 | Formula: ="₹"&TEXT(C7*12*25/10000000,"0.00")&"Cr" | Value: ₹1.80Cr
+E30 | Formula: Lean FI Number | Value: Lean FI Number
+B31 | Formula: 33× Annual Expenses | Value: 33× Annual Expenses
+D31 | Formula: ="₹"&TEXT(C7*12*33/10000000,"0.00")&"Cr" | Value: ₹2.38Cr
+E31 | Formula: Standard FI Number | Value: Standard FI Number
+B32 | Formula: 40× Annual Expenses | Value: 40× Annual Expenses
+D32 | Formula: ="₹"&TEXT(C7*12*40/10000000,"0.00")&"Cr" | Value: ₹2.88Cr
+E32 | Formula: Fat FI / Safety Margin | Value: Fat FI / Safety Margin
+
+
+=== Sheet: 🎯 Goal Dashboard ===
+A1 | Formula: 🎯  GOAL VISUALIZATION DASHBOARD | Value: 🎯  GOAL VISUALIZATION DASHBOARD
+A2 | Formula: Track all your financial goals in one place — from emergencies to retirement | Value: Track all your financial goals in one place — from emergencies to retirement
+B4 | Formula: 📋  FINANCIAL GOALS TRACKER | Value: 📋  FINANCIAL GOALS TRACKER
+B5 | Formula: Goal Name | Value: Goal Name
+C5 | Formula: Target Amount (₹) | Value: Target Amount (₹)
+D5 | Formula: Current Saved (₹) | Value: Current Saved (₹)
+E5 | Formula: Monthly SIP (₹) | Value: Monthly SIP (₹)
+F5 | Formula: Timeline (Yrs) | Value: Timeline (Yrs)
+G5 | Formula: % Achieved | Value: % Achieved
+H5 | Formula: Status | Value: Status
+B6 | Formula: Emergency Fund | Value: Emergency Fund
+C6 | Formula: 360000.0 | Value: 360000.0
+D6 | Formula: 80000.0 | Value: 80000.0
+E6 | Formula: 20000.0 | Value: 20000.0
+F6 | Formula: 1.0 | Value: 1.0
+G6 | Formula: =D6/C6 | Value: 0.2222222222
+H6 | Formula: =IF(D6>=C6,"✅ Done!",IF(D6/C6>=0.75,"🔥 Almost!",IF(D6/C6>=0.5,"🌿 Half way",IF(D6/C6>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B7 | Formula: Child Education | Value: Child Education
+C7 | Formula: 3000000.0 | Value: 3000000.0
+D7 | Formula: 200000.0 | Value: 200000.0
+E7 | Formula: 15000.0 | Value: 15000.0
+F7 | Formula: 10.0 | Value: 10.0
+G7 | Formula: =D7/C7 | Value: 0.06666666667
+H7 | Formula: =IF(D7>=C7,"✅ Done!",IF(D7/C7>=0.75,"🔥 Almost!",IF(D7/C7>=0.5,"🌿 Half way",IF(D7/C7>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B8 | Formula: Home Down Payment | Value: Home Down Payment
+C8 | Formula: 1500000.0 | Value: 1500000.0
+D8 | Formula: 300000.0 | Value: 300000.0
+E8 | Formula: 25000.0 | Value: 25000.0
+F8 | Formula: 4.0 | Value: 4.0
+G8 | Formula: =D8/C8 | Value: 0.2
+H8 | Formula: =IF(D8>=C8,"✅ Done!",IF(D8/C8>=0.75,"🔥 Almost!",IF(D8/C8>=0.5,"🌿 Half way",IF(D8/C8>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B9 | Formula: Car Purchase | Value: Car Purchase
+C9 | Formula: 800000.0 | Value: 800000.0
+D9 | Formula: 100000.0 | Value: 100000.0
+E9 | Formula: 12000.0 | Value: 12000.0
+F9 | Formula: 3.0 | Value: 3.0
+G9 | Formula: =D9/C9 | Value: 0.125
+H9 | Formula: =IF(D9>=C9,"✅ Done!",IF(D9/C9>=0.75,"🔥 Almost!",IF(D9/C9>=0.5,"🌿 Half way",IF(D9/C9>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B10 | Formula: Foreign Vacation | Value: Foreign Vacation
+C10 | Formula: 200000.0 | Value: 200000.0
+D10 | Formula: 30000.0 | Value: 30000.0
+E10 | Formula: 5000.0 | Value: 5000.0
+F10 | Formula: 2.0 | Value: 2.0
+G10 | Formula: =D10/C10 | Value: 0.15
+H10 | Formula: =IF(D10>=C10,"✅ Done!",IF(D10/C10>=0.75,"🔥 Almost!",IF(D10/C10>=0.5,"🌿 Half way",IF(D10/C10>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B11 | Formula: Child Marriage | Value: Child Marriage
+C11 | Formula: 2000000.0 | Value: 2000000.0
+D11 | Formula: 0.0 | Value: 0.0
+E11 | Formula: 8000.0 | Value: 8000.0
+F11 | Formula: 18.0 | Value: 18.0
+G11 | Formula: =D11/C11 | Value: 0
+H11 | Formula: =IF(D11>=C11,"✅ Done!",IF(D11/C11>=0.75,"🔥 Almost!",IF(D11/C11>=0.5,"🌿 Half way",IF(D11/C11>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B12 | Formula: Parents Healthcare | Value: Parents Healthcare
+C12 | Formula: 500000.0 | Value: 500000.0
+D12 | Formula: 100000.0 | Value: 100000.0
+E12 | Formula: 5000.0 | Value: 5000.0
+F12 | Formula: 5.0 | Value: 5.0
+G12 | Formula: =D12/C12 | Value: 0.2
+H12 | Formula: =IF(D12>=C12,"✅ Done!",IF(D12/C12>=0.75,"🔥 Almost!",IF(D12/C12>=0.5,"🌿 Half way",IF(D12/C12>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B13 | Formula: Business Capital | Value: Business Capital
+C13 | Formula: 1000000.0 | Value: 1000000.0
+D13 | Formula: 150000.0 | Value: 150000.0
+E13 | Formula: 10000.0 | Value: 10000.0
+F13 | Formula: 3.0 | Value: 3.0
+G13 | Formula: =D13/C13 | Value: 0.15
+H13 | Formula: =IF(D13>=C13,"✅ Done!",IF(D13/C13>=0.75,"🔥 Almost!",IF(D13/C13>=0.5,"🌿 Half way",IF(D13/C13>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B14 | Formula: Retirement Corpus | Value: Retirement Corpus
+C14 | Formula: 30000000.0 | Value: 30000000.0
+D14 | Formula: 500000.0 | Value: 500000.0
+E14 | Formula: 30000.0 | Value: 30000.0
+F14 | Formula: 25.0 | Value: 25.0
+G14 | Formula: =D14/C14 | Value: 0.01666666667
+H14 | Formula: =IF(D14>=C14,"✅ Done!",IF(D14/C14>=0.75,"🔥 Almost!",IF(D14/C14>=0.5,"🌿 Half way",IF(D14/C14>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B15 | Formula: Wealth Creation | Value: Wealth Creation
+C15 | Formula: 5000000.0 | Value: 5000000.0
+D15 | Formula: 200000.0 | Value: 200000.0
+E15 | Formula: 15000.0 | Value: 15000.0
+F15 | Formula: 10.0 | Value: 10.0
+G15 | Formula: =D15/C15 | Value: 0.04
+H15 | Formula: =IF(D15>=C15,"✅ Done!",IF(D15/C15>=0.75,"🔥 Almost!",IF(D15/C15>=0.5,"🌿 Half way",IF(D15/C15>=0.25,"🌱 Growing","🚀 Just Started")))) | Value: 🚀 Just Started
+B16 | Formula: 📊 TOTALS | Value: 📊 TOTALS
+C16 | Formula: =SUM(C6:C15) | Value: 44360000
+D16 | Formula: =SUM(D6:D15) | Value: 1660000
+E16 | Formula: =SUM(E6:E15) | Value: 145000
+F16 | Formula: =D16/C16 | Value: 0.03742110009
+B18 | Formula: ⚡  GOAL PRIORITY MATRIX | Value: ⚡  GOAL PRIORITY MATRIX
+B19 | Formula: Goal | Value: Goal
+C19 | Formula: Priority | Value: Priority
+D19 | Formula: Urgency | Value: Urgency
+E19 | Formula: Impact | Value: Impact
+F19 | Formula: Action | Value: Action
+B20 | Formula: Emergency Fund | Value: Emergency Fund
+C20 | Formula: 🔴 Critical | Value: 🔴 Critical
+D20 | Formula: Immediate | Value: Immediate
+E20 | Formula: Protects Everything | Value: Protects Everything
+F20 | Formula: Build NOW | Value: Build NOW
+B21 | Formula: Term Insurance | Value: Term Insurance
+C21 | Formula: 🔴 Critical | Value: 🔴 Critical
+D21 | Formula: Immediate | Value: Immediate
+E21 | Formula: Family Protection | Value: Family Protection
+F21 | Formula: Buy NOW | Value: Buy NOW
+B22 | Formula: Retirement SIP | Value: Retirement SIP
+C22 | Formula: 🔴 High | Value: 🔴 High
+D22 | Formula: Long Term | Value: Long Term
+E22 | Formula: Financial Freedom | Value: Financial Freedom
+F22 | Formula: Start SIP | Value: Start SIP
+B23 | Formula: Health Insurance | Value: Health Insurance
+C23 | Formula: 🔴 High | Value: 🔴 High
+D23 | Formula: Immediate | Value: Immediate
+E23 | Formula: Medical Safety Net | Value: Medical Safety Net
+F23 | Formula: Buy NOW | Value: Buy NOW
+B24 | Formula: Child Education | Value: Child Education
+C24 | Formula: 🟡 Medium | Value: 🟡 Medium
+D24 | Formula: 10-15 yrs | Value: 10-15 yrs
+E24 | Formula: Child's Future | Value: Child's Future
+F24 | Formula: SIP Monthly | Value: SIP Monthly
+B25 | Formula: Home Purchase | Value: Home Purchase
+C25 | Formula: 🟡 Medium | Value: 🟡 Medium
+D25 | Formula: 3-5 yrs | Value: 3-5 yrs
+E25 | Formula: Asset Creation | Value: Asset Creation
+F25 | Formula: Save Down | Value: Save Down
+B26 | Formula: Vacation/Car | Value: Vacation/Car
+C26 | Formula: 🟢 Low | Value: 🟢 Low
+D26 | Formula: 2-3 yrs | Value: 2-3 yrs
+E26 | Formula: Lifestyle | Value: Lifestyle
+F26 | Formula: Plan Ahead | Value: Plan Ahead
+B28 | Formula: 💼  RECOMMENDED ASSET ALLOCATION | Value: 💼  RECOMMENDED ASSET ALLOCATION
+B29 | Formula: Asset Class | Value: Asset Class
+C29 | Formula: Allocation % | Value: Allocation %
+D29 | Formula: Purpose | Value: Purpose
+E29 | Formula: Horizon | Value: Horizon
+F29 | Formula: Notes | Value: Notes
+B30 | Formula: Equity (Mutual Funds) | Value: Equity (Mutual Funds)
+C30 | Formula: 40-60% | Value: 40-60%
+D30 | Formula: High growth | Value: High growth
+E30 | Formula: 10-15 yrs | Value: 10-15 yrs
+B31 | Formula: Debt (PPF, FD, Bonds) | Value: Debt (PPF, FD, Bonds)
+C31 | Formula: 20-30% | Value: 20-30%
+D31 | Formula: Capital safety | Value: Capital safety
+E31 | Formula: 1-5 yrs | Value: 1-5 yrs
+B32 | Formula: Real Estate | Value: Real Estate
+C32 | Formula: 10-20% | Value: 10-20%
+D32 | Formula: Appreciation + income | Value: Appreciation + income
+E32 | Formula: 10+ yrs | Value: 10+ yrs
+B33 | Formula: Gold / SGBs | Value: Gold / SGBs
+C33 | Formula: 5-10% | Value: 5-10%
+D33 | Formula: Inflation hedge | Value: Inflation hedge
+E33 | Formula: Long term | Value: Long term
+B34 | Formula: Cash / Liquid | Value: Cash / Liquid
+C34 | Formula: 5-10% | Value: 5-10%
+D34 | Formula: Emergency access | Value: Emergency access
+E34 | Formula: 0-6 months | Value: 0-6 months
+B35 | Formula: International Funds | Value: International Funds
+C35 | Formula: 5-10% | Value: 5-10%
+D35 | Formula: Global diversification | Value: Global diversification
+E35 | Formula: 7+ yrs | Value: 7+ yrs
+
+
+=== Sheet: 🏦 Family Vault ===
+A1 | Formula: 🏦  FAMILY FINANCIAL VAULT — Secure & Complete | Value: 🏦  FAMILY FINANCIAL VAULT — Secure & Complete
+A2 | Formula: 🔐 Store all family financial details, nominee info, insurance policies & investments — CONFIDENTIAL | Value: 🔐 Store all family financial details, nominee info, insurance policies & investments — CONFIDENTIAL
+B4 | Formula: 👨‍👩‍👧‍👦  FAMILY MEMBER DETAILS | Value: 👨‍👩‍👧‍👦  FAMILY MEMBER DETAILS
+B5 | Formula: Name | Value: Name
+C5 | Formula: Relation | Value: Relation
+D5 | Formula: DOB | Value: DOB
+E5 | Formula: PAN Number | Value: PAN Number
+F5 | Formula: Aadhaar (last 4) | Value: Aadhaar (last 4)
+G5 | Formula: Blood Group | Value: Blood Group
+B6 | Formula: Rajesh Kumar | Value: Rajesh Kumar
+C6 | Formula: Self | Value: Self
+D6 | Formula: 15-Jan-1990 | Value: 15-Jan-1990
+E6 | Formula: ABCDE1234F | Value: ABCDE1234F
+F6 | Formula: XXXX | Value: XXXX
+G6 | Formula: O+ | Value: O+
+B7 | Formula: Priya Kumar | Value: Priya Kumar
+C7 | Formula: Spouse | Value: Spouse
+D7 | Formula: 20-Mar-1993 | Value: 20-Mar-1993
+E7 | Formula: PQRST5678G | Value: PQRST5678G
+F7 | Formula: XXXX | Value: XXXX
+G7 | Formula: B+ | Value: B+
+B8 | Formula: Arjun Kumar | Value: Arjun Kumar
+C8 | Formula: Son | Value: Son
+D8 | Formula: 10-Jun-2018 | Value: 10-Jun-2018
+E8 | Formula: — | Value: —
+F8 | Formula: XXXX | Value: XXXX
+G8 | Formula: O+ | Value: O+
+B9 | Formula: Sunita Devi | Value: Sunita Devi
+C9 | Formula: Mother | Value: Mother
+D9 | Formula: 05-Aug-1960 | Value: 05-Aug-1960
+E9 | Formula: LMNOP9012H | Value: LMNOP9012H
+F9 | Formula: XXXX | Value: XXXX
+G9 | Formula: A+ | Value: A+
+B10 | Formula: ← Enter Details | Value: ← Enter Details
+C10 | Formula: ← Enter Details | Value: ← Enter Details
+D10 | Formula: ← Enter Details | Value: ← Enter Details
+E10 | Formula: ← Enter Details | Value: ← Enter Details
+F10 | Formula: ← Enter Details | Value: ← Enter Details
+G10 | Formula: ← Enter Details | Value: ← Enter Details
+B11 | Formula: ← Enter Details | Value: ← Enter Details
+C11 | Formula: ← Enter Details | Value: ← Enter Details
+D11 | Formula: ← Enter Details | Value: ← Enter Details
+E11 | Formula: ← Enter Details | Value: ← Enter Details
+F11 | Formula: ← Enter Details | Value: ← Enter Details
+G11 | Formula: ← Enter Details | Value: ← Enter Details
+B13 | Formula: 🛡️  INSURANCE POLICIES | Value: 🛡️  INSURANCE POLICIES
+B14 | Formula: Policy Type | Value: Policy Type
+C14 | Formula: Company | Value: Company
+D14 | Formula: Policy No. | Value: Policy No.
+E14 | Formula: Sum Assured (₹) | Value: Sum Assured (₹)
+F14 | Formula: Premium/Year (₹) | Value: Premium/Year (₹)
+G14 | Formula: Maturity/Expiry | Value: Maturity/Expiry
+B15 | Formula: Term Life Insurance | Value: Term Life Insurance
+C15 | Formula: LIC / HDFC Life | Value: LIC / HDFC Life
+D15 | Formula: TRM2024001 | Value: TRM2024001
+E15 | Formula: 15000000.0 | Value: 15000000.0
+F15 | Formula: 18000.0 | Value: 18000.0
+G15 | Formula: 2060 | Value: 2060
+B16 | Formula: Health Insurance | Value: Health Insurance
+C16 | Formula: Star Health | Value: Star Health
+D16 | Formula: HLT2024002 | Value: HLT2024002
+E16 | Formula: 1000000.0 | Value: 1000000.0
+F16 | Formula: 25000.0 | Value: 25000.0
+G16 | Formula: Annual Renewal | Value: Annual Renewal
+B17 | Formula: Critical Illness | Value: Critical Illness
+C17 | Formula: HDFC ERGO | Value: HDFC ERGO
+D17 | Formula: CI2024003 | Value: CI2024003
+E17 | Formula: 2500000.0 | Value: 2500000.0
+F17 | Formula: 12000.0 | Value: 12000.0
+G17 | Formula: 2050 | Value: 2050
+B18 | Formula: Home Insurance | Value: Home Insurance
+C18 | Formula: Bajaj Allianz | Value: Bajaj Allianz
+D18 | Formula: HOM2024004 | Value: HOM2024004
+E18 | Formula: 5000000.0 | Value: 5000000.0
+F18 | Formula: 8000.0 | Value: 8000.0
+G18 | Formula: Annual Renewal | Value: Annual Renewal
+B19 | Formula: Vehicle Insurance | Value: Vehicle Insurance
+C19 | Formula: ICICI Lombard | Value: ICICI Lombard
+D19 | Formula: VEH2024005 | Value: VEH2024005
+E19 | Formula: 500000.0 | Value: 500000.0
+F19 | Formula: 12000.0 | Value: 12000.0
+G19 | Formula: Annual Renewal | Value: Annual Renewal
+B20 | Formula: Personal Accident | Value: Personal Accident
+C20 | Formula: New India | Value: New India
+D20 | Formula: PA2024006 | Value: PA2024006
+E20 | Formula: 2500000.0 | Value: 2500000.0
+F20 | Formula: 3000.0 | Value: 3000.0
+G20 | Formula: Annual Renewal | Value: Annual Renewal
+B21 | Formula: Total Life Cover (₹) | Value: Total Life Cover (₹)
+E21 | Formula: =SUM(E15:E20) | Value: 26500000
+B23 | Formula: 📈  INVESTMENT PORTFOLIO | Value: 📈  INVESTMENT PORTFOLIO
+B24 | Formula: Investment Type | Value: Investment Type
+C24 | Formula: Scheme/Name | Value: Scheme/Name
+D24 | Formula: Account/Folio No. | Value: Account/Folio No.
+E24 | Formula: Current Value (₹) | Value: Current Value (₹)
+F24 | Formula: Nominee | Value: Nominee
+G24 | Formula: Institution | Value: Institution
+B25 | Formula: EPF / PF | Value: EPF / PF
+C25 | Formula: Employees Provident Fund | Value: Employees Provident Fund
+D25 | Formula: PF12345678 | Value: PF12345678
+E25 | Formula: 800000.0 | Value: 800000.0
+F25 | Formula: Priya Kumar | Value: Priya Kumar
+G25 | Formula: EPFO | Value: EPFO
+B26 | Formula: PPF | Value: PPF
+C26 | Formula: Public Provident Fund | Value: Public Provident Fund
+D26 | Formula: PPF98765432 | Value: PPF98765432
+E26 | Formula: 450000.0 | Value: 450000.0
+F26 | Formula: Priya Kumar | Value: Priya Kumar
+G26 | Formula: SBI | Value: SBI
+B27 | Formula: Mutual Fund - Equity | Value: Mutual Fund - Equity
+C27 | Formula: Parag Parikh Flexi Cap | Value: Parag Parikh Flexi Cap
+D27 | Formula: MF1234567 | Value: MF1234567
+E27 | Formula: 350000.0 | Value: 350000.0
+F27 | Formula: Priya Kumar | Value: Priya Kumar
+G27 | Formula: PPFAS AMC | Value: PPFAS AMC
+B28 | Formula: Mutual Fund - Debt | Value: Mutual Fund - Debt
+C28 | Formula: HDFC Short Term Debt | Value: HDFC Short Term Debt
+D28 | Formula: MF7654321 | Value: MF7654321
+E28 | Formula: 200000.0 | Value: 200000.0
+F28 | Formula: Priya Kumar | Value: Priya Kumar
+G28 | Formula: HDFC AMC | Value: HDFC AMC
+B29 | Formula: Direct Equity | Value: Direct Equity
+C29 | Formula: NSE/BSE Portfolio | Value: NSE/BSE Portfolio
+D29 | Formula: DEMAT001234 | Value: DEMAT001234
+E29 | Formula: 600000.0 | Value: 600000.0
+F29 | Formula: Priya Kumar | Value: Priya Kumar
+G29 | Formula: Zerodha | Value: Zerodha
+B30 | Formula: NPS | Value: NPS
+C30 | Formula: National Pension Scheme | Value: National Pension Scheme
+D30 | Formula: NPS123456789 | Value: NPS123456789
+E30 | Formula: 250000.0 | Value: 250000.0
+F30 | Formula: Priya Kumar | Value: Priya Kumar
+G30 | Formula: SBI Pension | Value: SBI Pension
+B31 | Formula: FD / RD | Value: FD / RD
+C31 | Formula: Fixed Deposit | Value: Fixed Deposit
+D31 | Formula: FD98765 | Value: FD98765
+E31 | Formula: 300000.0 | Value: 300000.0
+F31 | Formula: Priya Kumar | Value: Priya Kumar
+G31 | Formula: HDFC Bank | Value: HDFC Bank
+B32 | Formula: Gold / SGB | Value: Gold / SGB
+C32 | Formula: Sovereign Gold Bonds | Value: Sovereign Gold Bonds
+D32 | Formula: SGB2022-23 | Value: SGB2022-23
+E32 | Formula: 150000.0 | Value: 150000.0
+F32 | Formula: Priya Kumar | Value: Priya Kumar
+G32 | Formula: RBI / NSE | Value: RBI / NSE
+B33 | Formula: Real Estate | Value: Real Estate
+C33 | Formula: Flat - Brigade Metropolis | Value: Flat - Brigade Metropolis
+D33 | Formula: KA/BLR/2020 | Value: KA/BLR/2020
+E33 | Formula: 8500000.0 | Value: 8500000.0
+F33 | Formula: Priya Kumar | Value: Priya Kumar
+G33 | Formula: Brigade Group | Value: Brigade Group
+B34 | Formula: 📊 Total Portfolio Value (₹) | Value: 📊 Total Portfolio Value (₹)
+E34 | Formula: =SUM(E25:E33) | Value: 11600000
+B36 | Formula: 📂  IMPORTANT DOCUMENTS CHECKLIST | Value: 📂  IMPORTANT DOCUMENTS CHECKLIST
+B37 | Formula: Document | Value: Document
+C37 | Formula: Location | Value: Location
+D37 | Formula: Last Updated | Value: Last Updated
+E37 | Formula: Digital Copy | Value: Digital Copy
+F37 | Formula: Status | Value: Status
+B38 | Formula: Will / Testament | Value: Will / Testament
+C38 | Formula: Bank Locker / Advocate | Value: Bank Locker / Advocate
+D38 | Formula: Jan 2024 | Value: Jan 2024
+E38 | Formula: Google Drive/Will | Value: Google Drive/Will
+F38 | Formula: ✅ Done | Value: ✅ Done
+B39 | Formula: Property Documents | Value: Property Documents
+C39 | Formula: Bank Locker | Value: Bank Locker
+D39 | Formula: 2020 | Value: 2020
+E39 | Formula: Google Drive/Property | Value: Google Drive/Property
+F39 | Formula: ✅ Done | Value: ✅ Done
+B40 | Formula: Aadhaar Cards | Value: Aadhaar Cards
+C40 | Formula: Home Safe | Value: Home Safe
+D40 | Formula: 2023 | Value: 2023
+E40 | Formula: DigiLocker | Value: DigiLocker
+F40 | Formula: ✅ Done | Value: ✅ Done
+B41 | Formula: PAN Cards | Value: PAN Cards
+C41 | Formula: Home Safe | Value: Home Safe
+D41 | Formula: 2020 | Value: 2020
+E41 | Formula: DigiLocker | Value: DigiLocker
+F41 | Formula: ✅ Done | Value: ✅ Done
+B42 | Formula: Passports | Value: Passports
+C42 | Formula: Home Safe | Value: Home Safe
+D42 | Formula: 2022 | Value: 2022
+E42 | Formula: Google Drive/Passports | Value: Google Drive/Passports
+F42 | Formula: ✅ Done | Value: ✅ Done
+B43 | Formula: Marriage Certificate | Value: Marriage Certificate
+C43 | Formula: Home Safe | Value: Home Safe
+D43 | Formula: 2019 | Value: 2019
+E43 | Formula: Google Drive/Legal | Value: Google Drive/Legal
+F43 | Formula: ✅ Done | Value: ✅ Done
+B44 | Formula: Birth Certificates | Value: Birth Certificates
+C44 | Formula: Home Safe | Value: Home Safe
+D44 | Formula: 2018 | Value: 2018
+E44 | Formula: Google Drive/Legal | Value: Google Drive/Legal
+F44 | Formula: ✅ Done | Value: ✅ Done
+B45 | Formula: Educational Certificates | Value: Educational Certificates
+C45 | Formula: Home Safe | Value: Home Safe
+D45 | Formula: 2015 | Value: 2015
+E45 | Formula: Google Drive/Education | Value: Google Drive/Education
+F45 | Formula: ✅ Done | Value: ✅ Done
+B46 | Formula: Vehicle RC & Insurance | Value: Vehicle RC & Insurance
+C46 | Formula: Car Glove Box | Value: Car Glove Box
+D46 | Formula: 2024 | Value: 2024
+E46 | Formula: DigiLocker | Value: DigiLocker
+F46 | Formula: ✅ Done | Value: ✅ Done
+B47 | Formula: IT Returns (Last 3 yrs) | Value: IT Returns (Last 3 yrs)
+C47 | Formula: Folder/Accountant | Value: Folder/Accountant
+D47 | Formula: 2024 | Value: 2024
+E47 | Formula: Google Drive/Tax | Value: Google Drive/Tax
+F47 | Formula: ✅ Done | Value: ✅ Done
+B49 | Formula: 🆘  EMERGENCY CONTACTS & NOMINEES | Value: 🆘  EMERGENCY CONTACTS & NOMINEES
+B50 | Formula: Name | Value: Name
+C50 | Formula: Relation | Value: Relation
+D50 | Formula: Mobile | Value: Mobile
+E50 | Formula: Email | Value: Email
+F50 | Formula: Role/Purpose | Value: Role/Purpose
+B51 | Formula: Priya Kumar | Value: Priya Kumar
+C51 | Formula: Spouse | Value: Spouse
+D51 | Formula: +91-98765-43210 | Value: +91-98765-43210
+E51 | Formula: priya@email.com | Value: priya@email.com
+F51 | Formula: Primary Nominee | Value: Primary Nominee
+B52 | Formula: Ramesh Kumar | Value: Ramesh Kumar
+C52 | Formula: Father | Value: Father
+D52 | Formula: +91-87654-32109 | Value: +91-87654-32109
+E52 | Formula: ramesh@email.com | Value: ramesh@email.com
+F52 | Formula: Secondary Nominee | Value: Secondary Nominee
+B53 | Formula: CA Suresh Gupta | Value: CA Suresh Gupta
+C53 | Formula: Chartered Accountant | Value: Chartered Accountant
+D53 | Formula: +91-76543-21098 | Value: +91-76543-21098
+E53 | Formula: ca@firm.com | Value: ca@firm.com
+F53 | Formula: Tax/Finance Advisor | Value: Tax/Finance Advisor
+B54 | Formula: Adv. Meena Sharma | Value: Adv. Meena Sharma
+C54 | Formula: Lawyer / Advocate | Value: Lawyer / Advocate
+D54 | Formula: +91-65432-10987 | Value: +91-65432-10987
+E54 | Formula: adv@law.com | Value: adv@law.com
+F54 | Formula: Will Executor | Value: Will Executor
+B55 | Formula: Dr. Aruna Mehta | Value: Dr. Aruna Mehta
+C55 | Formula: Family Doctor | Value: Family Doctor
+D55 | Formula: +91-54321-09876 | Value: +91-54321-09876
+E55 | Formula: dr@hospital.com | Value: dr@hospital.com
+F55 | Formula: Medical Contact | Value: Medical Contact
+B57 | Formula: 🏦  BANK ACCOUNTS & CREDIT CARDS | Value: 🏦  BANK ACCOUNTS & CREDIT CARDS
+B58 | Formula: Bank / Card | Value: Bank / Card
+C58 | Formula: Account Type | Value: Account Type
+D58 | Formula: Account No (last 4) | Value: Account No (last 4)
+E58 | Formula: Branch / Limit | Value: Branch / Limit
+F58 | Formula: Nominee / Credit Limit | Value: Nominee / Credit Limit
+G58 | Formula: Status | Value: Status
+B59 | Formula: HDFC Bank | Value: HDFC Bank
+C59 | Formula: Savings Account | Value: Savings Account
+D59 | Formula: XXXX 4521 | Value: XXXX 4521
+E59 | Formula: Indiranagar, Blr | Value: Indiranagar, Blr
+F59 | Formula: Priya Kumar | Value: Priya Kumar
+G59 | Formula: ✅ Active | Value: ✅ Active
+B60 | Formula: SBI | Value: SBI
+C60 | Formula: Salary Account | Value: Salary Account
+D60 | Formula: XXXX 7832 | Value: XXXX 7832
+E60 | Formula: MG Road, Blr | Value: MG Road, Blr
+F60 | Formula: Priya Kumar | Value: Priya Kumar
+G60 | Formula: ✅ Active | Value: ✅ Active
+B61 | Formula: ICICI Bank | Value: ICICI Bank
+C61 | Formula: Savings Account | Value: Savings Account
+D61 | Formula: XXXX 3341 | Value: XXXX 3341
+E61 | Formula: Koramangala, Blr | Value: Koramangala, Blr
+F61 | Formula: Priya Kumar | Value: Priya Kumar
+G61 | Formula: ✅ Active | Value: ✅ Active
+B62 | Formula: HDFC Credit Card | Value: HDFC Credit Card
+C62 | Formula: Credit Card | Value: Credit Card
+D62 | Formula: XXXX 1234 | Value: XXXX 1234
+E62 | Formula: ₹3L limit | Value: ₹3L limit
+F62 | Formula: N/A | Value: N/A
+G62 | Formula: ✅ Active | Value: ✅ Active
+B63 | Formula: SBI Credit Card | Value: SBI Credit Card
+C63 | Formula: Credit Card | Value: Credit Card
+D63 | Formula: XXXX 5678 | Value: XXXX 5678
+E63 | Formula: ₹2L limit | Value: ₹2L limit
+F63 | Formula: N/A | Value: N/A
+G63 | Formula: ✅ Active | Value: ✅ Active
+B65 | Formula: 🔐 SECURITY NOTE: Keep this file password-protected. Never store actual passwords here. Use a password manager. | Value: 🔐 SECURITY NOTE: Keep this file password-protected. Never store actual passwords here. Use a password manager.
+B66 | Formula: 📅 REVIEW REMINDER: Update this vault annually (every January) or after any major life event. | Value: 📅 REVIEW REMINDER: Update this vault annually (every January) or after any major life event.
+
+

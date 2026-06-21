@@ -48,11 +48,10 @@ def calculate_freedom_date(
             else:
                 years_to_fi_stepup = math.log(log_num_step) / math.log(1 + annual_investment_return)
                 
-    # C20: YEAR(TODAY())+C18
-    current_year = datetime.now().year
-    fi_achievement_year = current_year + years_to_fi
+    # C20: =(C6+C5)+C18 (Birth Year + Current Age + Years to FI)
+    fi_achievement_year = birth_year + current_age + years_to_fi
     
-    # C21: C5+C18
+    # C21: C20-C6 (or simply current_age + years_to_fi)
     fi_age_at_achievement = current_age + years_to_fi
     
     # F5: C16
@@ -101,11 +100,22 @@ def calculate_freedom_date(
     # F18: C16*1.5
     safe_fi_buffer = fi_number * 1.5
     
-    # B23: CONCATENATE("🎉 YOUR FINANCIAL FREEDOM DATE: January 1, ",TEXT(C20,"0")," at age ",TEXT(C21,"0.0"),"!")
-    freedom_date_message = (
-        f"🎉 YOUR FINANCIAL FREEDOM DATE: January 1, {round(fi_achievement_year)} "
-        f"at age {fi_age_at_achievement:.1f}!"
-    )
+    # B23: CONCATENATE("🎉 YOUR FINANCIAL FREEDOM DATE: ", CHOOSE(...), " 1, ", INT(C20), " at age ", C21)
+    if years_to_fi < 999:
+        c20 = fi_achievement_year
+        c21 = fi_age_at_achievement
+        fractional_year = c20 - int(c20)
+        month_num = int(round(fractional_year * 12 + 1, 0))
+        month_num = min(12, max(1, month_num))
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        month_name = months[month_num - 1]
+        year_val = int(c20)
+        freedom_date_message = (
+            f"🎉 YOUR FINANCIAL FREEDOM DATE: {month_name} 1, {year_val} "
+            f"at age {c21:.1f}!"
+        )
+    else:
+        freedom_date_message = "📊 Financial Freedom date is not reachable with current savings rate."
     
     # Timeline Projection Series
     timeline_series = []

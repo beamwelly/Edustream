@@ -6,22 +6,23 @@ def calculate_cost_of_delay(
     target_age: float,
     current_age: float
 ) -> Dict[str, Any]:
-    # starting ages listed in Excel: 25, 27, 30, 32, 35, 38, 40, 42, 45, 48, 50
-    ages = [25.0, 27.0, 30.0, 32.0, 35.0, 38.0, 40.0, 42.0, 45.0, 48.0, 50.0]
+    # starting ages listed in Excel offsets relative to current_age:
+    # 0, 2, 5, 7, 10, 13, 15, 17, 20, 23, 25
+    offsets = [0.0, 2.0, 5.0, 7.0, 10.0, 13.0, 15.0, 17.0, 20.0, 23.0, 25.0]
+    ages = [current_age + offset for offset in offsets]
     
-    # Calculate corpus starting at age 25 to act as base
-    # E12: IF(25>=C7,0,C5*(((1+C6/12)^((C7-25)*12)-1)/(C6/12))*(1+C6/12))
-    base_age = 25.0
+    # Calculate corpus starting at current_age to act as base (E12 in Excel)
+    base_age = current_age
     r_monthly = expected_annual_return / 12
     
     if base_age >= target_age:
-        corpus_at_25 = 0.0
+        base_corpus = 0.0
     else:
-        months_25 = (target_age - base_age) * 12
+        months_base = (target_age - base_age) * 12
         if r_monthly == 0:
-            corpus_at_25 = monthly_sip_amount * months_25
+            base_corpus = monthly_sip_amount * months_base
         else:
-            corpus_at_25 = monthly_sip_amount * (((1 + r_monthly) ** months_25 - 1) / r_monthly) * (1 + r_monthly)
+            base_corpus = monthly_sip_amount * (((1 + r_monthly) ** months_base - 1) / r_monthly) * (1 + r_monthly)
             
     delay_table = []
     for start_age in ages:
@@ -44,43 +45,42 @@ def calculate_cost_of_delay(
             else:
                 corpus_at_target = monthly_sip_amount * (((1 + r_monthly) ** months - 1) / r_monthly) * (1 + r_monthly)
                 
-        # F12: corpus_at_target - corpus_at_25
-        vs_starting_at_25 = corpus_at_target - corpus_at_25
+        # F12: corpus_at_target - base_corpus (vs Starting at current_age)
+        vs_starting_at_base = corpus_at_target - base_corpus
         
         # G12: IF(E12=0,0,(E12-E12_base)/E12_base)
-        if corpus_at_25 == 0:
+        if base_corpus == 0:
             delay_cost_percent = 0.0
         else:
-            delay_cost_percent = vs_starting_at_25 / corpus_at_25
+            delay_cost_percent = vs_starting_at_base / base_corpus
             
         delay_table.append({
             "start_age": start_age,
             "years_to_invest": years_to_invest,
             "total_invested": total_invested,
             "corpus_at_target": corpus_at_target,
-            "vs_starting_at_25": vs_starting_at_25,
+            "vs_starting_at_25": vs_starting_at_base,  # keep key name for frontend compatibility
             "delay_cost_percent": delay_cost_percent
         })
         
-    # Generate dynamic warning text based on user's current_age input vs starting at 25
+    # Generate dynamic warning text based on user's current_age vs current_age + 13 (6th row, index 5)
     # C8 = current_age
-    current_point = None
-    # find closest matching start_age or calculate dynamically for the specific current_age
-    months_curr = (target_age - current_age) * 12
-    if current_age >= target_age:
-        corpus_at_curr = 0.0
+    age_13 = current_age + 13.0
+    months_13 = (target_age - age_13) * 12
+    if age_13 >= target_age:
+        corpus_at_13 = 0.0
     else:
         if r_monthly == 0:
-            corpus_at_curr = monthly_sip_amount * months_curr
+            corpus_at_13 = monthly_sip_amount * months_13
         else:
-            corpus_at_curr = monthly_sip_amount * (((1 + r_monthly) ** months_curr - 1) / r_monthly) * (1 + r_monthly)
+            corpus_at_13 = monthly_sip_amount * (((1 + r_monthly) ** months_13 - 1) / r_monthly) * (1 + r_monthly)
             
-    loss = corpus_at_curr - corpus_at_25
-    pct = (loss / corpus_at_25) * -1 if corpus_at_25 > 0 else 0.0
+    loss = corpus_at_13 - base_corpus
+    pct = (loss / base_corpus) * -1 if base_corpus > 0 else 0.0
     
     warning_text = (
-        f"💥 Starting at {int(current_age)} instead of 25: "
-        f"You lose ₹{round(abs(loss)):,} in corpus — {pct * 100:.1f}% penalty!"
+        f"💥 Starting at {int(round(age_13))} instead of {int(round(current_age))}: "
+        f"You lose ₹{round(loss):,} in corpus — {pct * 100:.1f}% penalty!"
     )
     
     return {
