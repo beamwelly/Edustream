@@ -173,6 +173,13 @@ def calculate_sip_home_loan_impact(
             "property_value": round(prop_val, 2)
         })
         
+    # Additional fields for PDF parity
+    future_sip_value = simple_sip_corpus
+    opportunity_cost_downpayment = down_payment * ((1 + sip_return) ** sip_duration)
+    total_payments_property = loan_amount + down_payment + total_interest_paid
+    future_property_value = property_value_maturity
+    net_financial_benefit = future_sip_value + future_property_value - opportunity_cost_downpayment - total_payments_property
+
     return {
         "simple_sip_corpus": simple_sip_corpus,
         "total_amount_invested": total_amount_invested,
@@ -192,6 +199,11 @@ def calculate_sip_home_loan_impact(
         "combined_wealth": combined_wealth,
         "effective_emi": effective_emi,
         "recommendation_msg": recommendation_msg,
+        "future_sip_value": future_sip_value,
+        "opportunity_cost_downpayment": opportunity_cost_downpayment,
+        "total_payments_property": total_payments_property,
+        "future_property_value": future_property_value,
+        "net_financial_benefit": net_financial_benefit,
         "sip_series": sip_series,
         "loan_series": loan_series
     }

@@ -778,6 +778,11 @@ class SipLoanResult(BaseModel):
     combined_wealth: float
     effective_emi: float
     recommendation_msg: str
+    future_sip_value: float
+    opportunity_cost_downpayment: float
+    total_payments_property: float
+    future_property_value: float
+    net_financial_benefit: float
     sip_series: List[SipSeriesPoint]
     loan_series: List[LoanSeriesPoint]
 
@@ -859,18 +864,21 @@ async def calculate_freedom(
     current_user: User = Depends(get_current_active_user)
 ):
     await check_calculator_policy(db, current_user, "financial_freedom")
-    results = calculate_freedom_date(
-        current_age=inputs.current_age,
-        birth_year=inputs.birth_year,
-        current_monthly_expenses=inputs.current_monthly_expenses,
-        expected_inflation=inputs.expected_inflation,
-        annual_investment_return=inputs.annual_investment_return,
-        withdrawal_rate=inputs.withdrawal_rate,
-        current_net_worth=inputs.current_net_worth,
-        monthly_savings=inputs.monthly_savings,
-        stepup_rate=inputs.stepup_rate
-    )
-    return FreedomDateResult(**results)
+    try:
+        results = calculate_freedom_date(
+            current_age=inputs.current_age,
+            birth_year=inputs.birth_year,
+            current_monthly_expenses=inputs.current_monthly_expenses,
+            expected_inflation=inputs.expected_inflation,
+            annual_investment_return=inputs.annual_investment_return,
+            withdrawal_rate=inputs.withdrawal_rate,
+            current_net_worth=inputs.current_net_worth,
+            monthly_savings=inputs.monthly_savings,
+            stepup_rate=inputs.stepup_rate
+        )
+        return FreedomDateResult(**results)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # --- Calculator 5: Goal Visualization Dashboard ---
