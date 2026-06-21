@@ -2690,16 +2690,7 @@ function FinancialFreedomDateTab({
   }, [inputs]);
 
   const handleValChange = (key: string, val: number) => {
-    setInputs(prev => {
-      const next = { ...prev, [key]: val };
-      if (key === "current_age") {
-        next.birth_year = new Date().getFullYear() - val;
-      }
-      if (key === "birth_year") {
-        next.current_age = new Date().getFullYear() - val;
-      }
-      return next;
-    });
+    setInputs(prev => ({ ...prev, [key]: val }));
   };
 
   const formatChartValue = (value: number) => {
