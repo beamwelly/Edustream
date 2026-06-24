@@ -1,4 +1,4 @@
-# EduStream — Learning & Financial Freedom Platform
+# EduStream — Learning & Financial Freedom Platform.
 
 EduStream is a high-performance, premium web application built for wealth managers, advisors, and clients. It integrates structured learning via masterclasses, a shared content library, meeting scheduling with Google Calendar/Meet, automated notifications, feedback tracking, and a comprehensive suite of financial calculators called the **WOW Financial Freedom Toolkit**.
 
